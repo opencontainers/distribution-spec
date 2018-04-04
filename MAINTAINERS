@@ -1,0 +1,8 @@
+This meta-project is maintained by the union of MAINTAINERS for all OCI Projects [1].
+
+Other OCI Projects should list one maintainer per line, with a name, email address, and GitHub username:
+
+Random J Developer <random@developer.example.org> (@RandomJDeveloperExample)
+A. U. Thor <author@example.org> (@AUThorExample)
+
+[1]: https://github.com/opencontainers/

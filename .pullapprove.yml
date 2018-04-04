@@ -1,0 +1,46 @@
+version: 2
+
+requirements:
+  signed_off_by:
+    required: true
+
+always_pending:
+  title_regex: '^WIP'
+  explanation: 'Work in progress...'
+
+group_defaults:
+  required: 2
+  approve_by_comment:
+    enabled: true
+    approve_regex: '^LGTM'
+    reject_regex: '^Rejected'
+  reset_on_push:
+    enabled: true
+  author_approval:
+    ignored: true
+  conditions:
+    branches:
+      - master
+
+groups:
+  image-spec:
+    teams:
+      - image-spec-maintainers
+  image-tools:
+    teams:
+      - image-tools-maintainers
+  go-digest:
+    teams:
+      - go-digest-maintainers
+  runc:
+    teams:
+      - runc-maintainers
+  runtime-spec:
+    teams:
+      - runtime-spec-maintainers
+  runtime-tools:
+    teams:
+      - runtime-tools-maintainers
+  selinux:
+    teams:
+      - selinux-maintainers
