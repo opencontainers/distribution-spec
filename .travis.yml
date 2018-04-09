@@ -1,0 +1,7 @@
+language: ruby
+rvm: 2.4
+cache: bundler
+before_script:
+  - gem install awesome_bot
+script:
+  - awesome_bot --skip-save-results --allow-redirect --allow-dupe -w pullapprove,example.com spec.md
