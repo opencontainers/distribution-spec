@@ -365,7 +365,7 @@ The `name` and `reference` parameter identify the image and are required.
 The reference may include a tag or digest.
 
 The client should include an Accept header indicating which manifest content types it supports.
-For more details on the manifest formats and their content types, see [manifest-v2-1.md](manifest-v2-1.md) and [manifest-v2-2.md](manifest-v2-2.md).
+For more details on the manifest formats and their content types, see [manifest-v2-1.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-1.md) and [manifest-v2-2.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md).
 In a successful response, the Content-Type header will indicate which manifest type is being returned.
 
 A `404 Not Found` response will be returned if the image is unknown to the registry.
