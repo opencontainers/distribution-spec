@@ -935,7 +935,7 @@ If the image had already been deleted or did not exist, a `404 Not Found` respon
 
     Accept: application/vnd.docker.distribution.manifest.v2+json
 
-> for more details, see: [compatibility.md](../compatibility.md#content-addressable-storage-cas)
+> for more details, see: [compatibility.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md#backward-compatibility)
 
 ## Detail
 
