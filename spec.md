@@ -67,7 +67,7 @@ The key words "unspecified", "undefined", and "implementation-defined" are to be
 An implementation is not compliant if it fails to satisfy one or more of the MUST, MUST NOT, REQUIRED, SHALL, or SHALL NOT requirements for the protocols it implements.
 An implementation is compliant if it satisfies all the MUST, MUST NOT, REQUIRED, SHALL, and SHALL NOT requirements for the protocols it implements.
 
-### Historical Context
+## Historical Context
 
 For relevant details and a history leading up to this specification, please see the following issues:
 
@@ -75,7 +75,7 @@ For relevant details and a history leading up to this specification, please see 
 - [docker/docker#9015](https://github.com/docker/docker/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
-### Scope
+## Scope
 
 This specification covers URL layout and protocols for interaction between a registry and registry client.
 Registry implementations MAY implement other API endpoints, but they are not covered by this specification.
@@ -87,7 +87,7 @@ This specification includes the following features:
 - Resumable layer PUSH support
 - V2 Client library implementation
 
-#### Future
+### Future
 
 The following is an incomplete list of features, discussed during the process of cutting this specification, which MAY be out of the scope of this specification, MAY be the purview of another specification, or MAY be deferred to a future version:
 
@@ -96,9 +96,9 @@ The following is an incomplete list of features, discussed during the process of
 - Multiple architecture support
 - Migration from v2compatibility representation
 
-### Use Cases
+## Use Cases
 
-#### Image Verification
+### Image Verification
 
 A docker engine instance would like to run verified image named "library/ubuntu", with the tag "latest".
 The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
@@ -106,20 +106,20 @@ An untrusted registry returns a manifest.
 Before proceeding to download the individual layers, the engine verifies the manifest's signature, ensuring that the content was produced from a trusted source and no tampering has occurred.
 After each layer is downloaded, the engine verifies the digest of the layer, ensuring that the content matches that specified by the manifest.
 
-#### Resumable Push
+### Resumable Push
 
 Company X's build servers lose connectivity to docker registry before completing an image layer transfer.
 After connectivity returns, the build server attempts to re-upload the image.
 The registry notifies the build server that the upload has already been partially attempted.
 The build server responds by only sending the remaining data to complete the image file.
 
-#### Resumable Pull
+### Resumable Pull
 
 Company X is having more connectivity problems but this time in their deployment datacenter.
 When downloading an image, the connection is interrupted before completion.
 The client keeps the partial data and uses http `Range` requests to avoid downloading repeated data.
 
-#### Layer Upload De-duplication
+### Layer Upload De-duplication
 
 Company Y's build system creates two identical docker layers from build processes A and B.
 Build process A completes uploading the layer before B.
@@ -127,7 +127,7 @@ When process B attempts to upload the layer, the registry indicates that its not
 
 If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry (Note: we may modify this to prevent dogpile with some locking mechanism).
 
-### Changes
+## Changes
 
 The V2 specification has been written to work as a living document, specifying only what is certain and leaving what is not specified open or to future changes.
 Only non-conflicting additions should be made to the API and accepted changes should avoid preventing future changes from happening.
