@@ -1,6 +1,6 @@
 # OCI Distribution Specification Changes
 
-This doc should be updated when changes are made to the specification, indicating what is different.
+With the exception of de-minimis modifications (such as non-code impacting spelling corrections), this doc should be updated when changes are made to the specification, indicating what is different.
 
 Each set of changes is given a letter corresponding to a set of modifications that were applied to the baseline specification.
 These are merely for reference and shouldn't be used outside the specification other than to identify a set of modifications.

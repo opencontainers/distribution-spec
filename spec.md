@@ -75,6 +75,8 @@ For relevant details and a history leading up to this specification, please see 
 - [docker/docker#9015](https://github.com/docker/docker/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
+<!--- TODO: add relevant background information here --->
+
 ## Scope
 
 This specification covers URL layout and protocols for interaction between a registry and registry client.
@@ -85,7 +87,7 @@ This specification includes the following features:
 - Namespace-oriented URI Layout
 - PUSH/PULL registry server for V2 image manifest format
 - Resumable layer PUSH support
-- V2 Client library implementation
+- V2 Client (Consumer) requirements
 
 ### Future
 
@@ -154,9 +156,9 @@ The V2 registry API does not enforce this.
 The rules for a repository name are as follows:
 
 1. A repository name is broken up into _path components_.
-   A component of a repository name must be at least one lowercase, alpha-numeric characters, optionally separated by periods, dashes or underscores.
-   More strictly, it must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*`.
-2. If a repository  name has two or more path components, they must be separated by a forward slash ("/").
+A component of a repository name must begin with one or more lowercase alpha-numeric characters. Subsequent lowercase alpha-numeric characters are optional and may be separated by periods, dashes or underscores.
+More strictly, it must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*`.
+2. If a repository name has two or more path components, they must be separated by a forward slash ("/").
 3. The total length of a repository name, including slashes, must be less than 256 characters.
 
 These name requirements _only_ apply to the registry API and should accept a superset of what is supported by other docker ecosystem components.
@@ -512,8 +514,7 @@ If this response is received, the client should resume from the "last valid rang
 A 416 will be returned under the following conditions:
 
 - Invalid Content-Range header format
-- Out of order chunk: the range of the next chunk must start immediately after
-  the "last valid range" from the previous response.
+- Out of order chunk: the range of the next chunk must start immediately after the "last valid range" from the previous response.
 
 When a chunk is accepted as part of the upload, a `202 Accepted` response will be returned, including a `Range` header with the current upload status:
 
@@ -876,7 +877,7 @@ If the image exists and has been successfully deleted, the following response wi
 
 If the image had already been deleted or did not exist, a `404 Not Found` response will be issued instead.
 
-> **Note**  When deleting a manifest from a registry version 2.3 or later, the following header must be used when `HEAD` or `GET`-ing the manifest to obtain the correct digest to delete:
+> **Note**: When deleting a manifest from a registry version 2.3 or later, the following header must be used when `HEAD` or `GET`-ing the manifest to obtain the correct digest to delete:
 
     Accept: application/vnd.docker.distribution.manifest.v2+json
 
