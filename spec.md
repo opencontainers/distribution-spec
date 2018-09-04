@@ -3,59 +3,104 @@ title: "HTTP API V2"
 description: "Specification for the Registry API."
 keywords: registry, on-prem, images, tags, repository, distribution, api, advanced
 ---
+# Open Container Initiative
+## Distribution Specification
 
-# Docker Registry HTTP API V2
+This specification defines an API protocol to facilitate distribution of images.
 
-## Introduction
+The goal of this specification is to standardize container image distribution based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md).
 
-The _Docker Registry HTTP API_ is the protocol to facilitate distribution of images to the docker engine.
-It interacts with instances of the docker registry, which is a service to manage information about docker images and enable their distribution.
-The specification covers the operation of version 2 of this API, known as _Docker Registry HTTP API V2_.
+### Table of Contents
 
-While the V1 registry protocol is usable, there are several problems with the architecture that have led to this new version.
-The main driver of this specification is a set of changes to the Docker image format, covered in [docker/docker#8093](https://github.com/docker/docker/issues/8093).
-The new, self-contained image manifest simplifies image definition and improves security.
-This specification will build on that work, leveraging new properties of the manifest format to improve performance, reduce bandwidth usage and decrease the likelihood of backend corruption.
+- [Introduction](spec.md)
+- [Notational Conventions](#notational-conventions)
+- [Historical Context](#historical-context)
+- [Scope](#scope)
+   - [Future](#future)
+- [Use Cases](#use-cases)
+   - [Image Verification](#image-verification)
+   - [Resumable Push](#resumable-push)
+   - [Resumable Pull](#resumable-pull)
+   - [Layer Upload De-duplication](#layer-upload-de-duplication)
+- [Changes](#changes)
+- [Overview](#overview)
+   - [Errors](#errors)
+   - [API Version Check](#api-version-check)
+   - [Content Digests](#content-digests)
+   - [Pulling An Image](#pulling-an-image)
+   - [Pushing An Image](#pushing-an-image)
+   - [Listing Repositories](#listing-repositories)
+   - [Listing Image Tags](#listing-image-tags)
+   - [Deleting an Image](#deleting-an-image)
+- [Detail](#detail)
+   - [Errors](#errors-2)
+   - [Base](#base)
+   - [Tags](#tags)
+   - [Manifest](#manifest)
+      - [GET Manifest](#get-manifest)
+      - [PUT Manifest](#put-manifest)
+      - [DELETE Manifest](#delete-manifest)
+   - [Blob](#blob)
+      - [GET Blob](#get-blob)
+         - [Fetch Blob](#fetch-blob)
+         - [Fetch Blob Part](#fetch-blob-part)
+      - [DELETE Blob](#delete-blob)
+   - [Initiate Blob Upload](#initiate-blob-upload)
+      - [POST Initiate Blob Upload](#post-initiate-blob-upload)
+         - [Initiate Monolithic Blob Upload](#initiate-monolithic-blob-upload)
+         - [Initiate Resumable Blob Upload](#initiate-resumable-blob-upload)
+         - [Mount Blob](#mount-blob)
+   - [Blob Upload](#blob-upload)
+      - [GET Blob Upload](#get-blob-upload)
+      - [PATCH Blob Upload](#patch-blob-upload)
+      - [PUT Blob Upload](#put-blob-upload)
+      - [DELETE Blob Upload](#delete-blob-upload)
+   - [Catalog](#catalog)
+      - [GET Catalog](#get-catalog)
 
-For relevant details and history leading up to this specification, please see the following issues:
+## Notational Conventions
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
+
+The key words "unspecified", "undefined", and "implementation-defined" are to be interpreted as described in the [rationale for the C99 standard][c99-unspecified].
+
+An implementation is not compliant if it fails to satisfy one or more of the MUST, MUST NOT, REQUIRED, SHALL, or SHALL NOT requirements for the protocols it implements.
+An implementation is compliant if it satisfies all the MUST, MUST NOT, REQUIRED, SHALL, and SHALL NOT requirements for the protocols it implements.
+
+## Historical Context
+
+For relevant details and a history leading up to this specification, please see the following issues:
 
 - [docker/docker#8093](https://github.com/docker/docker/issues/8093)
 - [docker/docker#9015](https://github.com/docker/docker/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
-### Scope
+<!--- TODO: add relevant background information here --->
 
-This specification covers the URL layout and protocols of the interaction between docker registry and docker core.
-This will affect the docker core registry API and the rewrite of docker-registry.
-Docker registry implementations may implement other API endpoints, but they are not covered by this specification.
+## Scope
 
-This includes the following features:
+This specification covers URL layout and protocols for interaction between a registry and registry client.
+Registry implementations MAY implement other API endpoints, but they are not covered by this specification.
+
+This specification includes the following features:
 
 - Namespace-oriented URI Layout
 - PUSH/PULL registry server for V2 image manifest format
 - Resumable layer PUSH support
-- V2 Client library implementation
+- V2 Client (Consumer) requirements
 
-While authentication and authorization support will influence this specification, details of the protocol will be left to a future specification.
-Relevant header definitions and error codes are present to provide an indication of what a client may encounter.
+### Future
 
-#### Future
+The following is an incomplete list of features, discussed during the process of cutting this specification, which MAY be out of the scope of this specification, MAY be the purview of another specification, or MAY be deferred to a future version:
 
-There are features that have been discussed during the process of cutting this specification.
-The following is an incomplete list:
-
+- Authentication and authorization support: While authentication and authorization support will influence this specification, those details MAY be left to a future specification. However, relevant header definitions and error codes are present to provide an indication of what a client may encounter.
 - Immutable image references
 - Multiple architecture support
 - Migration from v2compatibility representation
 
-These may represent features that are either out of the scope of this specification, the purview of another specification or have been deferred to a future version.
+## Use Cases
 
-### Use Cases
-
-For the most part, the use cases of the former registry API apply to the new version.
-Differentiating use cases are covered below.
-
-#### Image Verification
+### Image Verification
 
 A docker engine instance would like to run verified image named "library/ubuntu", with the tag "latest".
 The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
@@ -63,20 +108,20 @@ An untrusted registry returns a manifest.
 Before proceeding to download the individual layers, the engine verifies the manifest's signature, ensuring that the content was produced from a trusted source and no tampering has occurred.
 After each layer is downloaded, the engine verifies the digest of the layer, ensuring that the content matches that specified by the manifest.
 
-#### Resumable Push
+### Resumable Push
 
 Company X's build servers lose connectivity to docker registry before completing an image layer transfer.
 After connectivity returns, the build server attempts to re-upload the image.
 The registry notifies the build server that the upload has already been partially attempted.
 The build server responds by only sending the remaining data to complete the image file.
 
-#### Resumable Pull
+### Resumable Pull
 
 Company X is having more connectivity problems but this time in their deployment datacenter.
 When downloading an image, the connection is interrupted before completion.
 The client keeps the partial data and uses http `Range` requests to avoid downloading repeated data.
 
-#### Layer Upload De-duplication
+### Layer Upload De-duplication
 
 Company Y's build system creates two identical docker layers from build processes A and B.
 Build process A completes uploading the layer before B.
@@ -84,111 +129,13 @@ When process B attempts to upload the layer, the registry indicates that its not
 
 If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry (Note: we may modify this to prevent dogpile with some locking mechanism).
 
-### Changes
+## Changes
 
 The V2 specification has been written to work as a living document, specifying only what is certain and leaving what is not specified open or to future changes.
 Only non-conflicting additions should be made to the API and accepted changes should avoid preventing future changes from happening.
 
-This section should be updated when changes are made to the specification, indicating what is different.
+The [changes.md](changes.md) doc should be updated when changes are made to the specification, indicating what is different.
 Optionally, we may start marking parts of the specification to correspond with the versions enumerated here.
-
-Each set of changes is given a letter corresponding to a set of modifications that were applied to the baseline specification.
-These are merely for reference and shouldn't be used outside the specification other than to identify a set of modifications.
-
-<dl>
-  <dt>l</dt>
-  <dd>
-    <ul>
-      <li>Document TOOMANYREQUESTS error code.</li>
-    </ul>
-  </dd>
-
-  <dt>k</dt>
-  <dd>
-    <ul>
-      <li>Document use of Accept and Content-Type headers in manifests endpoint.</li>
-    </ul>
-  </dd>
-
-  <dt>j</dt>
-  <dd>
-    <ul>
-      <li>Add ability to mount blobs across repositories.</li>
-    </ul>
-  </dd>
-
-  <dt>i</dt>
-  <dd>
-    <ul>
-      <li>Clarified expected behavior response to manifest HEAD request.</li>
-    </ul>
-  </dd>
-
-  <dt>h</dt>
-  <dd>
-    <ul>
-      <li>All mention of tarsum removed.</li>
-    </ul>
-  </dd>
-
-  <dt>g</dt>
-  <dd>
-    <ul>
-      <li>Clarify behavior of pagination behavior with unspecified parameters.</li>
-    </ul>
-  </dd>
-
-  <dt>f</dt>
-  <dd>
-    <ul>
-      <li>Specify the delete API for layers and manifests.</li>
-    </ul>
-  </dd>
-
-  <dt>e</dt>
-  <dd>
-    <ul>
-      <li>Added support for listing registry contents.</li>
-      <li>Added pagination to tags API.</li>
-      <li>Added common approach to support pagination.</li>
-    </ul>
-  </dd>
-
-  <dt>d</dt>
-  <dd>
-    <ul>
-      <li>Allow repository name components to be one character.</li>
-      <li>Clarified that single component names are allowed.</li>
-    </ul>
-  </dd>
-
-  <dt>c</dt>
-  <dd>
-    <ul>
-      <li>Added section covering digest format.</li>
-      <li>Added more clarification that manifest cannot be deleted by tag.</li>
-    </ul>
-  </dd>
-
-  <dt>b</dt>
-  <dd>
-    <ul>
-      <li>Added capability of doing streaming upload to PATCH blob upload.</li>
-      <li>Updated PUT blob upload to no longer take final chunk, now requires entire data or no data.</li>
-      <li>Removed `416 Requested Range Not Satisfiable` response status from PUT blob upload.</li>
-    </ul>
-  </dd>
-
-  <dt>a</dt>
-  <dd>
-    <ul>
-      <li>Added support for immutable manifest references in manifest endpoints.</li>
-      <li>Deleting a manifest by tag has been deprecated.</li>
-      <li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
-      <li>Added error code for unsupported operations.</li>
-    </ul>
-  </dd>
-</dl>
 
 ## Overview
 
@@ -209,9 +156,9 @@ The V2 registry API does not enforce this.
 The rules for a repository name are as follows:
 
 1. A repository name is broken up into _path components_.
-   A component of a repository name must be at least one lowercase, alpha-numeric characters, optionally separated by periods, dashes or underscores.
-   More strictly, it must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*`.
-2. If a repository  name has two or more path components, they must be separated by a forward slash ("/").
+A component of a repository name must begin with one or more lowercase alpha-numeric characters. Subsequent lowercase alpha-numeric characters are optional and may be separated by periods, dashes or underscores.
+More strictly, it must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*`.
+2. If a repository name has two or more path components, they must be separated by a forward slash ("/").
 3. The total length of a repository name, including slashes, must be less than 256 characters.
 
 These name requirements _only_ apply to the registry API and should accept a superset of what is supported by other docker ecosystem components.
@@ -567,8 +514,7 @@ If this response is received, the client should resume from the "last valid rang
 A 416 will be returned under the following conditions:
 
 - Invalid Content-Range header format
-- Out of order chunk: the range of the next chunk must start immediately after
-  the "last valid range" from the previous response.
+- Out of order chunk: the range of the next chunk must start immediately after the "last valid range" from the previous response.
 
 When a chunk is accepted as part of the upload, a `202 Accepted` response will be returned, including a `Range` header with the current upload status:
 
@@ -931,7 +877,7 @@ If the image exists and has been successfully deleted, the following response wi
 
 If the image had already been deleted or did not exist, a `404 Not Found` response will be issued instead.
 
-> **Note**  When deleting a manifest from a registry version 2.3 or later, the following header must be used when `HEAD` or `GET`-ing the manifest to obtain the correct digest to delete:
+> **Note**: When deleting a manifest from a registry version 2.3 or later, the following header must be used when `HEAD` or `GET`-ing the manifest to obtain the correct digest to delete:
 
     Accept: application/vnd.docker.distribution.manifest.v2+json
 
