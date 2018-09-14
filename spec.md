@@ -71,8 +71,8 @@ An implementation is compliant if it satisfies all the MUST, MUST NOT, REQUIRED,
 
 For relevant details and a history leading up to this specification, please see the following issues:
 
-- [docker/docker#8093](https://github.com/docker/docker/issues/8093)
-- [docker/docker#9015](https://github.com/docker/docker/issues/9015)
+- [moby/moby#8093](https://github.com/moby/moby/issues/8093)
+- [moby/moby#9015](https://github.com/moby/moby/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
 <!--- TODO: add relevant background information here --->
@@ -102,7 +102,7 @@ The following is an incomplete list of features, discussed during the process of
 
 ### Image Verification
 
-A docker engine instance would like to run verified image named "library/ubuntu", with the tag "latest".
+A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
 The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
 An untrusted registry returns a manifest.
 Before proceeding to download the individual layers, the engine verifies the manifest's signature, ensuring that the content was produced from a trusted source and no tampering has occurred.
@@ -110,7 +110,7 @@ After each layer is downloaded, the engine verifies the digest of the layer, ens
 
 ### Resumable Push
 
-Company X's build servers lose connectivity to docker registry before completing an image layer transfer.
+Company X's build servers lose connectivity to a distribution endpoint before completing an image layer transfer.
 After connectivity returns, the build server attempts to re-upload the image.
 The registry notifies the build server that the upload has already been partially attempted.
 The build server responds by only sending the remaining data to complete the image file.
@@ -123,7 +123,7 @@ The client keeps the partial data and uses http `Range` requests to avoid downlo
 
 ### Layer Upload De-duplication
 
-Company Y's build system creates two identical docker layers from build processes A and B.
+Company Y's build system creates two identical layers from build processes A and B.
 Build process A completes uploading the layer before B.
 When process B attempts to upload the layer, the registry indicates that its not necessary because the layer is already known.
 
@@ -161,7 +161,7 @@ More strictly, it must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)
 2. If a repository name has two or more path components, they must be separated by a forward slash ("/").
 3. The total length of a repository name, including slashes, must be less than 256 characters.
 
-These name requirements _only_ apply to the registry API and should accept a superset of what is supported by other docker ecosystem components.
+These name requirements _only_ apply to the registry API and should accept a superset of what is supported by other components.
 
 All endpoints should support aggressive http caching, compression and range headers, where appropriate.
 The new API attempts to leverage HTTP semantics where possible but may break from standards to implement targeted features.
@@ -294,7 +294,7 @@ For reference, the relevant manifest fields for the registry are the following:
 | fsLayers  | A list of layer descriptors (including digest) |
 | signature | A JWS used to verify the manifest content      |
 
-For more information about the manifest format, please see [docker/docker#8093](https://github.com/docker/docker/issues/8093).
+For more information about the manifest format, please see [moby/moby#8093](https://github.com/moby/moby/issues/8093).
 
 When the manifest is in hand, the client must verify the signature to ensure the names and layers are valid.
 Once confirmed, the client will then use the digests to download the individual layers.
@@ -316,7 +316,7 @@ For more details on the manifest formats and their content types, see [manifest-
 In a successful response, the Content-Type header will indicate which manifest type is being returned.
 
 A `404 Not Found` response will be returned if the image is unknown to the registry.
-If the image exists and the response is successful, the image manifest will be returned, with the following format (see [docker/docker#8093](https://github.com/docker/docker/issues/8093) for details):
+If the image exists and the response is successful, the image manifest will be returned, with the following format (see [moby/moby#8093](https://github.com/moby/moby/issues/8093) for details):
 
     {
        "name": <name>,
@@ -899,7 +899,7 @@ A list of methods and URIs are covered in the table below:
 
 | Method | Path                               | Entity               | Description                                                                                                                                                                                                                              |
 |--------|------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| GET    | `/v2/`                             | Base                 | Check that the endpoint implements Docker Registry API V2.                                                                                                                                                                               |
+| GET    | `/v2/`                             | Base                 | Check that the endpoint implements distribution API.                                                                                                                                                                               |
 | GET    | `/v2/<name>/tags/list`             | Tags                 | Fetch the tags under the repository identified by `name`.                                                                                                                                                                                |
 | GET    | `/v2/<name>/manifests/<reference>` | Manifest             | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.                        |
 | PUT    | `/v2/<name>/manifests/<reference>` | Manifest             | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.                                                                                                                                          |
@@ -944,7 +944,7 @@ Typically, this can be used for lightweight version checks and to validate regis
 
 #### GET Base
 
-Check that the endpoint implements Docker Registry API V2.
+Check that the endpoint implements the distribution API.
 
 ```
 GET /v2/
