@@ -13,3 +13,23 @@
 // limitations under the License.
 
 package image
+
+import (
+	"crypto/sha256"
+	"math/rand"
+	"strconv"
+)
+
+func GenRandomBlob(blobLen int) string {
+	blob := ""
+	for i := 0; i < blobLen; i++ {
+		blob += strconv.Itoa(rand.Intn(9))
+	}
+	return blob
+}
+
+func GetHash(inputStr string) string {
+	h := sha256.New()
+	h.Write([]byte(inputStr))
+	return string(h.Sum(nil))
+}

@@ -18,10 +18,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/distribution-spec/test/pkg/auth"
 	distp "github.com/opencontainers/distribution-spec/test/pkg/distp"
+	"github.com/opencontainers/distribution-spec/test/pkg/image"
 )
 
 var (
@@ -35,8 +37,6 @@ var (
 
 func init() {
 	homeDir = os.Getenv("HOME")
-
-	regURL = regAuthCtx.RegURL
 }
 
 func TestCheckAPIVersion(t *testing.T) {
@@ -64,13 +64,84 @@ func TestCheckAPIVersion(t *testing.T) {
 	}
 }
 
-func TestPullManifest(t *testing.T) {
+func testUploadLayer(t *testing.T) {
+	regAuthCtx := auth.NewRegAuthContext()
+	regURL := regAuthCtx.RegURL
+	indexServer := auth.GetIndexServer(regURL)
+
+	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
+	reqPath := filepath.Join(remoteName, "blobs/uploads", testRefName)
+
+	regAuthCtx.Scope.RemoteName = remoteName
+	regAuthCtx.Scope.Actions = "push"
+
+	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
+		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
+	}
+
+	// 1. POST
+	// Send a POST request without any body specified.
+	postURL := "https://" + indexServer + "/v2/" + reqPath
+
+	res, err := regAuthCtx.GetResponse(postURL, "POST", nil, []int{http.StatusOK, http.StatusAccepted})
+	if err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
+	}
+
+	uuid := res.Header.Get(distp.UploadUuidKey)
+
+	// 2. PATCH
+	// Generate a 100-byte blob of a randomly generated string.
+	// Send a PATCH request with the blob.
+	blob := image.GenRandomBlob(100)
+
+	if _, err := regAuthCtx.GetResponse(postURL, "PATCH", strings.NewReader(blob),
+		[]int{http.StatusOK, http.StatusAccepted}); err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
+	}
+
+	// 3. PUT
+	// Generate a blob's digest, generated as a sha256 checksum of the blob.
+	// Send a PUT request with a "digest=..." option appended to its URL.
+	digest := image.GetHash(blob)
+	putURL := "https://" + indexServer + "/v2/" + reqPath + "/" + uuid + "?digest=" + digest
+
+	if _, err := regAuthCtx.GetResponse(putURL, "PUT", strings.NewReader(blob),
+		[]int{http.StatusCreated}); err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
+	}
+}
+
+func testPushManifest(t *testing.T) {
+	regAuthCtx := auth.NewRegAuthContext()
+	regURL := regAuthCtx.RegURL
 	indexServer := auth.GetIndexServer(regURL)
 
 	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
 	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
+	regAuthCtx.Scope.RemoteName = remoteName
+	regAuthCtx.Scope.Actions = "push"
+
+	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
+		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
+	}
+
+	inputURL := "https://" + indexServer + "/v2/" + reqPath
+
+	if _, err := regAuthCtx.GetResponse(inputURL, "PUT", nil, []int{http.StatusCreated}); err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
+	}
+}
+
+func testPullManifest(t *testing.T) {
 	regAuthCtx := auth.NewRegAuthContext()
+	regURL := regAuthCtx.RegURL
+	indexServer := auth.GetIndexServer(regURL)
+
+	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
+	reqPath := filepath.Join(remoteName, "manifests", testRefName)
+
 	regAuthCtx.Scope.RemoteName = remoteName
 	regAuthCtx.Scope.Actions = "pull"
 
@@ -85,23 +156,8 @@ func TestPullManifest(t *testing.T) {
 	}
 }
 
-func TestPushManifest(t *testing.T) {
-	indexServer := auth.GetIndexServer(regURL)
-
-	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
-	reqPath := filepath.Join(remoteName, "manifests", testRefName)
-
-	regAuthCtx := auth.NewRegAuthContext()
-	regAuthCtx.Scope.RemoteName = remoteName
-	regAuthCtx.Scope.Actions = "push"
-
-	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
-		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
-	}
-
-	inputURL := "https://" + indexServer + "/v2/" + reqPath
-
-	if _, err := regAuthCtx.GetResponse(inputURL, "PUT", nil, []int{http.StatusOK}); err != nil {
-		t.Fatalf("got an unexpected reply: %v", err)
-	}
+func TestPushPullLayer(t *testing.T) {
+	testUploadLayer(t)
+	testPushManifest(t)
+	testPullManifest(t)
 }
