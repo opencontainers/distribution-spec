@@ -193,25 +193,21 @@ For the purposes of the specification error codes will only be added and never r
 
 For a complete account of all error codes, please see the [_Errors_](#errors-2) section.
 
-### API Version Check
+### Distribution Version Check
 
 A minimal endpoint, mounted at `/v2/` will provide version support information based on its response statuses.
 The request format is as follows:
 
     GET /v2/
 
-If a `200 OK` response is returned, the registry implements the V2(.1) registry API and the client may proceed safely with other V2 operations.
-Optionally, the response may contain information about the supported paths in the response body.
-The client should be prepared to ignore this data.
+If a `200 OK` response is returned, the registry implements the distribution specification and the client may proceed safely with all other operations.
 
 If a `401 Unauthorized` response is returned, the client should take action based on the contents of the "WWW-Authenticate" header and try the endpoint again.
 Depending on access control setup, the client may still have to authenticate against different resources, even if this check succeeds.
 
-If `404 Not Found` response status, or other unexpected status, is returned, the client should proceed with the assumption that the registry does not implement V2 of the API.
+If `404 Not Found` response status, or other unexpected status, is returned, the client should proceed with the assumption that the registry does not implement the distribution specification.
 
-When a `200 OK` or `401 Unauthorized` response is returned, the "Docker-Distribution-API-Version" header should be set to "registry/2.0".
-Clients may require this header value to determine if the endpoint serves this API.
-When this header is omitted, clients may fallback to an older API version.
+When a `200 OK` or `401 Unauthorized` response is returned, the "OCI-Distribution-Version" header MUST be set to the OCI Distribution version the server implements.
 
 ### Content Digests
 
@@ -262,7 +258,7 @@ A digest can be verified by independently calculating `D` and comparing it with 
 
 #### Digest Header
 
-To provide verification of http content, any response may include a `Docker-Content-Digest` header.
+To provide verification of http content, any response may include a `OCI-Content-Digest` header.
 This will include the digest of the target entity returned in the response.
 For blobs, this is the entire blob content.
 For manifests, this is the manifest body without the signature content, also known as the JWS payload.
@@ -277,7 +273,7 @@ In such a case, the client may choose to verify the digests in both domains or i
 To maintain security, the client _must_ always verify the content against the _digest_ used to fetch the content.
 
 > __IMPORTANT:__ If a _digest_ is used to fetch content, the client should use the same digest used to fetch the content to verify it.
-> The header `Docker-Content-Digest` should not be trusted over the "local" digest.
+> The header `OCI-Content-Digest` should not be trusted over the "local" digest.
 
 ### Pulling An Image
 
@@ -351,7 +347,7 @@ If the image exists and the response is successful the response will be as follo
 ```
 200 OK
 Content-Length: <length of manifest>
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 #### Pulling a Layer
@@ -414,7 +410,7 @@ The response will look as follows:
 ```
 200 OK
 Content-Length: <length of blob>
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 When this response is received, the client can assume that the layer is already available in the registry under the given name and should take no further action to upload the layer.
@@ -426,19 +422,19 @@ If the POST request is successful, a `202 Accepted` response will be returned wi
 
 ```
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: bytes=0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 The rest of the upload process can be carried out with the returned url, called the "Upload URL" from the `Location` header.
 All responses to the upload url, whether sending data or getting status, will be in this format.
 
-Though the URI format (`/v2/<name>/blobs/uploads/<uuid>`) for the `Location` header is specified, clients should treat it as an opaque url and should never try to assemble it.
-While the `uuid` parameter may be an actual UUID, this proposal imposes no constraints on the format and clients should never impose any.
+Though the URI format (`/v2/<name>/blobs/uploads/<id>`) for the `Location` header is specified, clients should treat it as an opaque url and should never try to assemble it.
+While the `id` parameter may be an actual id, this proposal imposes no constraints on the format and clients should never impose any.
 
-If clients need to correlate local upload state with remote upload state, the contents of the `Docker-Upload-UUID` header should be used.
+If clients need to correlate local upload state with remote upload state, the contents of the `OCI-Upload-ID` header should be used.
 Such an id can be used to key the last used location header when implementing resumable uploads.
 
 ##### Upload Progress
@@ -454,7 +450,7 @@ Range: bytes=0-0
 To get the status of an upload, issue a GET request to the upload URL:
 
 ```
-GET /v2/<name>/blobs/uploads/<uuid>
+GET /v2/<name>/blobs/uploads/<id>
 Host: <registry host>
 ```
 
@@ -462,9 +458,9 @@ The response will be similar to the above, except will return 204 status:
 
 ```
 204 No Content
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: bytes=0-<offset>
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 Note that the HTTP `Range` header byte ranges are inclusive and that will be honored, even in non-standard use cases.
@@ -475,7 +471,7 @@ A monolithic upload is simply a chunked upload with a single chunk and may be fa
 To carry out a "monolithic" upload, one can simply put the entire content blob to the provided URL:
 
 ```
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<id>?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
 
@@ -490,7 +486,7 @@ Please see the [_Completed Upload_](#completed-upload) section for details on th
 To carry out an upload of a chunk, the client can specify a range header and only include that part of the layer file:
 
 ```
-PATCH /v2/<name>/blobs/uploads/<uuid>
+PATCH /v2/<name>/blobs/uploads/<id>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
 Content-Type: application/octet-stream
@@ -504,10 +500,10 @@ If the server cannot accept the chunk, a `416 Requested Range Not Satisfiable` r
 
 ```
 416 Requested Range Not Satisfiable
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: 0-<last valid range>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 If this response is received, the client should resume from the "last valid range" and upload the subsequent chunk.
@@ -520,10 +516,10 @@ When a chunk is accepted as part of the upload, a `202 Accepted` response will b
 
 ```
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: bytes=0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 ##### Completed Upload
@@ -533,7 +529,7 @@ If it is not provided, the upload will not be considered complete.
 The format for the final chunk will be as follows:
 
 ```
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<id>?digest=<digest>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
 Content-Type: application/octet-stream
@@ -551,11 +547,11 @@ When the last chunk is received and the layer has been validated, the client wil
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 The `Location` header will contain the registry URL to access the accepted layer file.
-The `Docker-Content-Digest` header returns the canonical digest of the uploaded blob which may differ from the provided digest.
+The `OCI-Content-Digest` header returns the canonical digest of the uploaded blob which may differ from the provided digest.
 Most clients may ignore the value but if it is used, the client should verify the value against the uploaded blob data.
 
 ###### Digest Parameter
@@ -575,10 +571,10 @@ An upload can be cancelled by issuing a DELETE request to the upload endpoint.
 The format will be as follows:
 
 ```
-DELETE /v2/<name>/blobs/uploads/<uuid>
+DELETE /v2/<name>/blobs/uploads/<id>
 ```
 
-After this request is issued, the upload uuid will no longer be valid and the registry server will dump all intermediate data.
+After this request is issued, the upload id will no longer be valid and the registry server will dump all intermediate data.
 While uploads will time out if not completed, clients should issue this request if they encounter a fatal error but still have the ability to issue an http request.
 
 ##### Cross Repository Blob Mount
@@ -597,21 +593,21 @@ If the blob is successfully mounted, the client will receive a `201 Created` res
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 The `Location` header will contain the registry URL to access the accepted layer file.
-The `Docker-Content-Digest` header returns the canonical digest of the uploaded blob which may differ from the provided digest.
+The `OCI-Content-Digest` header returns the canonical digest of the uploaded blob which may differ from the provided digest.
 Most clients may ignore the value but if it is used, the client should verify the value against the uploaded blob data.
 
 If a mount fails due to invalid repository or digest arguments, the registry will fall back to the standard upload behavior and return a `202 Accepted` with the upload URL in the `Location` header:
 
 ```
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: bytes=0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 This behavior is consistent with older versions of the registry, which do not recognize the repository mount query parameters.
@@ -627,7 +623,7 @@ If there is a problem with the upload, a 4xx error will be returned indicating t
 After receiving a 4xx response (except 416, as called out above), the upload will be considered failed and the client should take appropriate action.
 
 Note that the upload url will not be available forever.
-If the upload uuid is unknown to the registry, a `404 Not Found` response will be returned and the client must restart the upload process.
+If the upload id is unknown to the registry, a `404 Not Found` response will be returned and the client must restart the upload process.
 
 #### Deleting a Layer
 
@@ -907,10 +903,10 @@ A list of methods and URIs are covered in the table below:
 | GET    | `/v2/<name>/blobs/<digest>`        | Blob                 | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.                                                              |
 | DELETE | `/v2/<name>/blobs/<digest>`        | Blob                 | Delete the blob identified by `name` and `digest`                                                                                                                                                                                        |
 | POST   | `/v2/<name>/blobs/uploads/`        | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
-| GET    | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.                                                                                             |
-| PATCH  | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Upload a chunk of data for the specified upload.                                                                                                                                                                                         |
-| PUT    | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Complete the upload specified by `uuid`, optionally appending the body as the final chunk.                                                                                                                                               |
-| DELETE | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
+| GET    | `/v2/<name>/blobs/uploads/<id>`  | Blob Upload          | Retrieve status of upload identified by `id`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.                                                                                             |
+| PATCH  | `/v2/<name>/blobs/uploads/<id>`  | Blob Upload          | Upload a chunk of data for the specified upload.                                                                                                                                                                                         |
+| PUT    | `/v2/<name>/blobs/uploads/<id>`  | Blob Upload          | Complete the upload specified by `id`, optionally appending the body as the final chunk.                                                                                                                                               |
+| DELETE | `/v2/<name>/blobs/uploads/<id>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
 | GET    | `/v2/_catalog`                     | Catalog              | Retrieve a sorted, json list of repositories available in the registry.                                                                                                                                                                  |
 
 The detail for each endpoint is covered in the following sections.
@@ -1431,7 +1427,7 @@ The following parameters should be specified on the request:
 
 ```
 200 OK
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 Content-Type: <media type of manifest>
 
 {
@@ -1456,7 +1452,7 @@ The following headers will be returned with the response:
 
 | Name                    | Description                                     |
 |-------------------------|-------------------------------------------------|
-| `Docker-Content-Digest` | Digest of the targeted content for the request. |
+| `OCI-Content-Digest` | Digest of the targeted content for the request. |
 
 ###### On Failure: Bad Request
 
@@ -1659,7 +1655,7 @@ The following parameters should be specified on the request:
 201 Created
 Location: <url>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 The manifest has been accepted by the registry and is stored under the specified `name` and `tag`.
@@ -1670,7 +1666,7 @@ The following headers will be returned with the response:
 |-------------------------|----------------------------------------------------------------------|
 | `Location`              | The canonical location url of the uploaded manifest.                 |
 | `Content-Length`        | The `Content-Length` header must be zero and the body must be empty. |
-| `Docker-Content-Digest` | Digest of the targeted content for the request.                      |
+| `OCI-Content-Digest` | Digest of the targeted content for the request.                      |
 
 ###### On Failure: Invalid Manifest
 
@@ -2143,7 +2139,7 @@ The following parameters should be specified on the request:
 ```
 200 OK
 Content-Length: <length>
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 Content-Type: application/octet-stream
 
 <blob binary data>
@@ -2157,14 +2153,14 @@ The following headers will be returned with the response:
 | Name                    | Description                                     |
 |-------------------------|-------------------------------------------------|
 | `Content-Length`        | The length of the requested blob content.       |
-| `Docker-Content-Digest` | Digest of the targeted content for the request. |
+| `OCI-Content-Digest` | Digest of the targeted content for the request. |
 
 ###### On Success: Temporary Redirect
 
 ```
 307 Temporary Redirect
 Location: <blob location>
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 The blob identified by `digest` is available at the provided location.
@@ -2174,7 +2170,7 @@ The following headers will be returned with the response:
 | Name                    | Description                                        |
 |-------------------------|----------------------------------------------------|
 | `Location`              | The location where the layer should be accessible. |
-| `Docker-Content-Digest` | Digest of the targeted content for the request.    |
+| `OCI-Content-Digest` | Digest of the targeted content for the request.    |
 
 ###### On Failure: Bad Request
 
@@ -2629,7 +2625,7 @@ The following parameters should be specified on the request:
 ```
 202 Accepted
 Content-Length: 0
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 The following headers will be returned with the response:
@@ -2637,7 +2633,7 @@ The following headers will be returned with the response:
 | Name                    | Description                                     |
 |-------------------------|-------------------------------------------------|
 | `Content-Length`        | 0                                               |
-| `Docker-Content-Digest` | Digest of the targeted content for the request. |
+| `OCI-Content-Digest` | Digest of the targeted content for the request. |
 
 
 ###### On Failure: Invalid Name or Digest
@@ -2883,7 +2879,7 @@ The following parameters should be specified on the request:
 201 Created
 Location: <blob location>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 The blob has been created in the registry and is available at the provided location.
@@ -2894,7 +2890,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Location`           |                                                                      |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.           |
+| `OCI-Upload-ID` | Identifies the docker upload id for the current request.           |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -3082,9 +3078,9 @@ The following parameters should be specified on the request:
 ```
 202 Accepted
 Content-Length: 0
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: 0-0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 The upload has been created.
@@ -3098,7 +3094,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty.                                                                           |
 | `Location`           | The location of the created upload.Clients should use the contents verbatim to complete the upload, adding parameters where required.          |
 | `Range`              | Range header indicating the progress of the upload.When starting an upload, it will return an empty range, since no content has been received. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.                                                                                     |
+| `OCI-Upload-ID` | Identifies the upload id for the current request.                                                                                     |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -3275,7 +3271,7 @@ The following parameters should be specified on the request:
 201 Created
 Location: <blob location>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 The blob has been mounted in the repository and is available at the provided location.
@@ -3286,7 +3282,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Location`           |                                                                      |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.           |
+| `OCI-Upload-ID` | Identifies the upload id for the current request.           |
 
 
 
@@ -3461,11 +3457,11 @@ The `Location` header and its parameters should be preserved by clients, using t
 
 #### GET Blob Upload
 
-Retrieve status of upload identified by `uuid`.
+Retrieve status of upload identified by `id`.
 The primary purpose of this endpoint is to resolve the current status of a resumable upload.
 
 ```
-GET /v2/<name>/blobs/uploads/<uuid>
+GET /v2/<name>/blobs/uploads/<id>
 Host: <registry host>
 Authorization: <scheme> <token>
 ```
@@ -3479,7 +3475,7 @@ The following parameters should be specified on the request:
 | `Host`          | header | Standard HTTP Host Header.Should be set to the registry host.                                 |
 | `Authorization` | header | An RFC7235 compliant authorization header.                                                    |
 | `name`          | path   | Name of the target repository.                                                                |
-| `uuid`          | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
+| `id`          | path   | A id identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
 ###### On Success: Upload Progress
 
@@ -3487,7 +3483,7 @@ The following parameters should be specified on the request:
 204 No Content
 Range: 0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 The upload is known and in progress.
@@ -3499,7 +3495,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Range`              | Range indicating the current progress of the upload.                 |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.           |
+| `OCI-Upload-ID` | Identifies the upload id for the current request.           |
 
 ###### On Failure: Bad Request
 
@@ -3697,7 +3693,7 @@ Upload a chunk of data for the specified upload.
 ##### Stream upload
 
 ```
-PATCH /v2/<name>/blobs/uploads/<uuid>
+PATCH /v2/<name>/blobs/uploads/<id>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Type: application/octet-stream
@@ -3714,16 +3710,16 @@ The following parameters should be specified on the request:
 | `Host`          | header | Standard HTTP Host Header.Should be set to the registry host.                                 |
 | `Authorization` | header | An RFC7235 compliant authorization header.                                                    |
 | `name`          | path   | Name of the target repository.                                                                |
-| `uuid`          | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
+| `id`          | path   | A id identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
 ###### On Success: Data Accepted
 
 ```
 204 No Content
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: 0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 The stream of data has been accepted and the current progress is available in the range header.
@@ -3736,7 +3732,7 @@ The following headers will be returned with the response:
 | `Location`           | The location of the upload.Clients should assume this changes after each request.Clients should use the contents verbatim to complete the upload, adding parameters where required. |
 | `Range`              | Range indicating the current progress of the upload.                                                                                                                                |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty.                                                                                                                |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.                                                                                                                          |
+| `OCI-Upload-ID` | Identifies the upload id for the current request.                                                                                                                          |
 
 ###### On Failure: Bad Request
 
@@ -3932,7 +3928,7 @@ The error codes that may be included in the response body are enumerated below:
 ##### Chunked upload
 
 ```
-PATCH /v2/<name>/blobs/uploads/<uuid>
+PATCH /v2/<name>/blobs/uploads/<id>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Range: <start of range>-<end of range, inclusive>
@@ -3954,16 +3950,16 @@ The following parameters should be specified on the request:
 | `Content-Range`  | header | Range of bytes identifying the desired block of content represented by the body.Start must the end offset retrieved via status check plus one.Note that this is a non-standard use of the `Content-Range` header. |
 | `Content-Length` | header | Length of the chunk being uploaded, corresponding the length of the request body.                                                                                                                                 |
 | `name`           | path   | Name of the target repository.                                                                                                                                                                                    |
-| `uuid`           | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                                                                                                                     |
+| `id`           | path   | A id identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                                                                                                                     |
 
 ###### On Success: Chunk Accepted
 
 ```
 204 No Content
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<id>
 Range: 0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+OCI-Upload-ID: <id>
 ```
 
 The chunk of data has been accepted and the current progress is available in the range header.
@@ -3976,7 +3972,7 @@ The following headers will be returned with the response:
 | `Location`           | The location of the upload.Clients should assume this changes after each request.Clients should use the contents verbatim to complete the upload, adding parameters where required. |
 | `Range`              | Range indicating the current progress of the upload.                                                                                                                                |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty.                                                                                                                |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.                                                                                                                          |
+| `OCI-Upload-ID` | Identifies the docker upload id for the current request.                                                                                                                          |
 
 ###### On Failure: Bad Request
 
@@ -4177,10 +4173,10 @@ The error codes that may be included in the response body are enumerated below:
 
 #### PUT Blob Upload
 
-Complete the upload specified by `uuid`, optionally appending the body as the final chunk.
+Complete the upload specified by `id`, optionally appending the body as the final chunk.
 
 ```
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<id>?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: <length of data>
@@ -4200,7 +4196,7 @@ The following parameters should be specified on the request:
 | `Authorization`  | header | An RFC7235 compliant authorization header.                                                                             |
 | `Content-Length` | header | Length of the data being uploaded, corresponding to the length of the request body.May be zero if no data is provided. |
 | `name`           | path   | Name of the target repository.                                                                                         |
-| `uuid`           | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                          |
+| `id`           | path   | A id identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                          |
 | `digest`         | query  | Digest of uploaded blob.                                                                                               |
 
 ###### On Success: Upload Complete
@@ -4210,7 +4206,7 @@ The following parameters should be specified on the request:
 Location: <blob location>
 Content-Range: <start of range>-<end of range, inclusive>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+OCI-Content-Digest: <digest>
 ```
 
 The upload has been completed and accepted by the registry.
@@ -4223,7 +4219,7 @@ The following headers will be returned with the response:
 | `Location`              | The canonical location of the blob for retrieval                                                                                                                                                                  |
 | `Content-Range`         | Range of bytes identifying the desired block of content represented by the body.Start must match the end of offset retrieved via status check.Note that this is a non-standard use of the `Content-Range` header. |
 | `Content-Length`        | The `Content-Length` header must be zero and the body must be empty.                                                                                                                                              |
-| `Docker-Content-Digest` | Digest of the targeted content for the request.                                                                                                                                                                   |
+| `OCI-Content-Digest` | Digest of the targeted content for the request.                                                                                                                                                                   |
 
 ###### On Failure: Bad Request
 
@@ -4421,13 +4417,13 @@ Cancel outstanding upload processes, releasing associated resources.
 If this is not called, the unfinished uploads will eventually timeout.
 
 ```
-DELETE /v2/<name>/blobs/uploads/<uuid>
+DELETE /v2/<name>/blobs/uploads/<id>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: 0
 ```
 
-Cancel the upload specified by `uuid`.
+Cancel the upload specified by `id`.
 
 The following parameters should be specified on the request:
 
@@ -4437,7 +4433,7 @@ The following parameters should be specified on the request:
 | `Authorization`  | header | An RFC7235 compliant authorization header.                                                    |
 | `Content-Length` | header | The `Content-Length` header must be zero and the body must be empty.                          |
 | `name`           | path   | Name of the target repository.                                                                |
-| `uuid`           | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
+| `id`           | path   | A id identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
 ###### On Success: Upload Deleted
 
