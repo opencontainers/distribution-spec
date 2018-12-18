@@ -6,7 +6,7 @@ BINDIR ?= ${GOPATH}/bin
 VERSION=$(shell git describe --tags --always --dirty)
 
 test:
-	go test -v github.com/kinvolk/ocicert/dist/...
+	go test -v github.com/opencontainers/distribution-spec/test/dist/...
 
 update-vendor: | dep
 	dep ensure

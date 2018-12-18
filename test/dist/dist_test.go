@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kinvolk/ocicert/pkg/auth"
-	distp "github.com/kinvolk/ocicert/pkg/distp"
+	"github.com/opencontainers/distribution-spec/test/pkg/auth"
+	distp "github.com/opencontainers/distribution-spec/test/pkg/distp"
 )
 
 var (

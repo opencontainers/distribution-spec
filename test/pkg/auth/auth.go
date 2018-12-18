@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	distp "github.com/kinvolk/ocicert/pkg/distp"
+	distp "github.com/opencontainers/distribution-spec/test/pkg/distp"
 )
 
 var (
