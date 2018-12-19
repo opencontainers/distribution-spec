@@ -180,6 +180,21 @@ func testPullManifest(t *testing.T) {
 	if _, err := regAuthCtx.GetResponse(inputURL, "GET", nil, []int{http.StatusOK}); err != nil {
 		t.Fatalf("got an unexpected reply: %v", err)
 	}
+
+	reqPath = filepath.Join(remoteName, "tags/list")
+
+	regAuthCtx.Scope.RemoteName = remoteName
+	regAuthCtx.Scope.Actions = "pull"
+
+	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
+		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
+	}
+
+	inputURL = "https://" + indexServer + "/v2/" + reqPath
+
+	if _, err := regAuthCtx.GetResponse(inputURL, "GET", nil, []int{http.StatusOK}); err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
+	}
 }
 
 func testPullLayer(t *testing.T) {
@@ -301,7 +316,7 @@ func TestListTags(t *testing.T) {
 	indexServer := auth.GetIndexServer(regURL)
 
 	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
-	reqPath := filepath.Join(remoteName, "tags/list")
+	reqPath := filepath.Join(remoteName, "tags/")
 
 	regAuthCtx.Scope.RemoteName = remoteName
 	regAuthCtx.Scope.Actions = "pull"
