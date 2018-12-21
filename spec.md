@@ -429,7 +429,6 @@ If the POST request is successful, a `202 Accepted` response will be returned wi
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
 ```
 
 The rest of the upload process can be carried out with the returned url, called the "Upload URL" from the `Location` header.
@@ -438,8 +437,8 @@ All responses to the upload url, whether sending data or getting status, will be
 Though the URI format (`/v2/<name>/blobs/uploads/<uuid>`) for the `Location` header is specified, clients should treat it as an opaque url and should never try to assemble it.
 While the `uuid` parameter may be an actual UUID, this proposal imposes no constraints on the format and clients should never impose any.
 
-If clients need to correlate local upload state with remote upload state, the contents of the `Docker-Upload-UUID` header should be used.
-Such an id can be used to key the last used location header when implementing resumable uploads.
+Header `Blob-Upload-UUID` *OPTIONAL*: If clients need to correlate local upload state with remote upload state, largely for resumable uploads.
+Header `Docker-Upload-UUID` *OPTIONAL*: legacy compatibility
 
 ##### Upload Progress
 
@@ -464,7 +463,6 @@ The response will be similar to the above, except will return 204 status:
 204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
-Docker-Upload-UUID: <uuid>
 ```
 
 Note that the HTTP `Range` header byte ranges are inclusive and that will be honored, even in non-standard use cases.
@@ -507,7 +505,7 @@ If the server cannot accept the chunk, a `416 Requested Range Not Satisfiable` r
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<last valid range>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 If this response is received, the client should resume from the "last valid range" and upload the subsequent chunk.
@@ -523,7 +521,7 @@ When a chunk is accepted as part of the upload, a `202 Accepted` response will b
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 ##### Completed Upload
@@ -611,7 +609,7 @@ If a mount fails due to invalid repository or digest arguments, the registry wil
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 This behavior is consistent with older versions of the registry, which do not recognize the repository mount query parameters.
@@ -2883,7 +2881,7 @@ The following parameters should be specified on the request:
 201 Created
 Location: <blob location>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 The blob has been created in the registry and is available at the provided location.
@@ -2894,7 +2892,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Location`           |                                                                      |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.           |
+| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.           |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -3084,7 +3082,7 @@ The following parameters should be specified on the request:
 Content-Length: 0
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 The upload has been created.
@@ -3098,7 +3096,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty.                                                                           |
 | `Location`           | The location of the created upload.Clients should use the contents verbatim to complete the upload, adding parameters where required.          |
 | `Range`              | Range header indicating the progress of the upload.When starting an upload, it will return an empty range, since no content has been received. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.                                                                                     |
+| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.                                                                                     |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -3275,7 +3273,7 @@ The following parameters should be specified on the request:
 201 Created
 Location: <blob location>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 The blob has been mounted in the repository and is available at the provided location.
@@ -3286,7 +3284,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Location`           |                                                                      |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.           |
+| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.           |
 
 
 
@@ -3487,7 +3485,7 @@ The following parameters should be specified on the request:
 204 No Content
 Range: 0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 The upload is known and in progress.
@@ -3499,7 +3497,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Range`              | Range indicating the current progress of the upload.                 |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty. |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.           |
+| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.           |
 
 ###### On Failure: Bad Request
 
@@ -3723,7 +3721,7 @@ The following parameters should be specified on the request:
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 The stream of data has been accepted and the current progress is available in the range header.
@@ -3736,7 +3734,7 @@ The following headers will be returned with the response:
 | `Location`           | The location of the upload.Clients should assume this changes after each request.Clients should use the contents verbatim to complete the upload, adding parameters where required. |
 | `Range`              | Range indicating the current progress of the upload.                                                                                                                                |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty.                                                                                                                |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.                                                                                                                          |
+| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.                                                                                                                          |
 
 ###### On Failure: Bad Request
 
@@ -3963,7 +3961,7 @@ The following parameters should be specified on the request:
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
-Docker-Upload-UUID: <uuid>
+Blob-Upload-UUID: <uuid>
 ```
 
 The chunk of data has been accepted and the current progress is available in the range header.
@@ -3976,7 +3974,7 @@ The following headers will be returned with the response:
 | `Location`           | The location of the upload.Clients should assume this changes after each request.Clients should use the contents verbatim to complete the upload, adding parameters where required. |
 | `Range`              | Range indicating the current progress of the upload.                                                                                                                                |
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty.                                                                                                                |
-| `Docker-Upload-UUID` | Identifies the docker upload uuid for the current request.                                                                                                                          |
+| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.                                                                                                                          |
 
 ###### On Failure: Bad Request
 
