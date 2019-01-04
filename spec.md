@@ -718,7 +718,8 @@ Content-Type: application/json
 }
 ```
 
-Note that the contents of the response are specific to the registry implementation.
+Note that catalog operations are optional for registry implementations.
+Contents of the response are specific to the registry implementation.
 Some registries may opt to provide a full catalog output, limit it based on the user's access level or omit upstream results, if providing mirroring functionality.
 Subsequently, the presence of a repository in the catalog listing only means that the registry *may* provide access to the repository at the time of the request.
 Conversely, a missing entry does *not* mean that the registry does not have the repository.
@@ -911,7 +912,7 @@ A list of methods and URIs are covered in the table below:
 | PATCH  | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Upload a chunk of data for the specified upload.                                                                                                                                                                                         |
 | PUT    | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Complete the upload specified by `uuid`, optionally appending the body as the final chunk.                                                                                                                                               |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
-| GET    | `/v2/_catalog`                     | Catalog              | Retrieve a sorted, json list of repositories available in the registry.                                                                                                                                                                  |
+| GET    | `/v2/_catalog`                     | Catalog              | (OPTIONAL) Retrieve a sorted, json list of repositories available in the registry.                                                                                                                                                                  |
 
 The detail for each endpoint is covered in the following sections.
 
@@ -4643,7 +4644,7 @@ The error codes that may be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-### Catalog
+### Catalog (OPTIONAL)
 
 List a set of available repositories in the local registry cluster.
 Does not provide any indication of what may be available upstream.
