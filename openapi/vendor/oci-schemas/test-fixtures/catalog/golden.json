@@ -1,0 +1,6 @@
+{
+   "repositories": [
+      "foo/bar",
+      "baz/bar"
+   ]
+}

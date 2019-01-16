@@ -1,0 +1,15 @@
+{
+   "$id": "http://opencontainers.org/schema/catalog",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "description": "This property contains a list of repositories hosted on the registry.",
+   "properties": {
+      "repositories": {
+         "items": {
+            "type": "string"
+         },
+         "type": "array"
+      }
+   },
+   "title": "OCI Catalog List",
+   "type": "object"
+}

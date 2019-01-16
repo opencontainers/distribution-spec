@@ -1,0 +1,150 @@
+{
+   "$id": "http://opencontainers.org/image/manifest",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "properties": {
+      "architecture": {
+         "description": "The CPU architecture which the binaries in the image are built to run on. Configurations SHOULD use, and implementations SHOULD understand, values listed in the Go Language documentation for `GOARCH`.",
+         "type": "string"
+      },
+      "author": {
+         "description": "Gives the name and/or email address of the person or entity which created and is responsible for maintaining the image.",
+         "type": "string"
+      },
+      "config": {
+         "description": "The execution parameters which SHOULD be used as a base when running a container using the image. This field can be null, in which case any execution parameters should be specified at creation of the container.",
+         "properties": {
+            "Cmd": {
+               "description": "Default arguments to the entrypoint of the container. These values act as defaults and may be replaced by any specified when creating a container. If an `Entrypoint` value is not specified, then the first entry of the `Cmd` array SHOULD be interpreted as the executable to run.",
+               "items": {
+                  "type": "string"
+               },
+               "type": "array"
+            },
+            "Entrypoint": {
+               "description": "A list of arguments to use as the command to execute when the container starts. These values act as defaults and may be replaced by an entrypoint specified when creating a container.",
+               "items": {
+                  "type": "string"
+               },
+               "type": "array"
+            },
+            "Env": {
+               "description": "Entries are in the format of `VARNAME=VARVALUE`. These values act as defaults and are merged with any specified when creating a container.",
+               "items": {
+                  "type": "string"
+               },
+               "type": "array"
+            },
+            "ExposedPorts": {
+               "description": "A set of ports to expose from a container running this image. Its keys can be in the format of `port/tcp`, `port/udp`, or `port` with the default protocol being `tcp` if not specified. These values act as defaults and are merged with any specified when creating a container.",
+               "patternProperties": {
+                  ".{1,}": {
+                     "type": "object"
+                  }
+               },
+               "type": "object"
+            },
+            "Labels": {
+               "description": "The field contains arbitrary metadata for the container. This property MUST use the annotation rules.",
+               "patternProperties": {
+                  ".{1,}": {
+                     "type": "string"
+                  }
+               },
+               "type": "object"
+            },
+            "StopSignal": {
+               "description": "The field contains the system call that will be sent to the container to exit. The signal can be a signal name in the format `SIGNAME`, for instance `SIGKILL` or `SIGRTMIN+3`",
+               "type": "string"
+            },
+            "User": {
+               "description": "The username or UID which is a platform-specific structure that allows specific control over which user the process run as. This acts as a default value to use when the value is not specified when creating a container. For Linux based systems, all of the following are valid: `user`, `uid`, `user:group`, `uid:gid`, `uid:group`, `user:gid`. If `group`/`gid` is not specified, the default group and supplementary groups of the given `user`/`uid` in `/etc/passwd` from the container are applied.",
+               "type": "string"
+            },
+            "Volumes": {
+               "description": "A set of directories describing where the process is likely to write data specific to a container instance.",
+               "patternProperties": {
+                  ".{1,}": {
+                     "type": "object"
+                  }
+               },
+               "type": "object"
+            },
+            "WorkingDir": {
+               "description": "Sets the current working directory of the entrypoint process in the container. This value acts as a default and may be replaced by a working directory specified when creating a container.",
+               "type": "string"
+            }
+         },
+         "type": "object"
+      },
+      "created": {
+         "description": "A combined date and time at which the layer was created, formatted as defined by RFC 3339, section 5.6.",
+         "format": "date-time",
+         "type": "string"
+      },
+      "history": {
+         "description": "Describes the history of each layer. In order from first to last.",
+         "items": {
+            "properties": {
+               "author": {
+                  "description": "The author of the build point.",
+                  "type": "string"
+               },
+               "comment": {
+                  "description": "A custom message set when creating the layer.",
+                  "type": "string"
+               },
+               "created": {
+                  "description": "A combined date and time at which the layer was created, formatted as defined by RFC 3339, section 5.6.",
+                  "format": "date-time",
+                  "type": "string"
+               },
+               "created_by": {
+                  "description": "The command which created the layer.",
+                  "type": "string"
+               },
+               "empty_layer": {
+                  "description": "This field is used to mark if the history item created a filesystem diff. It is set to true if the history item doesn't correspond to an actual layer in the rootfs section.",
+                  "type": "boolean"
+               }
+            },
+            "type": "object"
+         },
+         "type": "array"
+      },
+      "os": {
+         "description": "The name of the operating system which the image is built to run on. Configurations SHOULD use, and implementations SHOULD understand, values listed in the Go Language document for `GOOS`.",
+         "type": "string"
+      },
+      "rootfs": {
+         "description": "The rootfs key references the layer content addresses used by the image. This makes the image config hash depend on the filesystem hash.",
+         "properties": {
+            "diff_ids": {
+               "description": "An array of layer content hashes in order from first to last.",
+               "items": {
+                  "type": "string"
+               },
+               "type": "array"
+            },
+            "type": {
+               "description": "MUST be set to `layers`. Implementations MUST generate an error if they encounter an unknown value while verifying or unpacking an image.",
+               "enum": [
+                  "layers"
+               ],
+               "type": "string"
+            }
+         },
+         "required": [
+            "diff_ids",
+            "type"
+         ],
+         "type": "object"
+      }
+   },
+   "required": [
+      "architecture",
+      "os",
+      "rootfs"
+   ],
+   "title": "OCI Image Config",
+   "type": "object"
+}

@@ -1,0 +1,63 @@
+{
+   "$id": "http://opencontainers.org/image/descriptor",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "anyOf": [
+      {
+         "properties": {
+            "digest": {
+               "pattern": "^sha256:[A-Fa-f0-9]{64}$"
+            }
+         }
+      },
+      {
+         "properties": {
+            "digest": {
+               "pattern": "^sha512:[A-Fa-f0-9]{128}$"
+            }
+         }
+      }
+   ],
+   "description": "A descriptor for referencing a blob.",
+   "properties": {
+      "annotations": {
+         "description": "This property contains arbitrary metadata. Property MUST use the annotation rules.",
+         "patternProperties": {
+            ".{1,}": {
+               "type": "string"
+            }
+         },
+         "type": "object"
+      },
+      "digest": {
+         "description": "the cryptographic checksum digest of the object, in the pattern `<algorithm>:<encoded>`",
+         "pattern": "^[a-z0-9]+(?:[+._-][a-z0-9]+)*:[a-zA-Z0-9=_-]+$",
+         "type": "string"
+      },
+      "mediaType": {
+         "description": "",
+         "pattern": "^[A-Za-z0-9][A-Za-z0-9!#$&-^_.+]{0,126}/[A-Za-z0-9][A-Za-z0-9!#$&-^_.+]{0,126}$",
+         "type": "string"
+      },
+      "size": {
+         "description": "This REQUIRED property specifies the size, in bytes, of the raw content. This property exists so that a client will have an expected size for the content before processing. If the length of the retrieved content does not match the specified length, the content SHOULD NOT be trusted.",
+         "maximum": 9223372036854775808,
+         "minimum": -9223372036854775808,
+         "type": "integer"
+      },
+      "urls": {
+         "description": "A list of URLs from which the content may be downloaded.",
+         "items": {
+            "format": "uri",
+            "type": "string"
+         },
+         "type": "array"
+      }
+   },
+   "required": [
+      "size",
+      "mediaType",
+      "digest"
+   ],
+   "title": "OCI Content Descriptor",
+   "type": "object"
+}
