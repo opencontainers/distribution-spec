@@ -15,3 +15,16 @@ install.tools: .install.gitvalidation
 
 .install.gitvalidation:
 	go get -u github.com/vbatts/git-validation
+
+.PHONY: openapi
+openapi: generate-openapi validate-openapi
+
+# Generate OpenAPI Specification.
+.PHONY: generate-openapi
+generate-openapi:
+	jsonnet -J openapi/vendor -m . openapi/openapi.jsonnet
+
+# Validate generated OpenAPI specification file.
+.PHONY: validate-openapi
+validate-openapi:
+	swagger-cli validate openapi.json
