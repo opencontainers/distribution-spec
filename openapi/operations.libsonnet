@@ -151,7 +151,7 @@ local oci = {
     op.new(
       operationId='oci-blob-exists',
       tags=['Blobs'],
-      summary='Check for the existence of a manifest by name and reference.',
+      summary='Check for the existence of a blob by name and reference.',
     )
     .addParameter(params.contentLength)
     .addParameter(params.host)
