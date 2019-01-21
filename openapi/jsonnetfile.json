@@ -1,14 +1,34 @@
 {
-    "dependencies": [
-        {
-            "name": "openapi-jsonnet",
-            "source": {
-                "git": {
-                    "remote": "https://github.com/atlaskerr/openapi-jsonnet",
-                    "subdir": ""
-                }
-            },
-            "version": "master"
+  "dependencies": [
+    {
+      "name": "openapi-jsonnet",
+      "source": {
+        "git": {
+          "remote": "https://github.com/atlaskerr/openapi-jsonnet",
+          "subdir": ""
         }
-    ]
+      },
+      "version": "master"
+    },
+    {
+      "name": "oci-schemas",
+      "source": {
+        "git": {
+          "remote": "https://github.com/atlaskerr/oci-schemas",
+          "subdir": ""
+        }
+      },
+      "version": "master"
+    },
+    {
+      "name": "openapi-schemas",
+      "source": {
+        "git": {
+          "remote": "https://github.com/atlaskerr/oci-schemas",
+          "subdir": ""
+        }
+      },
+      "version": "master"
+    }
+  ]
 }

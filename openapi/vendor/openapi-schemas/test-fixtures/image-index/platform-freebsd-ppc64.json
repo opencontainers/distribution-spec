@@ -1,0 +1,14 @@
+{
+   "manifests": [
+      {
+         "digest": "sha256:e3161859d1779d8330428ed745008710a1ecfb9f494c2e1b062be4cc0ba9ee2a",
+         "mediaType": "application/vnd.oci.image.manifest.v1+json",
+         "platform": {
+            "architecture": "ppc64",
+            "os": "freebsd"
+         },
+         "size": 642
+      }
+   ],
+   "schemaVersion": 2
+}

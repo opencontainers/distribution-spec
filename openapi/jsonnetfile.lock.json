@@ -9,6 +9,26 @@
                 }
             },
             "version": "fd78489d8eec4d3d0beafe47f077bac0747497ab"
+        },
+        {
+            "name": "oci-schemas",
+            "source": {
+                "git": {
+                    "remote": "https://github.com/atlaskerr/oci-schemas",
+                    "subdir": ""
+                }
+            },
+            "version": "3e705e64b0e8168fb1cf0b677ab2718afc02c237"
+        },
+        {
+            "name": "openapi-schemas",
+            "source": {
+                "git": {
+                    "remote": "https://github.com/atlaskerr/oci-schemas",
+                    "subdir": ""
+                }
+            },
+            "version": "3e705e64b0e8168fb1cf0b677ab2718afc02c237"
         }
     ]
 }
