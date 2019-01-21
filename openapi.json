@@ -699,7 +699,7 @@
                "explode": false,
                "in": "query",
                "name": "n",
-               "required": true,
+               "required": false,
                "schema": {
                   "type": "string"
                },
@@ -713,7 +713,7 @@
                "explode": false,
                "in": "query",
                "name": "last",
-               "required": true,
+               "required": false,
                "schema": {
                   "type": "string"
                },
@@ -4106,7 +4106,7 @@
                   }
                }
             },
-            "summary": "Check for the existence of a manifest by name and reference.",
+            "summary": "Check for the existence of a blob by name and reference.",
             "tags": [
                "Blobs"
             ]
@@ -6684,7 +6684,7 @@
                "explode": false,
                "in": "query",
                "name": "n",
-               "required": true,
+               "required": false,
                "schema": {
                   "type": "string"
                },
@@ -6698,7 +6698,7 @@
                "explode": false,
                "in": "query",
                "name": "last",
-               "required": true,
+               "required": false,
                "schema": {
                   "type": "string"
                },

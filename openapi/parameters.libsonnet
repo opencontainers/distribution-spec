@@ -84,6 +84,7 @@ local n = param.new(
   paramIn='query',
   style='form',
   description='',
+  required=false,
   schema=string,
 );
 
@@ -92,6 +93,7 @@ local last = param.new(
   paramIn='query',
   style='form',
   description='',
+  required=false,
   schema=string,
 );
 
