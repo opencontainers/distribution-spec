@@ -12,7 +12,7 @@
     [name]: {
       [if description != null then 'description']: description,
       required: required,
-      deprecated: deprecated,
+      [if deprecated then 'deprecated']: true,
       schema: schema,
       style: 'simple',
       [if example != null then 'example']: example,

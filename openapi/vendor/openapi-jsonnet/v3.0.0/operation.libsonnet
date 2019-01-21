@@ -18,7 +18,7 @@
     [if operationId != null then 'operationId']: operationId,
     [if parameters != null then 'parameters']: parameters,
     [if requestBody != null then 'requestBody']: requestBody,
-    deprecated: deprecated,
+    [if deprecated then 'deprecated']: true,
 
     addParameter(parameter):: self {
       parameters+: [parameter],
