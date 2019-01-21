@@ -27,7 +27,7 @@ local oci = {
   local verify =
     op.new(
       operationId='oci-verify',
-      tags=tags,
+      tags=['Verify OCI'],
       summary='Check that the endpoint implements distribution API.',
       description='This minimal endpoint is used to verify that the registry implements the OCI Distribution Specification.',
     )
@@ -43,7 +43,7 @@ local oci = {
   local catalogList =
     op.new(
       operationId='oci-catalog-list',
-      tags=tags,
+      tags=['Catalog'],
       summary='List a set of available repositories in the local registry cluster.',
       description='List a set of available repositories in the local registry cluster. Does not provide any indication of what may be available upstream. Applications can only determine if a repository is available but not if it is not available.',
     )
@@ -58,7 +58,7 @@ local oci = {
   local tagsList =
     op.new(
       operationId='oci-tags-list',
-      tags=tags,
+      tags=['Tags'],
       summary='Get all tags in a repository.',
     )
     .addParameter(params.contentLength)
@@ -73,7 +73,7 @@ local oci = {
     op.new(
       operationId='oci-manifest-get',
       summary='Get a manifest by name and reference.',
-      tags=tags,
+      tags=['Manifests'],
     )
     .addParameter(params.contentLength)
     .addParameter(params.host)
@@ -88,7 +88,7 @@ local oci = {
     op.new(
       operationId='oci-manifest-exists',
       summary='Check for the existence of a manifest by name and reference.',
-      tags=tags,
+      tags=['Manifests'],
     )
     .addParameter(params.contentLength)
     .addParameter(params.host)
@@ -103,7 +103,7 @@ local oci = {
     op.new(
       operationId='oci-manifest-create',
       summary='Add a manifest to a repository.',
-      tags=tags,
+      tags=['Manifests'],
     )
     .addParameter(params.contentLength)
     .addParameter(params.host)
@@ -120,7 +120,7 @@ local oci = {
     op.new(
       operationId='oci-manifest-delete',
       summary='Delete a manifest from the repository.',
-      tags=tags,
+      tags=['Manifests'],
     )
     .addParameter(params.contentLength)
     .addParameter(params.host)
@@ -135,7 +135,7 @@ local oci = {
     op.new(
       operationId='oci-blob-download',
       summary='Download a blob by digest.',
-      tags=tags,
+      tags=['Blobs'],
     )
     .addParameter(params.contentLength)
     .addParameter(params.host)
@@ -150,7 +150,7 @@ local oci = {
   local blobExists =
     op.new(
       operationId='oci-blob-exists',
-      tags=tags,
+      tags=['Blobs'],
       summary='Check for the existence of a manifest by name and reference.',
     )
     .addParameter(params.contentLength)
@@ -165,7 +165,7 @@ local oci = {
   local blobDelete =
     op.new(
       operationId='oci-blob-delete',
-      tags=tags,
+      tags=['Blobs'],
       summary='Delete a blob by digest.',
     )
     .addParameter(params.contentLength)
@@ -180,7 +180,7 @@ local oci = {
   local blobUploadInit =
     op.new(
       operationId='oci-blob-upload-init',
-      tags=tags,
+      tags=['Blobs'],
       summary='Initiate a blob upload or mount a blob from another respository.',
     )
     .addParameter(params.contentLength)
@@ -196,7 +196,7 @@ local oci = {
   local blobUploadStatus =
     op.new(
       operationId='oci-blob-upload-status',
-      tags=tags,
+      tags=['Blobs'],
       summary="Check a blob's upload status.",
     )
     .addParameter(params.contentLength)
@@ -210,7 +210,7 @@ local oci = {
   local blobUploadChunk =
     op.new(
       operationId='oci-blob-upload-chunk',
-      tags=tags,
+      tags=['Blobs'],
       summary='Upload a blob chunk to the repository.',
     )
     .addParameter(params.contentLength)
@@ -227,7 +227,7 @@ local oci = {
   local blobUploadComplete =
     op.new(
       operationId='oci-blob-upload-complete',
-      tags=tags,
+      tags=['Blobs'],
       summary='Notify registry that the chunked blob upload is complete.',
     )
     .addParameter(params.contentLength)
@@ -244,7 +244,7 @@ local oci = {
   local blobUploadCancel =
     op.new(
       operationId='oci-blob-upload-cancel',
-      tags=tags,
+      tags=['Blobs'],
       summary='Cancel the chunked blob upload.',
     )
     .addParameter(params.contentLength)

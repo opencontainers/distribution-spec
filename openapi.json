@@ -361,7 +361,7 @@
             },
             "summary": "Check that the endpoint implements distribution API.",
             "tags": [
-               "OCI"
+               "Verify OCI"
             ]
          }
       },
@@ -687,7 +687,7 @@
             },
             "summary": "List a set of available repositories in the local registry cluster.",
             "tags": [
-               "OCI"
+               "Catalog"
             ]
          },
          "parameters": [
@@ -1174,7 +1174,7 @@
             },
             "summary": "Initiate a blob upload or mount a blob from another respository.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          }
       },
@@ -1611,7 +1611,7 @@
             },
             "summary": "Cancel the chunked blob upload.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          },
          "get": {
@@ -1926,7 +1926,7 @@
             },
             "summary": "Check a blob's upload status.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          },
          "parameters": [
@@ -2510,7 +2510,7 @@
             },
             "summary": "Upload a blob chunk to the repository.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          },
          "put": {
@@ -2977,7 +2977,7 @@
             },
             "summary": "Notify registry that the chunked blob upload is complete.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          }
       },
@@ -3345,7 +3345,7 @@
             },
             "summary": "Delete a blob by digest.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          },
          "get": {
@@ -3742,7 +3742,7 @@
             },
             "summary": "Download a blob by digest.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          },
          "head": {
@@ -4108,7 +4108,7 @@
             },
             "summary": "Check for the existence of a manifest by name and reference.",
             "tags": [
-               "OCI"
+               "Blobs"
             ]
          },
          "parameters": [
@@ -4520,7 +4520,7 @@
             },
             "summary": "Delete a manifest from the repository.",
             "tags": [
-               "OCI"
+               "Manifests"
             ]
          },
          "get": {
@@ -5415,7 +5415,7 @@
             },
             "summary": "Get a manifest by name and reference.",
             "tags": [
-               "OCI"
+               "Manifests"
             ]
          },
          "head": {
@@ -5781,7 +5781,7 @@
             },
             "summary": "Check for the existence of a manifest by name and reference.",
             "tags": [
-               "OCI"
+               "Manifests"
             ]
          },
          "parameters": [
@@ -6325,7 +6325,7 @@
             },
             "summary": "Add a manifest to a repository.",
             "tags": [
-               "OCI"
+               "Manifests"
             ]
          }
       },
@@ -6644,7 +6644,7 @@
             },
             "summary": "Get all tags in a repository.",
             "tags": [
-               "OCI"
+               "Tags"
             ]
          },
          "parameters": [
