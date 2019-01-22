@@ -4,6 +4,7 @@ description: "Specification for the Registry API."
 keywords: registry, on-prem, images, tags, repository, distribution, api, advanced
 ---
 # Open Container Initiative
+
 ## Distribution Specification
 
 This specification defines an API protocol to facilitate distribution of images.
@@ -16,47 +17,47 @@ The goal of this specification is to standardize container image distribution ba
 - [Notational Conventions](#notational-conventions)
 - [Historical Context](#historical-context)
 - [Scope](#scope)
-   - [Future](#future)
+  - [Future](#future)
 - [Use Cases](#use-cases)
-   - [Image Verification](#image-verification)
-   - [Resumable Push](#resumable-push)
-   - [Resumable Pull](#resumable-pull)
-   - [Layer Upload De-duplication](#layer-upload-de-duplication)
+  - [Image Verification](#image-verification)
+  - [Resumable Push](#resumable-push)
+  - [Resumable Pull](#resumable-pull)
+  - [Layer Upload De-duplication](#layer-upload-de-duplication)
 - [Changes](#changes)
 - [Overview](#overview)
-   - [Errors](#errors)
-   - [API Version Check](#api-version-check)
-   - [Content Digests](#content-digests)
-   - [Pulling An Image](#pulling-an-image)
-   - [Pushing An Image](#pushing-an-image)
-   - [Listing Repositories](#listing-repositories)
-   - [Listing Image Tags](#listing-image-tags)
-   - [Deleting an Image](#deleting-an-image)
+  - [Errors](#errors)
+  - [API Version Check](#api-version-check)
+  - [Content Digests](#content-digests)
+  - [Pulling An Image](#pulling-an-image)
+  - [Pushing An Image](#pushing-an-image)
+  - [Listing Repositories](#listing-repositories)
+  - [Listing Image Tags](#listing-image-tags)
+  - [Deleting an Image](#deleting-an-image)
 - [Detail](#detail)
-   - [Errors](#errors-2)
-   - [Base](#base)
-   - [Tags](#tags)
-   - [Manifest](#manifest)
-      - [GET Manifest](#get-manifest)
-      - [PUT Manifest](#put-manifest)
-      - [DELETE Manifest](#delete-manifest)
-   - [Blob](#blob)
-      - [GET Blob](#get-blob)
-         - [Fetch Blob](#fetch-blob)
-         - [Fetch Blob Part](#fetch-blob-part)
-      - [DELETE Blob](#delete-blob)
-   - [Initiate Blob Upload](#initiate-blob-upload)
-      - [POST Initiate Blob Upload](#post-initiate-blob-upload)
-         - [Initiate Monolithic Blob Upload](#initiate-monolithic-blob-upload)
-         - [Initiate Resumable Blob Upload](#initiate-resumable-blob-upload)
-         - [Mount Blob](#mount-blob)
-   - [Blob Upload](#blob-upload)
-      - [GET Blob Upload](#get-blob-upload)
-      - [PATCH Blob Upload](#patch-blob-upload)
-      - [PUT Blob Upload](#put-blob-upload)
-      - [DELETE Blob Upload](#delete-blob-upload)
-   - [Catalog](#catalog)
-      - [GET Catalog](#get-catalog)
+  - [Errors](#errors-2)
+  - [Base](#base)
+  - [Tags](#tags)
+  - [Manifest](#manifest)
+    - [GET Manifest](#get-manifest)
+    - [PUT Manifest](#put-manifest)
+    - [DELETE Manifest](#delete-manifest)
+  - [Blob](#blob)
+    - [GET Blob](#get-blob)
+      - [Fetch Blob](#fetch-blob)
+      - [Fetch Blob Part](#fetch-blob-part)
+    - [DELETE Blob](#delete-blob)
+  - [Initiate Blob Upload](#initiate-blob-upload)
+    - [POST Initiate Blob Upload](#post-initiate-blob-upload)
+      - [Initiate Monolithic Blob Upload](#initiate-monolithic-blob-upload)
+      - [Initiate Resumable Blob Upload](#initiate-resumable-blob-upload)
+      - [Mount Blob](#mount-blob)
+  - [Blob Upload](#blob-upload)
+    - [GET Blob Upload](#get-blob-upload)
+    - [PATCH Blob Upload](#patch-blob-upload)
+    - [PUT Blob Upload](#put-blob-upload)
+    - [DELETE Blob Upload](#delete-blob-upload)
+  - [Catalog](#catalog)
+    - [GET Catalog](#get-catalog)
 
 ## Notational Conventions
 
@@ -223,7 +224,6 @@ Such an identifier can be independently calculated and verified by selection of 
 If such an identifier can be communicated in a secure manner, one can retrieve the content from an insecure source, calculate it independently and be certain that the correct content was obtained.
 Put simply, the identifier is a property of the content.
 
-
 To disambiguate from other concepts, we call this identifier a _digest_.
 A _digest_ is a serialized hash result, consisting of a _algorithm_ and _hex_ portion.
 The _algorithm_ identifies the methodology used to calculate the digest.
@@ -231,7 +231,7 @@ The _hex_ portion is the hex-encoded result of the hash.
 
 We define a _digest_ string to match the following grammar:
 
-```
+```EBNF
 digest      := algorithm ":" hex
 algorithm   := /[A-Fa-f0-9_+.-]+/
 hex         := /[A-Fa-f0-9]+/
@@ -248,7 +248,7 @@ Heavy processing of input before calculating a hash is discouraged to avoid degr
 
 Let's use a simple example in pseudo-code to demonstrate a digest calculation:
 
-```
+```EBNF
 let C = 'a small string'
 let B = sha256(C)
 let D = 'sha256:' + EncodeHex(B)
@@ -304,7 +304,7 @@ Layers are stored in as blobs in the V2 registry API, keyed by their digest.
 
 The image manifest can be fetched with the following url:
 
-```
+```HTTP
 GET /v2/<name>/manifests/<reference>
 ```
 
@@ -318,6 +318,7 @@ In a successful response, the Content-Type header will indicate which manifest t
 A `404 Not Found` response will be returned if the image is unknown to the registry.
 If the image exists and the response is successful, the image manifest will be returned, with the following format (see [moby/moby#8093](https://github.com/moby/moby/issues/8093) for details):
 
+```json
     {
        "name": <name>,
        "tag": <tag>,
@@ -331,6 +332,7 @@ If the image exists and the response is successful, the image manifest will be r
        "history": <v1 images>,
        "signature": <JWS>
     }
+```
 
 The client should verify the returned manifest signature for authenticity before fetching layers.
 
@@ -338,7 +340,7 @@ The client should verify the returned manifest signature for authenticity before
 
 The image manifest can be checked for existence with the following url:
 
-```
+```HTTP
 HEAD /v2/<name>/manifests/<reference>
 ```
 
@@ -348,7 +350,7 @@ The reference may include a tag or digest.
 A `404 Not Found` response will be returned if the image is unknown to the registry.
 If the image exists and the response is successful the response will be as follows:
 
-```
+```HTTP
 200 OK
 Content-Length: <length of manifest>
 Docker-Content-Digest: <digest>
@@ -360,7 +362,9 @@ Layers are stored in the blob portion of the registry, keyed by digest.
 Pulling a layer is carried out by a standard http request.
 The URL is as follows:
 
+```HTTP
     GET /v2/<name>/blobs/<digest>
+```
 
 Access to a layer will be gated by the `name` of the repository but is identified uniquely in the registry by `digest`.
 
@@ -392,7 +396,7 @@ While it won't change in the this specification, clients should use the most rec
 
 To begin the process, a POST request should be issued in the following format:
 
-```
+```HTTP
 POST /v2/<name>/blobs/uploads/
 ```
 
@@ -404,14 +408,14 @@ Responses to this request are covered below.
 The existence of a layer can be checked via a `HEAD` request to the blob store API.
 The request should be formatted as follows:
 
-```
+```HTTP
 HEAD /v2/<name>/blobs/<digest>
 ```
 
 If the layer with the digest specified in `digest` is available, a 200 OK response will be received, with no actual body content (this is according to http specification).
 The response will look as follows:
 
-```
+```HTTP
 200 OK
 Content-Length: <length of blob>
 Docker-Content-Digest: <digest>
@@ -424,7 +428,7 @@ Note that the binary digests may differ for the existing registry layer, but the
 
 If the POST request is successful, a `202 Accepted` response will be returned with the upload URL in the `Location` header:
 
-```
+```HTTP
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -446,20 +450,20 @@ The progress and chunk coordination of the upload process will be coordinated th
 While this is a non-standard use of the `Range` header, there are examples of [similar approaches](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol) in APIs with heavy use.
 For an upload that just started, for an example with a 1000 byte layer file, the `Range` header would be as follows:
 
-```
+```HTTP
 Range: bytes=0-0
 ```
 
 To get the status of an upload, issue a GET request to the upload URL:
 
-```
+```HTTP
 GET /v2/<name>/blobs/uploads/<uuid>
 Host: <registry host>
 ```
 
 The response will be similar to the above, except will return 204 status:
 
-```
+```HTTP
 204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -472,7 +476,7 @@ Note that the HTTP `Range` header byte ranges are inclusive and that will be hon
 A monolithic upload is simply a chunked upload with a single chunk and may be favored by clients that would like to avoided the complexity of chunking.
 To carry out a "monolithic" upload, one can simply put the entire content blob to the provided URL:
 
-```
+```HTTP
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
@@ -487,7 +491,7 @@ Please see the [_Completed Upload_](#completed-upload) section for details on th
 
 To carry out an upload of a chunk, the client can specify a range header and only include that part of the layer file:
 
-```
+```HTTP
 PATCH /v2/<name>/blobs/uploads/<uuid>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
@@ -500,7 +504,7 @@ There is no enforcement on layer chunk splits other than that the server must re
 The server may enforce a minimum chunk size.
 If the server cannot accept the chunk, a `416 Requested Range Not Satisfiable` response will be returned and will include a `Range` header indicating the current status:
 
-```
+```HTTP
 416 Requested Range Not Satisfiable
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<last valid range>
@@ -516,7 +520,7 @@ A 416 will be returned under the following conditions:
 
 When a chunk is accepted as part of the upload, a `202 Accepted` response will be returned, including a `Range` header with the current upload status:
 
-```
+```HTTP
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -530,7 +534,7 @@ For an upload to be considered complete, the client must submit a `PUT` request 
 If it is not provided, the upload will not be considered complete.
 The format for the final chunk will be as follows:
 
-```
+```HTTP
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
@@ -545,7 +549,7 @@ The server may verify none or all of them but _must_ notify the client if the co
 
 When the last chunk is received and the layer has been validated, the client will receive a `201 Created` response:
 
-```
+```HTTP
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
@@ -572,7 +576,7 @@ Given this parameter, the registry will verify that the provided content does ma
 An upload can be cancelled by issuing a DELETE request to the upload endpoint.
 The format will be as follows:
 
-```
+```HTTP
 DELETE /v2/<name>/blobs/uploads/<uuid>
 ```
 
@@ -584,14 +588,14 @@ While uploads will time out if not completed, clients should issue this request 
 A blob may be mounted from another repository that the client has read access to, removing the need to upload a blob already known to the registry.
 To issue a blob mount instead of an upload, a POST request should be issued in the following format:
 
-```
+```HTTP
 POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repository name>
 Content-Length: 0
 ```
 
 If the blob is successfully mounted, the client will receive a `201 Created` response:
 
-```
+```HTTP
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
@@ -604,7 +608,7 @@ Most clients may ignore the value but if it is used, the client should verify th
 
 If a mount fails due to invalid repository or digest arguments, the registry will fall back to the standard upload behavior and return a `202 Accepted` with the upload URL in the `Location` header:
 
-```
+```HTTP
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
@@ -632,12 +636,16 @@ If the upload uuid is unknown to the registry, a `404 Not Found` response will b
 A layer may be deleted from the registry via its `name` and `digest`.
 A delete may be issued with the following request format:
 
+```HTTP
     DELETE /v2/<name>/blobs/<digest>
+```
 
 If the blob exists and has been successfully deleted, the following response will be issued:
 
+```HTTP
     202 Accepted
     Content-Length: None
+```
 
 If the blob had already been deleted or did not exist, a `404 Not Found` response will be issued instead.
 
@@ -648,6 +656,7 @@ If a layer is deleted which is referenced by a manifest in the registry, then th
 Once all of the layers for an image are uploaded, the client can upload the image manifest.
 An image can be pushed using the following request format:
 
+```HTTP
     PUT /v2/<name>/manifests/<reference>
     Content-Type: <manifest media type>
 
@@ -665,6 +674,7 @@ An image can be pushed using the following request format:
        "signature": <JWS>,
        ...
     }
+```
 
 The `name` and `reference` fields of the response body must match those specified in the URL.
 The `reference` field may be a "tag" or a "digest".
@@ -698,13 +708,13 @@ The list of available repositories is made available through the _catalog_.
 
 The catalog for a given registry can be retrieved with the following request:
 
-```
+```HTTP
 GET /v2/_catalog
 ```
 
 The response will be in the following format:
 
-```
+```HTTP
 200 OK
 Content-Type: application/json
 
@@ -735,7 +745,7 @@ For details of the `Link` header, please see the [_Pagination_](#pagination) sec
 Paginated catalog results can be retrieved by adding an `n` parameter to the request URL, declaring that the response should be limited to `n` results.
 Starting a paginated flow begins as follows:
 
-```
+```HTTP
 GET /v2/_catalog?n=<integer>
 ```
 
@@ -743,7 +753,7 @@ The above specifies that a catalog response should be returned, from the start o
 the result set, ordered lexically, limiting the number of results to `n`.
 The response to such a request would look as follows:
 
-```
+```HTTP
 200 OK
 Content-Type: application/json
 Link: <<url>?n=<n from the request>&last=<last repository in response>>; rel="next"
@@ -771,7 +781,7 @@ The client may construct URLs to skip forward in the catalog.
 
 To get the next result set, a client would issue the request as follows, using the URL encoded in the described `Link` header:
 
-```
+```HTTP
 GET /v2/_catalog?n=<n from the request>&last=<last repository value from previous response>
 ```
 
@@ -783,17 +793,15 @@ The entries in the response start _after_ the term specified by `last`, up to `n
 The behavior of `last` is quite simple when demonstrated with an example.
 Let us say the registry has the following repositories:
 
-```
-a
-b
-c
-d
-```
+    a
+    b
+    c
+    d
 
 If the value of `n` is 2, _a_ and _b_ will be returned on the first response.
 The `Link` header returned on the response will have `n` set to 2 and last set to _b_:
 
-```
+```HTTP
 Link: <<url>?n=2&last=b>; rel="next"
 ```
 
@@ -805,10 +813,13 @@ Note that `n` may change on the second to last response or be fully omitted, dep
 It may be necessary to list all of the tags under a given repository.
 The tags for an image repository can be retrieved with the following request:
 
+```HTTP
     GET /v2/<name>/tags/list
+```
 
 The response will be in the following format:
 
+```HTTP
     200 OK
     Content-Type: application/json
 
@@ -819,6 +830,7 @@ The response will be in the following format:
             ...
         ]
     }
+```
 
 For repositories with a large number of tags, this response may be quite large.
 If such a response is expected, one should use the pagination.
@@ -831,14 +843,14 @@ We cover a simple flow to highlight any differences.
 
 Starting a paginated flow may begin as follows:
 
-```
+```HTTP
 GET /v2/<name>/tags/list?n=<integer>
 ```
 
 The above specifies that a tags response should be returned, from the start of the result set, ordered lexically, limiting the number of results to `n`.
 The response to such a request would look as follows:
 
-```
+```HTTP
 200 OK
 Content-Type: application/json
 Link: <<url>?n=<n from the request>&last=<last tag value from previous response>>; rel="next"
@@ -854,7 +866,7 @@ Link: <<url>?n=<n from the request>&last=<last tag value from previous response>
 
 To get the next result set, a client would issue the request as follows, using the value encoded in the [RFC5988](https://tools.ietf.org/html/rfc5988) `Link` header:
 
-```
+```HTTP
 GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
 ```
 
@@ -866,13 +878,17 @@ The behavior of the `last` parameter, the provided response result, lexical orde
 An image may be deleted from the registry via its `name` and `reference`.
 A delete may be issued with the following request format:
 
+```HTTP
     DELETE /v2/<name>/manifests/<reference>
+```
 
 For deletes, `reference` *must* be a digest or the delete will fail.
 If the image exists and has been successfully deleted, the following response will be issued:
 
+```HTTP
     202 Accepted
     Content-Length: None
+```
 
 If the image had already been deleted or did not exist, a `404 Not Found` response will be issued instead.
 
@@ -945,7 +961,7 @@ Typically, this can be used for lightweight version checks and to validate regis
 
 Check that the endpoint implements the distribution API.
 
-```
+```HTTP
 GET /v2/
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -960,7 +976,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: OK
 
-```
+```HTTP
 200 OK
 ```
 
@@ -968,7 +984,7 @@ The API implements V2 protocol and is accessible.
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 ```
 
@@ -976,15 +992,15 @@ The registry does not implement the V2 API.
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1011,14 +1027,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1052,7 +1068,7 @@ Fetch the tags under the repository identified by `name`.
 
 ##### Tags
 
-```
+```HTTP
 GET /v2/<name>/tags/list
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -1070,7 +1086,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: OK
 
-```
+```HTTP
 200 OK
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
@@ -1094,15 +1110,15 @@ The following headers will be returned with the response:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1129,14 +1145,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1162,14 +1178,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1195,14 +1211,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1228,7 +1244,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ##### Tags Paginated
 
-```
+```HTTP
 GET /v2/<name>/tags/list?n=<integer>&last=<integer>
 ```
 
@@ -1244,7 +1260,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: OK
 
-```
+```HTTP
 200 OK
 Content-Length: <length>
 Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
@@ -1270,15 +1286,15 @@ The following headers will be returned with the response:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1305,14 +1321,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1338,14 +1354,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1371,14 +1387,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1411,7 +1427,7 @@ Create, update, delete and retrieve manifests.
 Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
 A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.
 
-```
+```HTTP
 GET /v2/<name>/manifests/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -1428,7 +1444,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: OK
 
-```
+```HTTP
 200 OK
 Docker-Content-Digest: <digest>
 Content-Type: <media type of manifest>
@@ -1459,13 +1475,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1486,15 +1502,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1521,14 +1537,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1554,14 +1570,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1587,14 +1603,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1622,7 +1638,7 @@ The error codes that may be included in the response body are enumerated below:
 
 Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
 
-```
+```HTTP
 PUT /v2/<name>/manifests/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -1654,7 +1670,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Created
 
-```
+```HTTP
 201 Created
 Location: <url>
 Content-Length: 0
@@ -1673,13 +1689,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Invalid Manifest
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1704,15 +1720,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1739,14 +1755,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1772,14 +1788,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1805,14 +1821,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1830,7 +1846,6 @@ The following headers will be returned on the response:
 |------------------|-----------------------------------|
 | `Content-Length` | Length of the JSON response body. |
 
-
 The error codes that may be included in the response body are enumerated below:
 
 | Code              | Message           | Description                                                         |
@@ -1839,7 +1854,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Missing Layer(s)
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
@@ -1867,7 +1882,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not allowed
 
-```
+```HTTP
 405 Method Not Allowed
 ```
 
@@ -1884,7 +1899,7 @@ The error codes that may be included in the response body are enumerated below:
 Delete the manifest identified by `name` and `reference`.
 Note that a manifest can _only_ be deleted by `digest`.
 
-```
+```HTTP
 DELETE /v2/<name>/manifests/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -1901,19 +1916,19 @@ The following parameters should be specified on the request:
 
 ###### On Success: Accepted
 
-```
+```HTTP
 202 Accepted
 ```
 
 ###### On Failure: Invalid Name or Reference
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1932,19 +1947,17 @@ The error codes that may be included in the response body are enumerated below:
 | `NAME_INVALID` | invalid repository name        | Invalid repository name encountered either during manifest validation or any API operation.                   |
 | `TAG_INVALID`  | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 
-
-
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -1971,14 +1984,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2004,14 +2017,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2037,14 +2050,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2070,13 +2083,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Unknown Manifest
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2098,7 +2111,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not allowed
 
-```
+```HTTP
 405 Method Not Allowed
 ```
 
@@ -2122,7 +2135,7 @@ A `HEAD` request can also be issued to this endpoint to obtain resource informat
 
 ##### Fetch Blob
 
-```
+```HTTP
 GET /v2/<name>/blobs/<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -2139,7 +2152,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: OK
 
-```
+```HTTP
 200 OK
 Content-Length: <length>
 Docker-Content-Digest: <digest>
@@ -2160,7 +2173,7 @@ The following headers will be returned with the response:
 
 ###### On Success: Temporary Redirect
 
-```
+```HTTP
 307 Temporary Redirect
 Location: <blob location>
 Docker-Content-Digest: <digest>
@@ -2177,13 +2190,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2204,13 +2217,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2231,15 +2244,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2268,14 +2281,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2301,14 +2314,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2334,14 +2347,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2367,7 +2380,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ##### Fetch Blob Part
 
-```
+```HTTP
 GET /v2/<name>/blobs/<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -2390,7 +2403,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Partial Content
 
-```
+```HTTP
 206 Partial Content
 Content-Length: <length>
 Content-Range: bytes <start>-<end>/<size>
@@ -2411,13 +2424,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2438,13 +2451,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2463,7 +2476,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Requested Range Not Satisfiable
 
-```
+```HTTP
 416 Requested Range Not Satisfiable
 ```
 
@@ -2472,15 +2485,15 @@ This can happen when the range is not formatted correctly or if the range is out
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2507,14 +2520,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2540,14 +2553,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2573,14 +2586,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2608,7 +2621,7 @@ The error codes that may be included in the response body are enumerated below:
 
 Delete the blob identified by `name` and `digest`
 
-```
+```HTTP
 DELETE /v2/<name>/blobs/<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -2625,7 +2638,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Accepted
 
-```
+```HTTP
 202 Accepted
 Content-Length: 0
 Docker-Content-Digest: <digest>
@@ -2638,10 +2651,9 @@ The following headers will be returned with the response:
 | `Content-Length`        | 0                                               |
 | `Docker-Content-Digest` | Digest of the targeted content for the request. |
 
-
 ###### On Failure: Invalid Name or Digest
 
-```
+```HTTP
 400 Bad Request
 ```
 
@@ -2654,13 +2666,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2681,13 +2693,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Method Not Allowed
 
-```
+```HTTP
 405 Method Not Allowed
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2707,15 +2719,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2742,14 +2754,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2775,14 +2787,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2808,14 +2820,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2828,7 +2840,6 @@ Content-Type: application/json; charset=utf-8
 The client made too many requests within a time interval.
 
 The following headers will be returned on the response:
-
 
 | Name             | Description                       |
 |------------------|-----------------------------------|
@@ -2878,7 +2889,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Created
 
-```
+```HTTP
 201 Created
 Location: <blob location>
 Content-Length: 0
@@ -2897,7 +2908,7 @@ The following headers will be returned with the response:
 
 ###### On Failure: Invalid Name or Digest
 
-```
+```HTTP
 400 Bad Request
 ```
 
@@ -2910,7 +2921,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not allowed
 
-```
+```HTTP
 405 Method Not Allowed
 ```
 
@@ -2924,16 +2935,16 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
-            "code": <error code>,
+    "errors:" [
+        {
+             "code": <error code>,
             "message": "<error message>",
             "detail": ...
         },
@@ -2959,14 +2970,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -2992,15 +3003,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
-            "code": <error code>,
+    "errors:" [
+        {
+             "code": <error code>,
             "message": "<error message>",
             "detail": ...
         },
@@ -3025,14 +3036,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3058,7 +3069,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ##### Initiate Resumable Blob Upload
 
-```
+```HTTP
 POST /v2/<name>/blobs/uploads/
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -3078,7 +3089,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Accepted
 
-```
+```HTTP
 202 Accepted
 Content-Length: 0
 Location: /v2/<name>/blobs/uploads/<uuid>
@@ -3101,7 +3112,7 @@ The following headers will be returned with the response:
 
 ###### On Failure: Invalid Name or Digest
 
-```
+```HTTP
 400 Bad Request
 ```
 
@@ -3114,15 +3125,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3149,15 +3160,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
-            "code": <error code>,
+    "errors:" [
+        {
+             "code": <error code>,
             "message": "<error message>",
             "detail": ...
         },
@@ -3182,15 +3193,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
-            "code": <error code>,
+    "errors:" [
+        {
+             "code": <error code>,
             "message": "<error message>",
             "detail": ...
         },
@@ -3215,14 +3226,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3248,7 +3259,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ##### Mount Blob
 
-```
+```HTTP
 POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repository name>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -3270,7 +3281,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Created
 
-```
+```HTTP
 201 Created
 Location: <blob location>
 Content-Length: 0
@@ -3287,12 +3298,9 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header must be zero and the body must be empty. |
 | `Blob-Upload-UUID` | Identifies the upload uuid for the current request.           |
 
-
-
-
 ###### On Failure: Invalid Name or Digest
 
-```
+```HTTP
 400 Bad Request
 ```
 
@@ -3305,7 +3313,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not allowed
 
-```
+```HTTP
 405 Method Not Allowed
 ```
 
@@ -3319,15 +3327,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3346,7 +3354,6 @@ The following headers will be returned on the response:
 | `WWW-Authenticate` | An RFC7235 compliant authentication challenge header. |
 | `Content-Length`   | Length of the JSON response body.                     |
 
-
 The error codes that may be included in the response body are enumerated below:
 
 | Code           | Message                 | Description                                                                                                                                                           |
@@ -3355,14 +3362,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3388,14 +3395,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3421,15 +3428,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
-            "code": <error code>,
+    "errors:" [
+        {
+             "code": <error code>,
             "message": "<error message>",
             "detail": ...
         },
@@ -3463,7 +3470,7 @@ The `Location` header and its parameters should be preserved by clients, using t
 Retrieve status of upload identified by `uuid`.
 The primary purpose of this endpoint is to resolve the current status of a resumable upload.
 
-```
+```HTTP
 GET /v2/<name>/blobs/uploads/<uuid>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -3482,7 +3489,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Upload Progress
 
-```
+```HTTP
 204 No Content
 Range: 0-<offset>
 Content-Length: 0
@@ -3502,13 +3509,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3530,13 +3537,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3557,15 +3564,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3592,14 +3599,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3625,14 +3632,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3658,14 +3665,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3695,7 +3702,7 @@ Upload a chunk of data for the specified upload.
 
 ##### Stream upload
 
-```
+```HTTP
 PATCH /v2/<name>/blobs/uploads/<uuid>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -3717,7 +3724,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Data Accepted
 
-```
+```HTTP
 204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
@@ -3739,13 +3746,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3765,17 +3772,15 @@ The error codes that may be included in the response body are enumerated below:
 | `NAME_INVALID`        | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                        |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid                            | The blob upload encountered an error and can no longer proceed.                                                                                                                                                                                                                                    |
 
-
-
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3796,15 +3801,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3831,14 +3836,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3864,14 +3869,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3897,14 +3902,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -3930,7 +3935,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ##### Chunked upload
 
-```
+```HTTP
 PATCH /v2/<name>/blobs/uploads/<uuid>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -3957,7 +3962,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Chunk Accepted
 
-```
+```HTTP
 204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
@@ -3979,13 +3984,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4007,13 +4012,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4034,7 +4039,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Requested Range Not Satisfiable
 
-```
+```HTTP
 416 Requested Range Not Satisfiable
 ```
 
@@ -4042,15 +4047,15 @@ The `Content-Range` specification cannot be accepted, either because it does not
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4077,14 +4082,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4110,14 +4115,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4143,14 +4148,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4178,7 +4183,7 @@ The error codes that may be included in the response body are enumerated below:
 
 Complete the upload specified by `uuid`, optionally appending the body as the final chunk.
 
-```
+```HTTP
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -4204,7 +4209,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Upload Complete
 
-```
+```HTTP
 204 No Content
 Location: <blob location>
 Content-Range: <start of range>-<end of range, inclusive>
@@ -4226,13 +4231,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4255,13 +4260,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4282,15 +4287,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4317,14 +4322,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4350,14 +4355,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4383,14 +4388,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4419,7 +4424,7 @@ The error codes that may be included in the response body are enumerated below:
 Cancel outstanding upload processes, releasing associated resources.
 If this is not called, the unfinished uploads will eventually timeout.
 
-```
+```HTTP
 DELETE /v2/<name>/blobs/uploads/<uuid>
 Host: <registry host>
 Authorization: <scheme> <token>
@@ -4440,7 +4445,7 @@ The following parameters should be specified on the request:
 
 ###### On Success: Upload Deleted
 
-```
+```HTTP
 204 No Content
 Content-Length: 0
 ```
@@ -4455,13 +4460,13 @@ The following headers will be returned with the response:
 
 ###### On Failure: Bad Request
 
-```
+```HTTP
 400 Bad Request
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4483,13 +4488,13 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Not Found
 
-```
+```HTTP
 404 Not Found
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4510,15 +4515,15 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Authentication Required
 
-```
+```HTTP
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4545,14 +4550,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: No Such Repository Error
 
-```
+```HTTP
 404 Not Found
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4578,14 +4583,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Access Denied
 
-```
+```HTTP
 403 Forbidden
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4611,14 +4616,14 @@ The error codes that may be included in the response body are enumerated below:
 
 ###### On Failure: Too Many Requests
 
-```
+```HTTP
 429 Too Many Requests
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [
-	    {
+    "errors:" [
+        {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -4654,7 +4659,7 @@ Retrieve a sorted, json list of repositories available in the registry.
 
 ##### Catalog Fetch
 
-```
+```HTTP
 GET /v2/_catalog
 ```
 
@@ -4663,16 +4668,16 @@ The implementation may impose a maximum limit and return a partial set with pagi
 
 ###### On Success: OK
 
-```
+```HTTP
 200 OK
 Content-Length: <length>
 Content-Type: application/json; charset=utf-8
 
 {
-	"repositories": [
-		<name>,
-		...
-	]
+    "repositories": [
+        <name>,
+        ...
+    ]
 }
 ```
 
@@ -4686,7 +4691,7 @@ The following headers will be returned with the response:
 
 ##### Catalog Fetch Paginated
 
-```
+```HTTP
 GET /v2/_catalog?n=<integer>&last=<integer>
 ```
 
@@ -4701,18 +4706,18 @@ The following parameters should be specified on the request:
 
 ###### On Success: OK
 
-```
+```HTTP
 200 OK
 Content-Length: <length>
 Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
 Content-Type: application/json; charset=utf-8
 
 {
-	"repositories": [
-		<name>,
-		...
-	]
-	"next": "<url>?last=<name>&n=<last value of n>"
+    "repositories": [
+        <name>,
+        ...
+    ]
+    "next": "<url>?last=<name>&n=<last value of n>"
 }
 ```
 
