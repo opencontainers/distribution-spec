@@ -319,19 +319,25 @@ A `404 Not Found` response will be returned if the image is unknown to the regis
 If the image exists and the response is successful, the image manifest will be returned, with the following format (see [moby/moby#8093](https://github.com/moby/moby/issues/8093) for details):
 
 ```json
-    {
-       "name": <name>,
-       "tag": <tag>,
-       "fsLayers": [
-          {
-             "blobSum": <digest>
-          },
-          ...
-        ]
-       ],
-       "history": <v1 images>,
-       "signature": <JWS>
-    }
+{
+   "annotations": {
+      "com.example.key1": "value1",
+      "com.example.key2": "value2"
+   },
+   "config": {
+      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+      "mediaType": "application/vnd.oci.image.config.v1+json",
+      "size": 452
+   },
+   "layers": [
+      {
+         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+         "size": 78343
+      }
+   ],
+   "schemaVersion": 2
+}
 ```
 
 The client SHOULD verify the returned manifest signature for authenticity before fetching layers.
@@ -660,20 +666,25 @@ An image can be pushed using the following request format:
     PUT /v2/<name>/manifests/<reference>
     Content-Type: <manifest media type>
 
-    {
-       "name": <name>,
-       "tag": <tag>,
-       "fsLayers": [
-          {
-             "blobSum": <digest>
-          },
-          ...
-        ]
-       ],
-       "history": <v1 images>,
-       "signature": <JWS>,
-       ...
-    }
+	{
+	   "annotations": {
+	      "com.example.key1": "value1",
+	      "com.example.key2": "value2"
+	   },
+	   "config": {
+	      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+	      "mediaType": "application/vnd.oci.image.config.v1+json",
+	      "size": 452
+	   },
+	   "layers": [
+	      {
+	         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+	         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+	         "size": 78343
+	      }
+	   ],
+	   "schemaVersion": 2
+	}
 ```
 
 The `name` and `reference` fields of the response body MUST match those specified in the URL.
@@ -1450,17 +1461,23 @@ Docker-Content-Digest: <digest>
 Content-Type: <media type of manifest>
 
 {
-   "name": <name>,
-   "tag": <tag>,
-   "fsLayers": [
+   "annotations": {
+      "com.example.key1": "value1",
+      "com.example.key2": "value2"
+   },
+   "config": {
+      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+      "mediaType": "application/vnd.oci.image.config.v1+json",
+      "size": 452
+   },
+   "layers": [
       {
-         "blobSum": "<digest>"
-      },
-      ...
-    ]
+         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+         "size": 78343
+      }
    ],
-   "history": <v1 images>,
-   "signature": <JWS>
+   "schemaVersion": 2
 }
 ```
 
@@ -1645,17 +1662,23 @@ Authorization: <scheme> <token>
 Content-Type: <media type of manifest>
 
 {
-   "name": <name>,
-   "tag": <tag>,
-   "fsLayers": [
+   "annotations": {
+      "com.example.key1": "value1",
+      "com.example.key2": "value2"
+   },
+   "config": {
+      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+      "mediaType": "application/vnd.oci.image.config.v1+json",
+      "size": 452
+   },
+   "layers": [
       {
-         "blobSum": "<digest>"
-      },
-      ...
-    ]
+         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+         "size": 78343
+      }
    ],
-   "history": <v1 images>,
-   "signature": <JWS>
+   "schemaVersion": 2
 }
 ```
 
