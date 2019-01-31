@@ -1,0 +1,43 @@
+{
+   "$id": "http://opencontainers.org/schema/errors",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "description": "This property contains a list of errors messages returned from the server due to an invalid request.",
+   "properties": {
+      "errors": {
+         "items": {
+            "properties": {
+               "code": {
+                  "enum": [
+                     "BLOB_UNKNOWN",
+                     "BLOB_UPLOAD_INVALID",
+                     "BLOB_UPLOAD_UNKNOWN",
+                     "DIGEST_INVALID",
+                     "MANIFEST_BLOB_UNKNOWN",
+                     "MANIFEST_INVALID",
+                     "MANIFEST_UNKNOWN",
+                     "MANIFEST_UNVERIFED",
+                     "NAME_INVALID",
+                     "NAME_UNKNOWN",
+                     "SIZE_INVALID",
+                     "TAG_INVALID",
+                     "UNAUTHORIZED",
+                     "DENIED",
+                     "UNSUPPORTED"
+                  ],
+                  "type": "string"
+               },
+               "detail": {
+                  "type": "string"
+               },
+               "message": {
+                  "type": "string"
+               }
+            },
+            "type": "object"
+         },
+         "type": "array"
+      }
+   },
+   "title": "OCI Error Response",
+   "type": "object"
+}

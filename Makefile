@@ -15,3 +15,16 @@ install.tools: .install.gitvalidation
 
 .install.gitvalidation:
 	go get -u github.com/vbatts/git-validation
+
+# Generate json-schemas.
+schemas:
+	find schema -path 'schema/test-fixtures' -prune -o -name generate.jsonnet -execdir jsonnet -J jsonnet -m . {} \;
+
+embed-files:
+	find . -name gen.go -execdir go generate {} \;
+
+test-fixtures:
+	find schema -path 'schema/test-fixtures/**' -name generate.jsonnet -execdir jsonnet -J jsonnet -m . {} \;
+
+test-schemas:
+	go test -cover ./schema

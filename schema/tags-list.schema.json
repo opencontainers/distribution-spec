@@ -1,0 +1,18 @@
+{
+   "$id": "http://opencontainers.org/schema/tags/list",
+   "$schema": "http://json-schema.org/draft-07/schema#",
+   "description": "This property contains a list of all tags in a repository.",
+   "properties": {
+      "name": {
+         "type": "string"
+      },
+      "tags": {
+         "items": {
+            "type": "string"
+         },
+         "type": "array"
+      }
+   },
+   "title": "OCI Tags List",
+   "type": "object"
+}
