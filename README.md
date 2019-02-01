@@ -6,10 +6,9 @@
 
 # OCI Distribution Specification
 
-The Distribution project defines a collection of HTTP endpoints used to distribute [OCI Images][image-spec]. The specification can be found [here][spec].
-
+The Distribution project defines a collection of HTTP endpoints used to distribute [OCI Images][image-spec].
+The specification can be found [here][spec].
 This repository also provides [Go types][specs-go] and [JSON Schemas][schemas].
-
 Additional documentation about how this group operates, refer to the [org repo][org].
 
 ## Contributing
