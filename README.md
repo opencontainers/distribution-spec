@@ -1,9 +1,10 @@
-# OCI Distribution Specification
 <div>
 <a href="https://travis-ci.org/opencontainers/distribution-spec">
 <img src="https://travis-ci.org/opencontainers/distribution-spec.svg?branch=master"></img>
 </a>
 </div>
+
+# OCI Distribution Specification
 
 The OCI Distribution Specification defines a collection of HTTP endpoints used to distribute [OCI Images][image-spec].
 
