@@ -11,6 +11,7 @@ The Distribution project defines a collection of HTTP endpoints used to distribu
 The specification can be found [here][spec].
 
 This repository also provides [Go types][specs-go] and [JSON Schemas][schemas].
+The Go types and validation should be compatible with the current Go release; earlier Go releases are not supported.
 
 For additional documentation about how this group operates, refer to the [org repo][org].
 
