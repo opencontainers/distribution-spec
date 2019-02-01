@@ -19,9 +19,12 @@ type ErrorResponse struct {
 	Errors []ErrorInfo `json:"errors"`
 }
 
+// ErrRegistry is the string returned by and ErrorResponse error.
+var ErrRegistry = "distribution: registry returned error"
+
 // Error implements the Error interface.
 func (er *ErrorResponse) Error() string {
-	return "distribution: registry returned error"
+	return ErrRegistry
 }
 
 // Detail returns an ErrorInfo
