@@ -25,8 +25,6 @@ Development happens on GitHub.
 Responsible disclosure for security issues is discussed [here](CONTRIBUTING.md#security-issues).
 [Issues][issues] are used for non-security bugs and actionable items; longer discussions can happen on the [mailing list](#mailing-list).
 
-## Security Issues
-
 ### Mailing list
 
 You can subscribe and browse the mailing list on [Google Groups][mailing-list].
