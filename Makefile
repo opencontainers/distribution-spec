@@ -54,7 +54,7 @@ $(OUTPUT_DIRNAME)/$(DOC_FILENAME).html: header.html $(DOC_FILES) $(FIGURE_FILES)
 	ls -sh $(realpath $@)
 endif
 
-header.html: .tool/genheader.go version.go
+header.html: .tool/genheader.go specs-go/version.go
 	go run .tool/genheader.go > $@
 
 install.tools: .install.gitvalidation
