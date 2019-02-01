@@ -12,22 +12,13 @@ The specification can be found [here][spec].
 
 This repository also provides [Go types][specs-go] and [JSON Schemas][schemas].
 
-Additional documentation about how this group operates:
-
-- [Code of Conduct][code-of-conduct]
-- [Releases][releases]
-- [Charter][charter]
-
+Additional documentation about how this group operates, refer to the [org repo][org].
 
 ## Contributing
 
 Development happens on GitHub.
 Responsible disclosure for security issues is discussed [here](CONTRIBUTING.md#security-issues).
-[Issues][issues] are used for non-security bugs and actionable items; longer discussions can happen on the [mailing list](#mailing-list).
-
-## Mailing list
-
-You can subscribe and browse the mailing list on [Google Groups][mailing-list].
+[Issues][issues] are used for non-security bugs and actionable items; longer discussions can happen on the [mailing list][mailing-list].
 
 [spec]: spec.md
 [specs-go]: specs-go
@@ -35,9 +26,8 @@ You can subscribe and browse the mailing list on [Google Groups][mailing-list].
 [releases]: RELEASES.md
 [contributing]: CONTRIBUTING.md
 
+[org]: https://github.com/opencontainers/org.com
 [oci]: https://www.opencontainers.org
-[charter]: https://www.opencontainers.org/about/governance
-[code-of-conduct]: https://github.com/opencontainers/tob/blob/master/code-of-conduct.md
 [issues]: https://github.com/opencontainers/distribution-spec/issues
 [mailing-list]: https://groups.google.com/a/opencontainers.org/forum/#!forum/dev
 [image-spec]: https://github.com/opencontainers/image-spec
