@@ -10,7 +10,7 @@ To pull an image from a registry, the client MUST know the following information
 
 When fetching a manifest from a registry, there are two manifest types that clients MUST be aware of:
 
-### Standard Manifest
+### Standard Manifests
 
 The most widely used manifest type is the standard manifest.
 The standard manifest contains meta-data that describes where to download content for a specific image.
@@ -23,4 +23,10 @@ An index allows multiple images to be referenced by the same tag.
 The index contains meta-data that describes a collection of standard manifests.
 A common use case for indices is to store binaries built for different operating systems.
 
+If a registry returns an index, clients MUST use the index to fetch a standard manifest by its digest.
+
 ## Step 2: Fetch blobs referenced in the manifest.
+
+Once a standard manifest is fetched, clients MUST fetch all of the content referenced within.
+
+Image download is complete. No further steps required.
