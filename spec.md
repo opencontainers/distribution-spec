@@ -996,7 +996,7 @@ The registry does not implement the V2 API.
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1030,7 +1030,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1089,7 +1089,7 @@ The following parameters SHOULD be specified on the request:
 ```HTTP
 200 OK
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "name": <name>,
@@ -1114,7 +1114,7 @@ The following headers will be returned with the response:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1148,7 +1148,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1181,7 +1181,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1214,7 +1214,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1264,7 +1264,7 @@ The following parameters SHOULD be specified on the request:
 200 OK
 Content-Length: <length>
 Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "name": <name>,
@@ -1290,7 +1290,7 @@ The following headers will be returned with the response:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1324,7 +1324,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1357,7 +1357,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1390,7 +1390,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1477,7 +1477,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1506,7 +1506,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1540,7 +1540,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1573,7 +1573,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1606,7 +1606,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1691,7 +1691,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1724,7 +1724,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1758,7 +1758,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1791,7 +1791,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1824,7 +1824,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1856,7 +1856,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [{
@@ -1924,7 +1924,7 @@ The following parameters SHOULD be specified on the request:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1953,7 +1953,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -1987,7 +1987,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2020,7 +2020,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2053,7 +2053,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2085,7 +2085,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2192,7 +2192,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2219,7 +2219,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2248,7 +2248,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2284,7 +2284,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2317,7 +2317,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2350,7 +2350,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2426,7 +2426,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2453,7 +2453,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2489,7 +2489,7 @@ This can happen when the range is not formatted correctly or if the range is out
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2523,7 +2523,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2556,7 +2556,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2589,7 +2589,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2668,7 +2668,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2695,7 +2695,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 405 Method Not Allowed
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2723,7 +2723,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2757,7 +2757,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2790,7 +2790,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2823,7 +2823,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2939,7 +2939,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -2973,7 +2973,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3006,7 +3006,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3039,7 +3039,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3129,7 +3129,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3163,7 +3163,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3196,7 +3196,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3229,7 +3229,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3331,7 +3331,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3365,7 +3365,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3398,7 +3398,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3431,7 +3431,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3511,7 +3511,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3539,7 +3539,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3568,7 +3568,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3602,7 +3602,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3635,7 +3635,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3668,7 +3668,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3748,7 +3748,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3776,7 +3776,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3805,7 +3805,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3839,7 +3839,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3872,7 +3872,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3905,7 +3905,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -3986,7 +3986,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4014,7 +4014,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4051,7 +4051,7 @@ The `Content-Range` specification cannot be accepted, either because it does not
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4085,7 +4085,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4118,7 +4118,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4151,7 +4151,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4233,7 +4233,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4262,7 +4262,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4291,7 +4291,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4325,7 +4325,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4358,7 +4358,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4391,7 +4391,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4462,7 +4462,7 @@ The following headers will be returned with the response:
 
 ```HTTP
 400 Bad Request
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4490,7 +4490,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ```HTTP
 404 Not Found
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4519,7 +4519,7 @@ The error codes that MAY be included in the response body are enumerated below:
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4553,7 +4553,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 404 Not Found
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4586,7 +4586,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 403 Forbidden
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4619,7 +4619,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ```HTTP
 429 Too Many Requests
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "errors:" [
@@ -4671,7 +4671,7 @@ The implementation MAY impose a maximum limit and return a partial set with pagi
 ```HTTP
 200 OK
 Content-Length: <length>
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "repositories": [
@@ -4710,7 +4710,7 @@ The following parameters SHOULD be specified on the request:
 200 OK
 Content-Length: <length>
 Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
-Content-Type: application/json; charset=utf-8
+Content-Type: application/json
 
 {
     "repositories": [
