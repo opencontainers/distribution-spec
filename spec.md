@@ -173,7 +173,7 @@ For detail on individual endpoints, please see the [_Detail_](#detail) section.
 
 Actionable failure conditions, covered in detail in their relevant sections, are reported as part of 4xx responses, in a json response body.
 One or more errors will be returned in the following format:
-
+```JSON
     {
         "errors:" [{
                 "code": <error identifier>,
@@ -183,6 +183,7 @@ One or more errors will be returned in the following format:
             ...
         ]
     }
+```
 
 The `code` field will be a unique identifier, all caps with underscores by convention.
 The `message` field will be a human readable string.
@@ -285,16 +286,7 @@ An "image" is a combination of a JSON manifest and individual layer files.
 The process of pulling an image centers around retrieving these two components.
 
 The first step in pulling an image is to retrieve the manifest.
-For reference, the relevant manifest fields for the registry are the following:
-
-| field     | description                                    |
-|-----------|------------------------------------------------|
-| name      | The name of the image.                         |
-| tag       | The tag for this version of the image.         |
-| fsLayers  | A list of layer descriptors (including digest) |
-| signature | A JWS used to verify the manifest content      |
-
-For more information about the manifest format, please see [moby/moby#8093](https://github.com/moby/moby/issues/8093).
+For details on manifest formats and their content types, refer to the OCI Image Specification's [manifest property description](https://github.com/opencontainers/image-spec/blob/master/manifest.md#image-manifest-property-descriptions).
 
 When the manifest is in hand, the client MUST verify the signature to ensure the names and layers are valid.
 Once confirmed, the client will then use the digests to download the individual layers.
@@ -312,11 +304,10 @@ The `name` and `reference` parameter identify the image and are REQUIRED.
 The reference MAY include a tag or digest.
 
 The client SHOULD include an Accept header indicating which manifest content types it supports.
-For more details on the manifest formats and their content types, see [manifest-v2-1.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-1.md) and [manifest-v2-2.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md).
 In a successful response, the Content-Type header will indicate which manifest type is being returned.
 
 A `404 Not Found` response will be returned if the image is unknown to the registry.
-If the image exists and the response is successful, the image manifest will be returned, with the following format (see [moby/moby#8093](https://github.com/moby/moby/issues/8093) for details):
+If the image exists and the response is successful, the image manifest will be returned:
 
 ```json
 {
@@ -663,28 +654,28 @@ Once all of the layers for an image are uploaded, the client can upload the imag
 An image can be pushed using the following request format:
 
 ```HTTP
-    PUT /v2/<name>/manifests/<reference>
-    Content-Type: <manifest media type>
+PUT /v2/<name>/manifests/<reference>
+Content-Type: <manifest media type>
 
-	{
-	   "annotations": {
-	      "com.example.key1": "value1",
-	      "com.example.key2": "value2"
-	   },
-	   "config": {
-	      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
-	      "mediaType": "application/vnd.oci.image.config.v1+json",
-	      "size": 452
-	   },
-	   "layers": [
-	      {
-	         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
-	         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
-	         "size": 78343
-	      }
-	   ],
-	   "schemaVersion": 2
-	}
+{
+   "annotations": {
+      "com.example.key1": "value1",
+      "com.example.key2": "value2"
+   },
+   "config": {
+      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+      "mediaType": "application/vnd.oci.image.config.v1+json",
+      "size": 452
+   },
+   "layers": [
+      {
+         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+         "size": 78343
+      }
+   ],
+   "schemaVersion": 2
+}
 ```
 
 The `name` and `reference` fields of the response body MUST match those specified in the URL.
@@ -698,7 +689,7 @@ If one or more layers are unknown to the registry, `BLOB_UNKNOWN` errors are ret
 The `detail` field of the error response will have a `digest` field identifying the missing blob.
 An error is returned for each unknown blob.
 The response format is as follows:
-
+```JSON
     {
         "errors:" [{
                 "code": "BLOB_UNKNOWN",
@@ -710,6 +701,7 @@ The response format is as follows:
             ...
         ]
     }
+```
 
 ### Listing Repositories
 
@@ -831,16 +823,16 @@ The tags for an image repository can be retrieved with the following request:
 The response will be in the following format:
 
 ```HTTP
-    200 OK
-    Content-Type: application/json
+200 OK
+Content-Type: application/json
 
-    {
-        "name": <name>,
-        "tags": [
-            <tag>,
-            ...
-        ]
-    }
+{
+  "name": <name>,
+  "tags": [
+    <tag>,
+    ...
+  ]
+}
 ```
 
 For repositories with a large number of tags, this response MAY be quite large.
