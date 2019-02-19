@@ -1,0 +1,12 @@
+language: go
+
+go:
+  - 1.11.x
+
+script:
+  - make
+
+notifications:
+  email: false
+
+sudo: false
