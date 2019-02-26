@@ -7,7 +7,7 @@ The content of this repository is licensed under the [Apache License, Version 2.
 
 ## Code of Conduct
 
-Participation in the Open Container community is governed by [Open Container Code of Conduct][code-of-conduct].
+Participation in the Open Container community is governed by the [OCI Code of Conduct][code-of-conduct].
 
 ## Meetings
 
@@ -27,12 +27,9 @@ OCI discussion happens on #opencontainers on [Freenode][] ([logs][irc-logs]).
 
 ## Git
 
-### Security issues
+### Security
 
-If you are reporting a security issue, do not create an issue or file a pull
-request on GitHub. Instead, disclose the issue responsibly by sending an email
-to security@opencontainers.org (which is inhabited only by the maintainers of
-the various OCI projects).
+If you wish to report a security issue, please see the protocol under [security][security].
 
 ### Pull requests are always welcome
 
@@ -139,7 +136,7 @@ using your real name (sorry, no pseudonyms or anonymous contributions.)
 
 You can add the sign off when creating the git commit via `git commit -s`.
 
-[code-of-conduct]: https://github.com/opencontainers/tob/blob/d2f9d68c1332870e40693fe077d311e0742bc73d/code-of-conduct.md
+[code-of-conduct]: https://github.com/opencontainers/org/blob/master/CODE_OF_CONDUCT.md
 [developercertificate.org]: http://developercertificate.org/
 [Freenode]: https://freenode.net/
 [irc-logs]: http://ircbot.wl.linuxfoundation.org/eavesdrop/%23opencontainers/
@@ -147,4 +144,5 @@ You can add the sign off when creating the git commit via `git commit -s`.
 [meeting.ics]: https://github.com/opencontainers/runtime-spec/blob/master/meeting.ics
 [minutes]: http://ircbot.wl.linuxfoundation.org/meetings/opencontainers/
 [rfc5545]: https://tools.ietf.org/html/rfc5545
+[security]: https://github.com/opencontainers/org/blob/master/security
 [UberConference]: https://www.uberconference.com/opencontainers
