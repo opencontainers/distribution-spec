@@ -35,6 +35,6 @@ Responsible disclosure for security issues is discussed [here](CONTRIBUTING.md#s
 You can subscribe and browse the mailing list on [Google Groups][mailing-list].
 
 [charter]: https://www.opencontainers.org/about/governance
-[code-of-conduct]: https://github.com/opencontainers/tob/blob/master/code-of-conduct.md
+[code-of-conduct]: https://github.com/opencontainers/org/blob/master/CODE_OF_CONDUCT.md
 [issues]: https://github.com/opencontainers/distribution-spec/issues
 [mailing-list]: https://groups.google.com/a/opencontainers.org/forum/#!forum/dev
