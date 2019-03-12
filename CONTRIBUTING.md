@@ -25,6 +25,12 @@ You can subscribe and browse the mailing list on [Google Groups][mailing-list].
 
 OCI discussion happens on #opencontainers on [Freenode][] ([logs][irc-logs]).
 
+## Slack
+
+In addition to IRC, https://opencontainers.slack.com/ provides discussions with markdown formatting, with several channels enabling focused discussions.
+
+Gain access to OCI Slack here: https://chat.opencontainers.org/
+
 ## Git
 
 ### Security
