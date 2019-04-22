@@ -234,7 +234,7 @@ We define a _digest_ string to match the following grammar:
 
 ```EBNF
 digest      := algorithm ":" hex
-algorithm   := /[A-Fa-f0-9_+.-]+/
+algorithm   := /[A-Za-z0-9_+.-]+/
 hex         := /[A-Fa-f0-9]+/
 ```
 
