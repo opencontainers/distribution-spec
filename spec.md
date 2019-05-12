@@ -7,9 +7,13 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 
 ## Distribution Specification
 
-This specification defines an API protocol to facilitate distribution of images.
+This specification defines an API protocol to facilitate distribution of artifacts, including images.
 
-The goal of this specification is to standardize container image distribution based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md).
+The goal of this specification is to standardize container image distribution based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md). In addition to images, additional artifacts may be stored and retrieved from an OCI compliant registry. 
+
+## OCI Artifact Extensibility 
+
+The distribution spec was initially based on docker images and the [OCI Image spec](https://github.com/opencontainers/image-spec/). As new artifact types surfaced, it became a logical use case to leverage the common elements of distribution to store and retrieve additional artifacts. This spec will reference *images* as one type of artifact, with specifics on how to differentiate different types of artifacts.
 
 ### Table of Contents
 
@@ -23,6 +27,7 @@ The goal of this specification is to standardize container image distribution ba
   - [Resumable Push](#resumable-push)
   - [Resumable Pull](#resumable-pull)
   - [Layer Upload De-duplication](#layer-upload-de-duplication)
+  - [OCI Artifacts](#artifact-support)
 - [Changes](#changes)
 - [Overview](#overview)
   - [Errors](#errors)
@@ -56,6 +61,7 @@ The goal of this specification is to standardize container image distribution ba
     - [PATCH Blob Upload](#patch-blob-upload)
     - [PUT Blob Upload](#put-blob-upload)
     - [DELETE Blob Upload](#delete-blob-upload)
+  - [OCI Artifacts](#oci-artifacts)
   - [Catalog](#catalog)
     - [GET Catalog](#get-catalog)
 
@@ -75,6 +81,7 @@ For relevant details and a history leading up to this specification, please see 
 - [moby/moby#8093](https://github.com/moby/moby/issues/8093)
 - [moby/moby#9015](https://github.com/moby/moby/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
+- [opencontainers/image-spec#770](https://github.com/opencontainers/image-spec/pull/770)
 
 <!--- TODO: add relevant background information here --->
 
@@ -87,6 +94,7 @@ This specification includes the following features:
 
 - Namespace-oriented URI Layout
 - PUSH/PULL registry server for V2 image manifest format
+- PUSH/PULL registry server for OCI artifacts
 - Resumable layer PUSH support
 - V2 Client (Consumer) requirements
 
@@ -129,6 +137,10 @@ Build process A completes uploading the layer before B.
 When process B attempts to upload the layer, the registry indicates that its not necessary because the layer is already known.
 
 If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry (Note: we MAY modify this to prevent dogpile with some locking mechanism).
+
+### Artifact Support
+
+Company Z has established policies, procedures and authentication between their registry and container hosts. As they integrate new cloud-native artifacts, such as [Helm Charts](helm.sh), [Singularity Images for High Performance Computing workloads](https://www.sylabs.io/singularity/), [Open Policy Agent Bundles](https://github.com/open-policy-agent/opa), they'd like to leverage this common infrastructure. As they consider less popular artifact types, they'd like to also incorporate them into their registry. 
 
 ## Changes
 
@@ -4646,6 +4658,10 @@ The error codes that MAY be included in the response body are enumerated below:
 | Code              | Message           | Description                                                         |
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
+
+### OCI Artifacts
+
+[./artifacts.md](./artifacts.md)
 
 ### Catalog (OPTIONAL)
 
