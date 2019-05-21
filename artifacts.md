@@ -16,19 +16,37 @@ Artifacts are defined by setting the `manifest.config.mediaType` to a globally u
 
 `application/vnd.`[org|company]`.`[objectType]`.`[optional sub type]`.config.`[version]`+json`
 
-|Artifact|mediaType|
-|-|-|
-|OCI Image|`application/vnd.oci.image.config.v1+json`|
-|[Helm Chart](https://helm.sh)|`application/vnd.cncf.helm.chart.config.v1+json`|
-|[Singularity Images](https://www.sylabs.io/singularity/), by Sylabs|`application/vnd.sylabs.sif.config.v1+json`|
+### Sample Artifacts
+
+|Artifact|mediaType|Folder Name|
+|-|-|-|
+|[OCI Image](https://github.com/opencontainers/image-spec/)|`application/vnd.oci.image.config.v1+json`|[vnd.oci.image](./artifactTypes/vnd.oci.image/)
+|[Helm Chart](https://helm.sh)|`application/vnd.cncf.helm.chart.config.v1+json`|[vnd.cncf.helm.chart](./artifactTypes/vnd.cncf.helm.chart/)|
+|[Singularity Images](https://www.sylabs.io/singularity/), by Sylabs|`application/vnd.sylabs.sif.config.v1+json`|[vnd.sylabs.sif](./artifactTypes/vnd.sylabs.sif/)
 
 ## Registering Artifact Types
 
-It is NOT a requirement for distribution implementations to support all artifact types. To ease in the awareness of new artifact types, artifact authors MAY define their types by contributing to [artifact-media-types.json](./artifacts/artifact-media-types.json).
+It is NOT a requirement for distribution implementations to support all artifact types. To ease in the awareness of new artifact types, artifact authors MAY define their types by providing providing the following files under the [./artifactTypes](./artifactTypes) folder.
+
+- Each new artifact definition is placed in a separate folder. 
+- Each folder follows a subset of the `manifest.config.mediaType` definition: `vnd.`[org|company]`.`[objectType]`.`[optional sub type]`.config.`[version]
+
+
+`artifactTypes` folder contains:
+|File|Content|
+|-|-|
+|`artifactMapping.json`|REQUIRED: Information that enables registries and artifact specific tooling to represent the artifact|
+|`artifactConfigSchema.json`|OPTIONAL: Schema validation for the optional configuration. If a file is present, the config has schema. A missing `artifactConfigSchema.json` file states the artifact does not support configuration information.
+|`logo.svg`|OPTIONAL: The artifact logo, in svg format, enabling distributions and tooling to associate the artifact logo. 
 
 ## Config Schema Validation
 
 While the value of `manifest.config.mediaType` is used to determine the artifact type, the persistance of a config.json file is OPTIONAL. `manifest.config` schema verification is OPTIONAL. The [artifact-media-types.json](./artifacts/artifact-media-types.json) specifies whether an artifact defines a config schema. 
+
+Distribution instances MAY:
+
+- parse and process the contents of  `manifest.config`, based on the provided schema of `manifest.config.mediaType`, offering additional information or actions. 
+- ignore the contents and validation of the config.json file
 
 ## Artifact Layers
 
@@ -54,3 +72,11 @@ Artifact layer types utilize the `layer.mediaType` with the following format:
 |Helm Chart Meta Layer|`application/vnd.cncf.helm.chart.meta.layer.v1+json`|
 |Singularity SIF Layer|`application/vnd.sylabs.sif.layer.v1+tar`|
 
+## Authoring New Artifacts
+
+Authoring a new artifact involves the following steps:
+
+1. Define the [artifact type](#artifact-types), by identifying a unique `manifest.config.mediaType`
+1. Define the [layer types](#artifact-layer-types)
+1. OPTIONAL: [define a config schema](#config-schema-validation)
+1. OPTIONAL: [register the artifact information](#registering-artifact-types)

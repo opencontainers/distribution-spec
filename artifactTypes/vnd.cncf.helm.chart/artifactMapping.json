@@ -1,0 +1,19 @@
+{
+  "mediaType": "application/vnd.cncf.helm.config.v1+json",
+  "spec": "https://github.com/helm/helm/blob/master/oci-artifact-mediatypes",
+  "title": "Helm Chart",
+  "description": "The package manager for Kubernetes",
+  "url": "https://helm.sh/",
+  "tools": [
+    {
+      "title": "Helm",
+      "url": "https://github.com/helm/helm#install"
+    }
+  ],
+  "schemaReference": "",
+  "layerMediaTypes": [
+    {
+      "mediaType": "application/vnd.cncf.helm.chart.layer.v1.tar"
+    }
+  ]
+}

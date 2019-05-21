@@ -1,0 +1,19 @@
+{
+  "mediaType": "application/vnd.sylabs.sif.config.v1+json",
+  "spec": "https://github.com/sylabs/singularity",
+  "title": "Singularity Image",
+  "description": "High Performance Computing Singularity Image",
+  "url": "https://www.sylabs.io/singularity/",
+  "tools": [
+    {
+      "title": "Singularity CRI",
+      "url": "https://github.com/sylabs/singularity-cri"
+    }
+  ],
+  "schemaReference": "",
+  "layerMediaTypes": [
+    {
+      "mediaType": "application/vnd.sylabs.sif.layer.v1.tar"
+    }
+  ]
+}
