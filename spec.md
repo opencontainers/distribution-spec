@@ -7,9 +7,9 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 
 ## Distribution Specification
 
-This specification defines an API protocol to facilitate distribution of artifacts, including images.
+This specification defines an API protocol to facilitate distribution of artifacts, including container images.
 
-The goal of this specification is to standardize container image distribution based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md). In addition to images, additional artifacts may be stored and retrieved from an OCI compliant registry. 
+The goal of this specification is to standardize artifact distribution based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md). 
 
 ## OCI Artifact Extensibility 
 
@@ -140,7 +140,7 @@ If process A and B upload the same layer at the same time, both operations will 
 
 ### Artifact Support
 
-Company Z has established policies, procedures and authentication between their registry and container hosts. As they integrate new cloud-native artifacts, such as [Helm Charts](helm.sh), [Singularity Images for High Performance Computing workloads](https://www.sylabs.io/singularity/), [Open Policy Agent Bundles](https://github.com/open-policy-agent/opa), they'd like to leverage this common infrastructure. As they consider less popular artifact types, they'd like to also incorporate them into their registry. 
+Company Z has established policies, procedures and authentication between their registry and container hosts. As they integrate new cloud-native artifacts, such as [Helm Charts](helm.sh), [Singularity Images for High Performance Computing workloads](https://www.sylabs.io/singularity/), [Open Policy Agent Bundles](https://github.com/open-policy-agent/opa), they prefer leveraging existing infrastructure rather than deploying new storage solutions. As they consider new, possibly less popular artifact types, they'd like to also incorporate them into their registry. 
 
 ## Changes
 
@@ -4661,7 +4661,8 @@ The error codes that MAY be included in the response body are enumerated below:
 
 ### OCI Artifacts
 
-[./artifacts.md](./artifacts.md)
+See [artifacts](./artifacts.md) for OCI distribution extensibility supporting additional artifact types.
+
 
 ### Catalog (OPTIONAL)
 

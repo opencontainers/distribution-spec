@@ -10,7 +10,7 @@
       "url": "https://github.com/helm/helm#install"
     }
   ],
-  "schemaReference": "",
+  "configSchemaReference": "",
   "layerMediaTypes": [
     {
       "mediaType": "application/vnd.cncf.helm.chart.layer.v1.tar"

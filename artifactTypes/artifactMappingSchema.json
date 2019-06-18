@@ -1,0 +1,68 @@
+{
+  "description": "OpenContainer Artifact Type Mapping Specification",
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "https://opencontainers.org/schema/artifactMapping",
+  "type": "object",
+  "properties": {
+    "mediaType": {
+      "type": "string",
+      "description": "Uniquely identifies the artifact for computer consumption.",
+      "minLength": 35,
+      "maxLength": 50
+    },
+    "title": {
+      "type": "string",
+      "description": "Represents the name of the type displayed for human consumption.",
+      "minLength": 5,
+      "maxLength": 30
+    },
+    "description": {
+      "type": "string",
+      "description": "Provides a short description of the type for human consumption.",
+      "minLength": 10,
+      "maxLength": 255
+    },
+    "url": {
+      "type": "string",
+      "description": "Provides additional details, intended for consumers of the type.",
+      "format": "url"
+    },
+    "spec": {
+      "type": "string",
+      "description": "References a spec, providing additional details on the type.",
+      "format": "url"
+    },
+    "tools": {
+      "type": "object",
+      "description": "Provides a collection of tools that may be used with artifact type.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Represents the name of the tool, displayed for human consumption.",
+          "minLength": 5,
+          "maxLength": 30
+        },
+        "url": {
+          "type": "string",
+          "description": "Links to a page where users can download the tool.",
+          "format": "url"
+        }
+      }
+    },
+    "configSchemaReference": {
+      "type": "string",
+      "description": "provides a schema reference for the artifact config object.",
+      "format": "url"
+    },
+    "layerMediaTypes": {
+      "type": "object",
+      "description": "Represents one or more layer mediaTypes, defined by the artifact.",
+      "properties": {
+        "mediaType": {
+          "type": "string",
+          "description": "Represents a valid layer `mediaTypes`for the artifact."
+        }
+      }
+    }
+  }
+}

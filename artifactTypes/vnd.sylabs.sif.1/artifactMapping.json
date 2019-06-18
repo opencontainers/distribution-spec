@@ -10,7 +10,7 @@
       "url": "https://github.com/sylabs/singularity-cri"
     }
   ],
-  "schemaReference": "",
+  "configSchemaReference": "",
   "layerMediaTypes": [
     {
       "mediaType": "application/vnd.sylabs.sif.layer.v1.tar"

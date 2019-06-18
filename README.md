@@ -18,6 +18,8 @@ Following sections give context for aspects of this specification:
 
 ### Registry Administrators
 
+### Registry Operators
+
 ### Client Side Image Tools
 
 ### Container Image Pipeline
