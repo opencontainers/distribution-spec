@@ -211,7 +211,7 @@ Depending on access control setup, the client MAY still have to authenticate aga
 
 If `404 Not Found` response status, or other unexpected status, is returned, the client SHOULD proceed with the assumption that the registry does not implement V2 of the API.
 
-When a `200 OK` or `401 Unauthorized` response is returned, the "Docker-Distribution-API-Version" header SHOULD be set to "registry/2.0".
+When a `200 OK` or `401 Unauthorized` response is returned, the "OCI-Distribution-API-Version" header SHOULD be set to "registry/2.0".
 Clients MAY require this header value to determine if the endpoint serves this API.
 When this header is omitted, clients MAY fallback to an older API version.
 
@@ -263,7 +263,7 @@ A digest can be verified by independently calculating `D` and comparing it with 
 
 #### Digest Header
 
-To provide verification of http content, any response MAY include a `Docker-Content-Digest` header.
+To provide verification of http content, any response MAY include a `Distribution-Content-Digest` header.
 This will include the digest of the target entity returned in the response.
 For blobs, this is the entire blob content.
 For manifests, this is the manifest body without the signature content, also known as the JWS payload.
@@ -278,7 +278,7 @@ In such a case, the client MAY choose to verify the digests in both domains or i
 To maintain security, the client MUST always verify the content against the _digest_ used to fetch the content.
 
 > __IMPORTANT:__ If a _digest_ is used to fetch content, the client SHOULD use the same digest used to fetch the content to verify it.
-> The header `Docker-Content-Digest` SHOULD NOT be trusted over the "local" digest.
+> The header `Distribution-Content-Digest` SHOULD NOT be trusted over the "local" digest.
 
 ### Pulling An Image
 
@@ -350,7 +350,7 @@ If the image exists and the response is successful the response will be as follo
 ```HTTP
 200 OK
 Content-Length: <length of manifest>
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 #### Pulling a Layer
@@ -415,7 +415,7 @@ The response will look as follows:
 ```HTTP
 200 OK
 Content-Length: <length of blob>
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 When this response is received, the client can assume that the layer is already available in the registry under the given name and SHOULD take no further action to upload the layer.
@@ -439,7 +439,7 @@ Though the URI format (`/v2/<name>/blobs/uploads/<uuid>`) for the `Location` hea
 While the `uuid` parameter MAY be an actual UUID, this proposal imposes no constraints on the format and clients SHOULD never impose any.
 
 Header `Blob-Upload-UUID` OPTIONAL: If clients need to correlate local upload state with remote upload state, largely for resumable uploads.
-Header `Docker-Upload-UUID` OPTIONAL: legacy compatibility
+Header `Distribution-Upload-UUID` OPTIONAL: legacy compatibility
 
 ##### Upload Progress
 
@@ -550,11 +550,11 @@ When the last chunk is received and the layer has been validated, the client wil
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 The `Location` header will contain the registry URL to access the accepted layer file.
-The `Docker-Content-Digest` header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
+The `Distribution-Content-Digest` header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
 Most clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 ###### Digest Parameter
@@ -596,11 +596,11 @@ If the blob is successfully mounted, the client will receive a `201 Created` res
 201 Created
 Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 The `Location` header will contain the registry URL to access the accepted layer file.
-The `Docker-Content-Digest` header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
+The `Distribution-Content-Digest` header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
 Most clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 If a mount fails due to invalid repository or digest arguments, the registry will fall back to the standard upload behavior and return a `202 Accepted` with the upload URL in the `Location` header:
@@ -1449,7 +1449,7 @@ The following parameters SHOULD be specified on the request:
 
 ```HTTP
 200 OK
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 Content-Type: <media type of manifest>
 
 {
@@ -1480,7 +1480,7 @@ The following headers will be returned with the response:
 
 | Name                    | Description                                     |
 |-------------------------|-------------------------------------------------|
-| `Docker-Content-Digest` | Digest of the targeted content for the request. |
+| `Distribution-Content-Digest` | Digest of the targeted content for the request. |
 
 ###### On Failure: Bad Request
 
@@ -1689,7 +1689,7 @@ The following parameters SHOULD be specified on the request:
 201 Created
 Location: <url>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 The manifest has been accepted by the registry and is stored under the specified `name` and `tag`.
@@ -1700,7 +1700,7 @@ The following headers will be returned with the response:
 |-------------------------|----------------------------------------------------------------------|
 | `Location`              | The canonical location url of the uploaded manifest.                 |
 | `Content-Length`        | The `Content-Length` header MUST be zero and the body MUST be empty. |
-| `Docker-Content-Digest` | Digest of the targeted content for the request.                      |
+| `Distribution-Content-Digest` | Digest of the targeted content for the request.                      |
 
 ###### On Failure: Invalid Manifest
 
@@ -2170,7 +2170,7 @@ The following parameters SHOULD be specified on the request:
 ```HTTP
 200 OK
 Content-Length: <length>
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 Content-Type: application/octet-stream
 
 <blob binary data>
@@ -2184,14 +2184,14 @@ The following headers will be returned with the response:
 | Name                    | Description                                     |
 |-------------------------|-------------------------------------------------|
 | `Content-Length`        | The length of the requested blob content.       |
-| `Docker-Content-Digest` | Digest of the targeted content for the request. |
+| `Distribution-Content-Digest` | Digest of the targeted content for the request. |
 
 ###### On Success: Temporary Redirect
 
 ```HTTP
 307 Temporary Redirect
 Location: <blob location>
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 The blob identified by `digest` is available at the provided location.
@@ -2201,7 +2201,7 @@ The following headers will be returned with the response:
 | Name                    | Description                                        |
 |-------------------------|----------------------------------------------------|
 | `Location`              | The location where the layer SHOULD be accessible. |
-| `Docker-Content-Digest` | Digest of the targeted content for the request.    |
+| `Distribution-Content-Digest` | Digest of the targeted content for the request.    |
 
 ###### On Failure: Bad Request
 
@@ -2656,7 +2656,7 @@ The following parameters SHOULD be specified on the request:
 ```HTTP
 202 Accepted
 Content-Length: 0
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 The following headers will be returned with the response:
@@ -2664,7 +2664,7 @@ The following headers will be returned with the response:
 | Name                    | Description                                     |
 |-------------------------|-------------------------------------------------|
 | `Content-Length`        | 0                                               |
-| `Docker-Content-Digest` | Digest of the targeted content for the request. |
+| `Distribution-Content-Digest` | Digest of the targeted content for the request. |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -4229,7 +4229,7 @@ The following parameters SHOULD be specified on the request:
 Location: <blob location>
 Content-Range: <start of range>-<end of range, inclusive>
 Content-Length: 0
-Docker-Content-Digest: <digest>
+Distribution-Content-Digest: <digest>
 ```
 
 The upload has been completed and accepted by the registry.
@@ -4242,7 +4242,7 @@ The following headers will be returned with the response:
 | `Location`              | The canonical location of the blob for retrieval                                                                                                                                                                  |
 | `Content-Range`         | Range of bytes identifying the desired block of content represented by the body.Start MUST match the end of offset retrieved via status check.Note that this is a non-standard use of the `Content-Range` header. |
 | `Content-Length`        | The `Content-Length` header MUST be zero and the body MUST be empty.                                                                                                                                              |
-| `Docker-Content-Digest` | Digest of the targeted content for the request.                                                                                                                                                                   |
+| `Distribution-Content-Digest` | Digest of the targeted content for the request.                                                                                                                                                                   |
 
 ###### On Failure: Bad Request
 
