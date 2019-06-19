@@ -46,7 +46,7 @@ Distribution instances MAY:
 
 ## Artifact Layers
 
-Artifacts are intended to have content. The content of an artifact is represented through one ore more [OCI Layers](https://github.com/opencontainers/image-spec/blob/master/layer.md). How the layers are constructed, and whether the layers are ordinal is a decision of the artifact author. 
+Artifacts are intended to have content. The content of an artifact is represented through one or more [OCI Layers](https://github.com/opencontainers/image-spec/blob/master/layer.md). How the layers are constructed, and whether the layers are ordinal is a decision of the artifact author. 
 
 As an example, OCI images are represented through an ordinal collection of compressed files. Each layer overlays the previous layer. 
 Other artifacts may be represented by a single file, such as a markdown document, or a config file. Other artifacts may include single config file as one layer, and a collection of binaries, compressed as another layer. By separating the layers, the artifact author can benefit from layer de-duplication and concurrent downloading of the blobs which represent the layer. 
