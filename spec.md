@@ -3740,7 +3740,7 @@ The following parameters SHOULD be specified on the request:
 ###### On Success: Data Accepted
 
 ```HTTP
-204 No Content
+202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
@@ -3978,7 +3978,7 @@ The following parameters SHOULD be specified on the request:
 ###### On Success: Chunk Accepted
 
 ```HTTP
-204 No Content
+202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
