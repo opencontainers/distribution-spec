@@ -19,4 +19,5 @@ const (
 	DistAPIVersionValue string = "registry/2.0"
 
 	UploadUuidKey string = "Docker-Upload-Uuid"
+	ContentDigest string = "Docker-Content-Digest"
 )
