@@ -22,7 +22,7 @@ import (
 	"strings"
 	"text/template"
 
-	distspec "github.com/opencontainers/distribution-spec"
+	specs "github.com/opencontainers/distribution-spec/specs-go"
 )
 
 var headerTemplate = template.Must(template.New("gen").Parse(`<title>distribution-spec {{.Version}}</title>
@@ -35,10 +35,10 @@ type Obj struct {
 
 func main() {
 	obj := Obj{
-		Version: distspec.Version,
-		Branch:  distspec.Version,
+		Version: specs.Version,
+		Branch:  specs.Version,
 	}
-	if strings.HasSuffix(distspec.Version, "-dev") {
+	if strings.HasSuffix(specs.Version, "-dev") {
 		cmd := exec.Command("git", "log", "-1", `--pretty=%H`, "HEAD")
 		var out bytes.Buffer
 		cmd.Stdout = &out
