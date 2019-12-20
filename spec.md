@@ -426,7 +426,7 @@ If the POST request is successful, a `202 Accepted` response will be returned wi
 
 ```HTTP
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: bytes=0-<offset>
 Content-Length: 0
 ```
@@ -434,11 +434,11 @@ Content-Length: 0
 The rest of the upload process can be carried out with the returned url, called the "Upload URL" from the `Location` header.
 All responses to the upload url, whether sending data or getting status, will be in this format.
 
-Though the URI format (`/v2/<name>/blobs/uploads/<uuid>`) for the `Location` header is specified, clients SHOULD treat it as an opaque url and SHOULD never try to assemble it.
-While the `uuid` parameter MAY be an actual UUID, this proposal imposes no constraints on the format and clients SHOULD never impose any.
+Though the URI format (`/v2/<name>/blobs/uploads/<session_id>`) for the `Location` header is specified, clients SHOULD treat it as an opaque url and SHOULD never try to assemble it.
+While the `session_id` parameter MAY be an actual UUID, this proposal imposes no constraints on the format and clients SHOULD never impose any.
 
-Header `Blob-Upload-UUID` OPTIONAL: If clients need to correlate local upload state with remote upload state, largely for resumable uploads.
-Header `Docker-Upload-UUID` OPTIONAL: legacy compatibility
+Header `Blob-Upload-Session-ID` OPTIONAL: If clients need to correlate local upload state with remote upload state, largely for resumable uploads.
+Header `Docker-Upload-UUID` OPTIONAL: legacy compatibility. Not contstrained to being an official UUID.
 
 ##### Upload Progress
 
@@ -453,7 +453,7 @@ Range: bytes=0-0
 To get the status of an upload, issue a GET request to the upload URL:
 
 ```HTTP
-GET /v2/<name>/blobs/uploads/<uuid>
+GET /v2/<name>/blobs/uploads/<session_id>
 Host: <registry host>
 ```
 
@@ -461,7 +461,7 @@ The response will be similar to the above, except will return 204 status:
 
 ```HTTP
 204 No Content
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: bytes=0-<offset>
 ```
 
@@ -473,7 +473,7 @@ A monolithic upload is simply a chunked upload with a single chunk and MAY be fa
 To carry out a "monolithic" upload, one can simply put the entire content blob to the provided URL:
 
 ```HTTP
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<session_id>?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
 
@@ -488,7 +488,7 @@ Please see the [_Completed Upload_](#completed-upload) section for details on th
 To carry out an upload of a chunk, the client can specify a range header and only include that part of the layer file:
 
 ```HTTP
-PATCH /v2/<name>/blobs/uploads/<uuid>
+PATCH /v2/<name>/blobs/uploads/<session_id>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
 Content-Type: application/octet-stream
@@ -502,10 +502,10 @@ If the server cannot accept the chunk, a `416 Requested Range Not Satisfiable` r
 
 ```HTTP
 416 Requested Range Not Satisfiable
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: 0-<last valid range>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 If this response is received, the client SHOULD resume from the "last valid range" and upload the subsequent chunk.
@@ -518,10 +518,10 @@ When a chunk is accepted as part of the upload, a `202 Accepted` response will b
 
 ```HTTP
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: bytes=0-<offset>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 ##### Completed Upload
@@ -531,7 +531,7 @@ If it is not provided, the upload will not be considered complete.
 The format for the final chunk will be as follows:
 
 ```HTTP
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<session_id>?digest=<digest>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
 Content-Type: application/octet-stream
@@ -573,10 +573,10 @@ An upload can be cancelled by issuing a DELETE request to the upload endpoint.
 The format will be as follows:
 
 ```HTTP
-DELETE /v2/<name>/blobs/uploads/<uuid>
+DELETE /v2/<name>/blobs/uploads/<session_id>
 ```
 
-After this request is issued, the upload uuid will no longer be valid and the registry server will dump all intermediate data.
+After this request is issued, the upload `session_id` will no longer be valid and the registry server will dump all intermediate data.
 While uploads will time out if not completed, clients SHOULD issue this request if they encounter a fatal error but still have the ability to issue an http request.
 
 ##### Cross Repository Blob Mount
@@ -606,10 +606,10 @@ If a mount fails due to invalid repository or digest arguments, the registry wil
 
 ```HTTP
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: bytes=0-<offset>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 This behavior is consistent with older versions of the registry, which do not recognize the repository mount query parameters.
@@ -625,7 +625,7 @@ If there is a problem with the upload, a 4xx error will be returned indicating t
 After receiving a 4xx response (except 416, as called out above), the upload will be considered failed and the client SHOULD take appropriate action.
 
 Note that the upload url will not be available forever.
-If the upload uuid is unknown to the registry, a `404 Not Found` response will be returned and the client MUST restart the upload process.
+If the upload `session_id` is unknown to the registry, a `404 Not Found` response will be returned and the client MUST restart the upload process.
 
 #### Deleting a Layer
 
@@ -853,10 +853,10 @@ A list of methods and URIs are covered in the table below:
 | GET    | `/v2/<name>/blobs/<digest>`        | Blob                 | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.                                                              |
 | DELETE | `/v2/<name>/blobs/<digest>`        | Blob                 | Delete the blob identified by `name` and `digest`                                                                                                                                                                                        |
 | POST   | `/v2/<name>/blobs/uploads/`        | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
-| GET    | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.                                                                                             |
-| PATCH  | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Upload a chunk of data for the specified upload.                                                                                                                                                                                         |
-| PUT    | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Complete the upload specified by `uuid`, optionally appending the body as the final chunk.                                                                                                                                               |
-| DELETE | `/v2/<name>/blobs/uploads/<uuid>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
+| GET    | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Retrieve status of upload identified by `session_id`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.                                                                                             |
+| PATCH  | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Upload a chunk of data for the specified upload.                                                                                                                                                                                         |
+| PUT    | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Complete the upload specified by `session_id`, optionally appending the body as the final chunk.                                                                                                                                               |
+| DELETE | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
 The detail for each endpoint is covered in the following sections.
 
 ### Errors
@@ -2834,7 +2834,7 @@ The following parameters SHOULD be specified on the request:
 201 Created
 Location: <blob location>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 The blob has been created in the registry and is available at the provided location.
@@ -2845,7 +2845,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Location`           |                                                                      |
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty. |
-| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.           |
+| `Blob-Upload-Session-ID` | Identifies the upload session_id for the current request.           |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -3033,9 +3033,9 @@ The following parameters SHOULD be specified on the request:
 ```HTTP
 202 Accepted
 Content-Length: 0
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: 0-0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 The upload has been created.
@@ -3049,7 +3049,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty.                                                                           |
 | `Location`           | The location of the created upload.Clients SHOULD use the contents verbatim to complete the upload, adding parameters where required.          |
 | `Range`              | Range header indicating the progress of the upload.When starting an upload, it will return an empty range, since no content has been received. |
-| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.                                                                                     |
+| `Blob-Upload-Session-ID` | Identifies the upload session_id for the current request.                                                                                     |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -3226,7 +3226,7 @@ The following parameters SHOULD be specified on the request:
 201 Created
 Location: <blob location>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 The blob has been mounted in the repository and is available at the provided location.
@@ -3237,7 +3237,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Location`           |                                                                      |
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty. |
-| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.           |
+| `Blob-Upload-Session-ID` | Identifies the upload session_id for the current request.           |
 
 ###### On Failure: Invalid Name or Digest
 
@@ -3408,11 +3408,11 @@ The `Location` header and its parameters SHOULD be preserved by clients, using t
 
 #### GET Blob Upload
 
-Retrieve status of upload identified by `uuid`.
+Retrieve status of upload identified by `session_id`.
 The primary purpose of this endpoint is to resolve the current status of a resumable upload.
 
 ```HTTP
-GET /v2/<name>/blobs/uploads/<uuid>
+GET /v2/<name>/blobs/uploads/<session_id>
 Host: <registry host>
 Authorization: <scheme> <token>
 ```
@@ -3426,7 +3426,7 @@ The following parameters SHOULD be specified on the request:
 | `Host`          | header | Standard HTTP Host Header.SHOULD be set to the registry host.                                 |
 | `Authorization` | header | An RFC7235 compliant authorization header.                                                    |
 | `name`          | path   | Name of the target repository.                                                                |
-| `uuid`          | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
+| `session_id`          | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
 ###### On Success: Upload Progress
 
@@ -3434,7 +3434,7 @@ The following parameters SHOULD be specified on the request:
 204 No Content
 Range: 0-<offset>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 The upload is known and in progress.
@@ -3446,7 +3446,7 @@ The following headers will be returned with the response:
 |----------------------|----------------------------------------------------------------------|
 | `Range`              | Range indicating the current progress of the upload.                 |
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty. |
-| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.           |
+| `Blob-Upload-Session-ID` | Identifies the upload session ID for the current request.           |
 
 ###### On Failure: Bad Request
 
@@ -3644,7 +3644,7 @@ Upload a chunk of data for the specified upload.
 ##### Stream upload
 
 ```HTTP
-PATCH /v2/<name>/blobs/uploads/<uuid>
+PATCH /v2/<name>/blobs/uploads/<session_id>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Type: application/octet-stream
@@ -3661,16 +3661,16 @@ The following parameters SHOULD be specified on the request:
 | `Host`          | header | Standard HTTP Host Header.SHOULD be set to the registry host.                                 |
 | `Authorization` | header | An RFC7235 compliant authorization header.                                                    |
 | `name`          | path   | Name of the target repository.                                                                |
-| `uuid`          | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
+| `session_id`          | path   | A unique string identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
 ###### On Success: Data Accepted
 
 ```HTTP
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: 0-<offset>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 The stream of data has been accepted and the current progress is available in the range header.
@@ -3683,7 +3683,7 @@ The following headers will be returned with the response:
 | `Location`           | The location of the upload.Clients SHOULD assume this changes after each request.Clients SHOULD use the contents verbatim to complete the upload, adding parameters where required. |
 | `Range`              | Range indicating the current progress of the upload.                                                                                                                                |
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty.                                                                                                                |
-| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.                                                                                                                          |
+| `Blob-Upload-Session-ID` | Identifies the upload session ID for the current request.                                                                                                                          |
 
 ###### On Failure: Bad Request
 
@@ -3877,7 +3877,7 @@ The error codes that MAY be included in the response body are enumerated below:
 ##### Chunked upload
 
 ```HTTP
-PATCH /v2/<name>/blobs/uploads/<uuid>
+PATCH /v2/<name>/blobs/uploads/<session_id>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Range: <start of range>-<end of range, inclusive>
@@ -3899,16 +3899,16 @@ The following parameters SHOULD be specified on the request:
 | `Content-Range`  | header | Range of bytes identifying the desired block of content represented by the body.Start MUST the end offset retrieved via status check plus one.Note that this is a non-standard use of the `Content-Range` header. |
 | `Content-Length` | header | Length of the chunk being uploaded, corresponding the length of the request body.                                                                                                                                 |
 | `name`           | path   | Name of the target repository.                                                                                                                                                                                    |
-| `uuid`           | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                                                                                                                     |
+| `session_id`           | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                                                                                                                     |
 
 ###### On Success: Chunk Accepted
 
 ```HTTP
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
+Location: /v2/<name>/blobs/uploads/<session_id>
 Range: 0-<offset>
 Content-Length: 0
-Blob-Upload-UUID: <uuid>
+Blob-Upload-Session-ID: <session_id>
 ```
 
 The chunk of data has been accepted and the current progress is available in the range header.
@@ -3921,7 +3921,7 @@ The following headers will be returned with the response:
 | `Location`           | The location of the upload.Clients SHOULD assume this changes after each request.Clients SHOULD use the contents verbatim to complete the upload, adding parameters where required. |
 | `Range`              | Range indicating the current progress of the upload.                                                                                                                                |
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty.                                                                                                                |
-| `Blob-Upload-UUID` | Identifies the upload uuid for the current request.                                                                                                                          |
+| `Blob-Upload-Session-ID` | Identifies the upload session ID for the current request.                                                                                                                          |
 
 ###### On Failure: Bad Request
 
@@ -4122,10 +4122,10 @@ The error codes that MAY be included in the response body are enumerated below:
 
 #### PUT Blob Upload
 
-Complete the upload specified by `uuid`, optionally appending the body as the final chunk.
+Complete the upload specified by `session_id`, optionally appending the body as the final chunk.
 
 ```HTTP
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<session_id>?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: <length of data>
@@ -4145,7 +4145,7 @@ The following parameters SHOULD be specified on the request:
 | `Authorization`  | header | An RFC7235 compliant authorization header.                                                                             |
 | `Content-Length` | header | Length of the data being uploaded, corresponding to the length of the request body.May be zero if no data is provided. |
 | `name`           | path   | Name of the target repository.                                                                                         |
-| `uuid`           | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                          |
+| `session_id`           | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                          |
 | `digest`         | query  | Digest of uploaded blob.                                                                                               |
 
 ###### On Success: Upload Complete
@@ -4366,13 +4366,13 @@ Cancel outstanding upload processes, releasing associated resources.
 If this is not called, the unfinished uploads will eventually timeout.
 
 ```HTTP
-DELETE /v2/<name>/blobs/uploads/<uuid>
+DELETE /v2/<name>/blobs/uploads/<session_id>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: 0
 ```
 
-Cancel the upload specified by `uuid`.
+Cancel the upload specified by `session_id`.
 
 The following parameters SHOULD be specified on the request:
 
@@ -4382,7 +4382,7 @@ The following parameters SHOULD be specified on the request:
 | `Authorization`  | header | An RFC7235 compliant authorization header.                                                    |
 | `Content-Length` | header | The `Content-Length` header MUST be zero and the body MUST be empty.                          |
 | `name`           | path   | Name of the target repository.                                                                |
-| `uuid`           | path   | A uuid identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
+| `session_id`           | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
 ###### On Success: Upload Deleted
 
