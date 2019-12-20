@@ -240,9 +240,10 @@ Some examples of _digests_ include the following:
 
 | digest                                                                  | description                |
 |-------------------------------------------------------------------------|----------------------------|
-| sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b | Common sha256 based digest |
+| `sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b` | Common sha256 based digest format |
 
-While the _algorithm_ does allow one to implement a wide variety of algorithms, compliant implementations SHOULD use sha256.
+Compliant implementations SHOULD use _algorithm_ of sha256.
+The _algorithm_ does allow one to implement a wide variety of algorithms, though for portability sake it is best to keep this consistent because a translation of hashing algorithm used would produce a new object and new documents that reference it.
 Heavy processing of input before calculating a hash is discouraged to avoid degrading the uniqueness of the _digest_ but some canonicalization MAY be performed to ensure consistent identifiers.
 
 Let's use a simple example in pseudo-code to demonstrate a digest calculation:
