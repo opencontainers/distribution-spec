@@ -395,6 +395,8 @@ Uploads are started with a POST request which returns a url that can be used to 
 
 The `Location` header will be used to communicate the upload location after each request.
 While it won't change in the this specification, clients SHOULD use the most recent value returned by the API.
+`Location` header value returned MUST either be absolute or relative as described in
+[RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
 
 ##### Starting An Upload
 
