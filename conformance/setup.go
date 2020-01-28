@@ -18,35 +18,54 @@ type (
 )
 
 const (
-	nonexistentManifest string = ".INVALID_MANIFEST_NAME"
+	BLOB_UNKNOWN = iota
+	BLOB_UPLOAD_INVALID
+	BLOB_UPLOAD_UNKNOWN
+	DIGEST_INVALID
+	MANIFEST_BLOB_UNKNOWN
+	MANIFEST_INVALID
+	MANIFEST_UNKNOWN
+	MANIFEST_UNVERIFIED
+	NAME_INVALID
+	NAME_UNKNOWN
+	SIZE_INVALID
+	TAG_INVALID
+	UNAUTHORIZED
+	DENIED
+	UNSUPPORTED
 )
 
 var (
-	blobA               []byte
-	blobALength         string
-	blobADigest         string
-	blobB               []byte
-	blobBDigest         string
-	blobBChunk1         []byte
-	blobBChunk1Length   string
-	blobBChunk2         []byte
-	blobBChunk2Length   string
-	blobBChunk1Range    string
-	blobBChunk2Range    string
-	client              *reggie.Client
-	configContent       []byte
-	configContentLength string
-	configDigest        string
-	dummyDigest         string
-	lastResponse        *reggie.Response
-	lastTagList         TagList
-	manifestContent     []byte
-	manifestDigest      string
-	numTags             int
-	reportJUnitFilename string
-	reportHTMLFilename  string
-	httpWriter          *httpDebugWriter
-	suiteDescription    string
+	blobA                  []byte
+	blobALength            string
+	blobADigest            string
+	blobB                  []byte
+	blobBDigest            string
+	blobBChunk1            []byte
+	blobBChunk1Length      string
+	blobBChunk2            []byte
+	blobBChunk2Length      string
+	blobBChunk1Range       string
+	blobBChunk2Range       string
+	client                 *reggie.Client
+	configContent          []byte
+	configContentLength    string
+	configDigest           string
+	dummyDigest            string
+	errorCodes             []string
+	firstTag               string
+	lastResponse           *reggie.Response
+	lastTagList            TagList
+	manifestContent        []byte
+	invalidManifestContent []byte
+	manifestDigest         string
+	nonexistentManifest    string
+	numTags                int
+	reportJUnitFilename    string
+	reportHTMLFilename     string
+	httpWriter             *httpDebugWriter
+	suiteDescription       string
+	Version                = "unknown"
 )
 
 func init() {
@@ -80,6 +99,8 @@ func init() {
 			"\"schemaVersion\": 2 }",
 		configDigest, configContentLength))
 	manifestDigest = godigest.FromBytes(manifestContent).String()
+	nonexistentManifest = ".INVALID_MANIFEST_NAME"
+	invalidManifestContent = []byte("blablabla")
 
 	blobA = []byte("NBA Jam on my NBA toast")
 	blobALength = strconv.Itoa(len(blobA))
@@ -95,6 +116,24 @@ func init() {
 	blobBChunk2Range = fmt.Sprintf("%d-%d", len(blobBChunk1), len(blobB)-1)
 
 	dummyDigest = godigest.FromString("hello world").String()
+
+	errorCodes = []string{
+		BLOB_UNKNOWN:          "BLOB_UNKNOWN",
+		BLOB_UPLOAD_INVALID:   "BLOB_UPLOAD_INVALID",
+		BLOB_UPLOAD_UNKNOWN:   "BLOB_UPLOAD_UNKNOWN",
+		DIGEST_INVALID:        "DIGEST_INVALID",
+		MANIFEST_BLOB_UNKNOWN: "MANIFEST_BLOB_UNKNOWN",
+		MANIFEST_INVALID:      "MANIFEST_INVALID",
+		MANIFEST_UNKNOWN:      "MANIFEST_UNKNOWN",
+		MANIFEST_UNVERIFIED:   "MANIFEST_UNVERIFIED",
+		NAME_INVALID:          "NAME_INVALID",
+		NAME_UNKNOWN:          "NAME_UNKNOWN",
+		SIZE_INVALID:          "SIZE_INVALID",
+		TAG_INVALID:           "TAG_INVALID",
+		UNAUTHORIZED:          "UNAUTHORIZED",
+		DENIED:                "DENIED",
+		UNSUPPORTED:           "UNSUPPORTED",
+	}
 
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"

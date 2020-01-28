@@ -1,7 +1,9 @@
 EPOCH_TEST_COMMIT	:= 91d6d8466e68f1efff7977b63ad6f48e72245e05
+CURRENT_COMMIT	:= $(shell git log --format="%H" -n 1)
 
-DOCKER		?= $(shell command -v docker 2>/dev/null)
-PANDOC		?= $(shell command -v pandoc 2>/dev/null)
+DOCKER	?= $(shell command -v docker 2>/dev/null)
+PANDOC	?= $(shell command -v pandoc 2>/dev/null)
+GOLANGCILINT	?= $(shell command -v golangcli-lint 2>/dev/null)
 
 OUTPUT_DIRNAME	?= output/
 DOC_FILENAME	?= oci-distribution-spec
@@ -19,6 +21,26 @@ ifeq "$(strip $(PANDOC))" ''
 			$(PANDOC_CONTAINER)
 		PANDOC_SRC := /input/
 		PANDOC_DST := /
+	endif
+endif
+
+# Using older version of golangci-lint
+# see https://github.com/golangci/golangci-lint/issues/825#issuecomment-553210121
+GOLANGCILINT_CONTAINER ?= docker.io/golangci/golangci-lint:v1.17.1
+ifeq "$(strip $(GOLANGCILINT))" ''
+	ifneq "$(strip $(DOCKER))" ''
+		GOLANGCILINT = $(DOCKER) run \
+			-it \
+			--rm \
+			-v $(shell pwd)/:/input:ro \
+			-e GOCACHE=/tmp/.cache \
+			-e GO111MODULE=on \
+			--entrypoint /bin/bash \
+			-u $(shell id -u) \
+			--workdir /input \
+			$(GOLANGCILINT_CONTAINER)
+		GOLANGCILINT_SRC := /input/
+		GOLANGCILINT_DST := /
 	endif
 endif
 
@@ -61,3 +83,15 @@ install.tools: .install.gitvalidation
 
 .install.gitvalidation:
 	go get -u github.com/vbatts/git-validation
+
+conformance: conformance-test conformance-binary
+
+conformance-test:
+	$(GOLANGCILINT) -c 'cd conformance && golangci-lint run -v'
+
+conformance-binary: $(OUTPUT_DIRNAME)/conformance.test
+
+$(OUTPUT_DIRNAME)/conformance.test:
+	cd conformance && \
+		CGO_ENABLED=0 go test -c -o $(shell pwd)/$(OUTPUT_DIRNAME)/conformance.test \
+			--ldflags="-X github.com/opencontainers/distribution-spec/conformance.Version=$(CURRENT_COMMIT)"

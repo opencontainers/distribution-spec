@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"time"
 
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/types"
@@ -68,6 +70,57 @@ const (
         max-height: 60em;
         overflow-y: auto;
       }
+	  .summary {
+		width: 75%;
+		height: auto;
+		padding: 0 0 .5em 0;
+		border: 1px solid grey;
+	  }
+	  .summary-bullet {
+		width: 100%;
+		height: auto;
+		display: flex;
+		padding: .5em .1em .1em .5em;
+	  }
+	  .bullet-left {
+		width: 20%;
+		font-weight: bold;
+		font-size: 1.1em;
+	  }
+	  .bullet-right {
+		width: auto;
+	  }
+	  .quick-summary {
+		width: 70%;
+		display: flex;
+		margin: 0 auto 0 0;
+		font-weight: bold;
+		font-size: 1.2em;
+	  }
+	  .darkgreen {
+		color: green;
+		padding: 0 2em 0 0;
+	  }
+	  .darkred {
+		color: red;
+	  }
+	  .meter {
+		border: 1px solid black;
+		margin: 0 .5em 0 auto;
+		display: flex;
+		height: 25px;
+		width: 50%;
+	  }
+	  .meter-green {
+		height: 100%;
+		background: green;
+		width: {{ .PercentPassed -}}%;
+	  }
+	  .meter-red {
+		height: 100%;
+		background: red;
+		width: {{ .PercentFailed -}}%;
+	  }
     </style>
     <script>
       function toggleOutput(id) {
@@ -85,6 +138,48 @@ const (
   </head>
   <body>
     <h1>OCI Distribution Conformance Tests</h1>
+<div class="summary">
+	<div class="summary-bullet">
+		<div class="bullet-left">Summary:</div>
+		<div class="quick-summary">
+			{{- if not .AllFailed -}}
+				<span class="darkgreen">
+				{{- if .AllPassed -}}All {{ end -}}{{ .SuiteSummary.NumberOfPassedSpecs }} passed</span>
+			{{- end -}}
+			{{- if not .AllPassed -}}
+				<span class="darkred">
+				{{- if .AllFailed -}}All {{ end -}}{{ .SuiteSummary.NumberOfFailedSpecs }} failed</span>
+			{{- end -}}
+		  <div class="meter">
+			<div class="meter-green"></div><div class="meter-red"></div>
+		  </div>
+		</div>
+	</div>
+	<div class="summary-bullet">
+		<div class="bullet-left">Start time:</div>
+		<div class="bullet-right">{{ .StartTimeString }}</div>
+	</div>
+	<div class="summary-bullet">
+		<div class="bullet-left">End time:</div>
+		<div class="bullet-right">{{ .EndTimeString }}</div>
+	</div>
+	<div class="summary-bullet">
+		<div class="bullet-left">Elapsed time:</div>
+		<div class="bullet-right">{{ .RunTime }}</div>
+	</div>
+	<div class="summary-bullet">
+		<div class="bullet-left">Test version:</div>
+		<div class="bullet-right">{{ .Version }}</div>
+	</div>
+	<div class="summary-bullet">
+		<div class="bullet-left">Configuration:</div>
+		<div class="bullet-right">
+			{{ range $i, $s := .EnvironmentVariables }}
+				{{ $s }}<br />
+			{{ end }}
+		</div>
+	</div>
+</div>
     <div>
       {{with .SpecSummaryMap}}
         {{$x := .M}}
@@ -212,16 +307,30 @@ func (l *httpDebugLogger) output(format string, v ...interface{}) {
 		l.l.Print(format)
 		return
 	}
-	l.w.Write([]byte(fmt.Sprintf(format, v...)))
+	_, err := l.w.Write([]byte(fmt.Sprintf(format, v...)))
+	if err != nil {
+		l.Errorf(err.Error())
+	}
 }
 
 type (
 	HTMLReporter struct {
-		htmlReportFilename string
-		SpecSummaryMap     summaryMap
-		config             config.DefaultReporterConfigType
-		debugLogger        *httpDebugWriter
-		debugIndex         int
+		htmlReportFilename   string
+		SpecSummaryMap       summaryMap
+		EnvironmentVariables []string
+		SuiteSummary         *types.SuiteSummary
+		debugLogger          *httpDebugWriter
+		debugIndex           int
+		PercentPassed        int
+		PercentFailed        int
+		StartTime            time.Time
+		StartTimeString      string
+		EndTime              time.Time
+		EndTimeString        string
+		RunTime              string
+		AllPassed            bool
+		AllFailed            bool
+		Version              string
 	}
 )
 
@@ -248,6 +357,15 @@ func (reporter *HTMLReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 }
 
 func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
+	reporter.EndTime = time.Now()
+	reporter.EndTimeString = reporter.EndTime.Format("Jan 2 15:04:05.000 -0700 MST")
+	reporter.RunTime = reporter.EndTime.Sub(reporter.StartTime).String()
+	reporter.PercentPassed = int(float64(summary.NumberOfPassedSpecs) / float64(summary.NumberOfTotalSpecs) * 100)
+	reporter.PercentFailed = 100 - reporter.PercentPassed
+	reporter.SuiteSummary = summary
+	reporter.AllPassed = summary.NumberOfPassedSpecs == (summary.NumberOfTotalSpecs - summary.NumberOfSkippedSpecs)
+	reporter.AllFailed = summary.NumberOfFailedSpecs == (summary.NumberOfTotalSpecs - summary.NumberOfSkippedSpecs)
+
 	t, err := template.New("report").Parse(htmlTemplate)
 	if err != nil {
 		log.Fatal(err)
@@ -265,7 +383,6 @@ func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 	defer htmlReportFile.Close()
 
 	err = t.ExecuteTemplate(htmlReportFile, "report", &reporter)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -275,6 +392,31 @@ func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 
 //unused by HTML reporter
 func (reporter *HTMLReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
+	varsToCheck := []string{
+		"OCI_ROOT_URL",
+		"OCI_NAMESPACE",
+		"OCI_DEBUG",
+		"OCI_PASSWORD",
+		"OCI_USERNAME",
+	}
+	for _, v := range varsToCheck {
+		var replacement string
+		if envVar := os.Getenv(v); envVar != "" {
+			replacement = envVar
+			if strings.Contains(v, "PASSWORD") || strings.Contains(v, "USERNAME") {
+				replacement = "*****"
+			}
+		} else {
+			continue
+		}
+		reporter.EnvironmentVariables = append(reporter.EnvironmentVariables,
+			fmt.Sprintf("%s=%s", v, replacement))
+	}
+
+	reporter.StartTime = time.Now()
+	reporter.StartTimeString = reporter.StartTime.Format("Jan 2 15:04:05.000 -0700 MST")
+
+	reporter.Version = Version
 }
 
 func (reporter *HTMLReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
