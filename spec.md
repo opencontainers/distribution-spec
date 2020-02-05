@@ -718,7 +718,7 @@ The response format is as follows:
 
 Repository listing is reserved for a future version of the distribution spec.
 
-The `_catalog` api is reserved for historical usage. Registries MAY implement _catalog, but are NOT required.
+The `_catalog` api is reserved for historical usage. Registries MAY implement `_catalog`, but are NOT required.
 
 ### Listing Image Tags
 
