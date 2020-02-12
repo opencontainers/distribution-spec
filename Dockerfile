@@ -1,3 +1,5 @@
+# Note: this Dockerfile is used for running conformance tests
+
 # ---
 # Stage 1: Install certs and build conformance binary
 # ---
