@@ -33,13 +33,13 @@ Note: for some registries, you may need to create `OCI_NAMESPACE` ahead of time.
 
 #### Container Image
 
-You may use [Dockerfile.conformance](./../Dockerfile.conformance) located at the
+You may use [Dockerfile](./../Dockerfile) located at the
 root of this repo to build a container image that contains the test binary.
 
 Example (using `docker`):
 ```
 # build the image
-(cd ../ && docker build -t conformance:latest -f Dockerfile.conformance .)
+(cd ../ && docker build -t conformance:latest -f Dockerfile .)
 
 # run the image
 docker run --rm \
