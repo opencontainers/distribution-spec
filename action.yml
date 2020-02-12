@@ -1,0 +1,11 @@
+name: OCI Distribution Spec Conformance Tests
+description: Validate a registry against the OCI Distribution Spec
+author: The Linux Foundation
+branding:
+  color: blue
+  icon: check-circle
+inputs: {}
+outputs: {}
+runs:
+  using: docker
+  image: Dockerfile.conformance
