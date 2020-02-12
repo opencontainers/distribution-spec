@@ -802,7 +802,7 @@ v3
 v4
 ```
 
-If the value of `n` is 2, _v1_ and _v1_ will be returned on the first response.
+If the value of `n` is 2, _v1_ and _v2_ will be returned on the first response.
 The `Link` header returned on the response will have `n` set to 2 and last set
 to _v2_:
 
