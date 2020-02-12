@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var test08BlobDelete = func() {
+var test09BlobDelete = func() {
 	g.Context("Blob Delete", func() {
 		g.Specify("DELETE request to blob URL should yield 202 response", func() {
 			req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configDigest))

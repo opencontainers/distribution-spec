@@ -14,9 +14,10 @@ var test02BlobUploadStreamed = func() {
 			req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
-			lastResponse = resp
+			location := resp.Header().Get("Location")
+			Expect(location).ToNot(BeEmpty())
 
-			req = client.NewRequest(reggie.PATCH, lastResponse.GetRelativeLocation()).
+			req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 				SetHeader("Content-Type", "application/octet-stream").
 				SetBody(blobA)
 			resp, err = client.Do(req)
@@ -33,6 +34,8 @@ var test02BlobUploadStreamed = func() {
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
 			Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+			location := resp.Header().Get("Location")
+			Expect(location).ToNot(BeEmpty())
 		})
 	})
 }

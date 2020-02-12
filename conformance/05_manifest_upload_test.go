@@ -21,12 +21,18 @@ var test05ManifestUpload = func() {
 
 		g.Specify("PUT should accept a manifest upload", func() {
 			for i := 0; i < 4; i++ {
+				tag := fmt.Sprintf("test%d", i)
+				if i == 0 {
+					firstTag = tag
+				}
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(fmt.Sprintf("test%d", i))).
+					reggie.WithReference(tag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(manifestContent)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
 				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
 			}
 		})

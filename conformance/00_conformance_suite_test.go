@@ -16,8 +16,9 @@ func TestConformance(t *testing.T) {
 		test04BlobUploadChunked()
 		test05ManifestUpload()
 		test06TagsList()
-		test07ManifestDelete()
-		test08BlobDelete()
+		test07ErrorCodes()
+		test08ManifestDelete()
+		test09BlobDelete()
 	})
 	RegisterFailHandler(g.Fail)
 	reporters := []g.Reporter{newHTMLReporter(reportHTMLFilename), reporters.NewJUnitReporter(reportJUnitFilename)}

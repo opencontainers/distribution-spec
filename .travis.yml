@@ -1,6 +1,6 @@
 language: go
 go:
-  - 1.11.x
+  - 1.13.x
 
 sudo: required
 
@@ -15,4 +15,4 @@ install: true
 script:
   - echo "${TRAVIS_COMMIT_RANGE} -> ${TRAVIS_COMMIT_RANGE/.../..} (travis-ci/travis-ci#4596)"
   - TRAVIS_COMMIT_RANGE="${TRAVIS_COMMIT_RANGE/.../..}" make .gitvalidation
-  - make docs
+  - make docs conformance
