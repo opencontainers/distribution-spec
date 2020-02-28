@@ -11,35 +11,50 @@ import (
 
 var test08ManifestDelete = func() {
 	g.Context("Manifest Delete", func() {
-		g.Specify("DELETE request to manifest URL (tag) MUST fail", func() {
+		g.Specify("DELETE request to manifest should return 202, 400, or 405", func() {
 			req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 				reggie.WithReference(firstTag))
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
-			Expect(resp.StatusCode()).To(BeNumerically(">=", 400))
-			Expect(resp.StatusCode()).To(BeNumerically("<", 500))
+			Expect(resp.StatusCode()).To(SatisfyAny(
+				Equal(http.StatusBadRequest),
+				Equal(http.StatusMethodNotAllowed),
+				Equal(http.StatusAccepted)))
+			if resp.StatusCode() == http.StatusBadRequest {
+				errorResponses, err := resp.Errors()
+				Expect(err).To(BeNil())
+				Expect(errorResponses).ToNot(BeEmpty())
+				Expect(errorResponses[0].Code).To(Equal(errorCodes[UNSUPPORTED]))
+			}
 		})
 
-		g.Specify("GET request to manifest URL should reveal that delete failed", func() {
-			req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest)).
-				SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
-			resp, err := client.Do(req)
-			Expect(err).To(BeNil())
-			Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-		})
-
-		g.Specify("DELETE request to manifest URL (digest) should yield 202 response", func() {
+		g.Specify("DELETE request to manifest (digest) should yield 202 response unless delete disallowed or already deleted", func() {
 			req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
-			Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+			// In the case that the previous request was accepted, this may or may not fail (which is ok)
+			Expect(resp.StatusCode()).To(SatisfyAny(
+				Equal(http.StatusBadRequest),
+				Equal(http.StatusMethodNotAllowed),
+				Equal(http.StatusAccepted),
+				Equal(http.StatusNotFound),
+			))
+			if resp.StatusCode() == http.StatusBadRequest {
+				errorResponses, err := resp.Errors()
+				Expect(err).To(BeNil())
+				Expect(errorResponses).ToNot(BeEmpty())
+				Expect(errorResponses[0].Code).To(Equal(errorCodes[UNSUPPORTED]))
+			}
 		})
 
-		g.Specify("GET request to deleted manifest URL should yield 404 response", func() {
+		g.Specify("GET request to deleted manifest URL should yield 404 response, unless delete is disallowed", func() {
 			req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
-			Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+			Expect(resp.StatusCode()).To(SatisfyAny(
+				Equal(http.StatusNotFound),
+				Equal(http.StatusOK),
+			))
 		})
 
 		g.Specify("GET request to tags list should reflect manifest deletion", func() {
