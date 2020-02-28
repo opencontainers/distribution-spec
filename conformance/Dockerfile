@@ -1,14 +1,13 @@
-# Note: this Dockerfile is used for running conformance tests
-
 # ---
 # Stage 1: Install certs and build conformance binary
 # ---
 FROM docker.io/golang:1.13.6-alpine3.11 AS builder
-RUN apk --update add git make ca-certificates && \
-    mkdir -p /go/src/github.com/opencontainers/distribution-spec
-WORKDIR /go/src/github.com/opencontainers/distribution-spec
+ARG VERSION=unknown
+ARG GO_PKG=github.com/opencontainers/distribution-spec/conformance
+RUN apk --update add git make ca-certificates && mkdir -p /go/src/${GO_PKG}
+WORKDIR /go/src/${GO_PKG}
 ADD . .
-RUN make conformance-binary && mv output/conformance.test /conformance.test
+RUN CGO_ENABLED=0 go test -c -o /conformance.test --ldflags="-X ${GO_PKG}.Version=${VERSION}"
 
 # ---
 # Stage 2: Final image with nothing but certs & binary
