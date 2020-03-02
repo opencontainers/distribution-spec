@@ -33,13 +33,14 @@ Note: for some registries, you may need to create `OCI_NAMESPACE` ahead of time.
 
 #### Container Image
 
-You may use [Dockerfile](./../Dockerfile) located at the
-root of this repo to build a container image that contains the test binary.
+You may use the [Dockerfile](./Dockerfile) located in this directory
+to build a container image that contains the test binary.
 
 Example (using `docker`):
 ```
-# build the image
-(cd ../ && docker build -t conformance:latest -f Dockerfile .)
+# build the image, using git SHA as the version
+docker build -t conformance:latest \
+    --build-arg VERSION=$(git log --format="%H" -n 1) .
 
 # run the image
 docker run --rm \

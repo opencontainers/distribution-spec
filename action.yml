@@ -8,4 +8,4 @@ inputs: {}
 outputs: {}
 runs:
   using: docker
-  image: Dockerfile
+  image: conformance/Dockerfile
