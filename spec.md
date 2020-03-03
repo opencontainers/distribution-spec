@@ -1014,7 +1014,8 @@ Host: <registry host>
 Authorization: <scheme> <token>
 ```
 
-Return all tags for the repository
+Return all tags for the repository.
+The implementation MAY impose a maximum limit and return a partial set with pagination links.
 
 The following parameters SHOULD be specified on the request:
 
@@ -1189,13 +1190,14 @@ GET /v2/<name>/tags/list?n=<integer>&last=<integer>
 ```
 
 Return a portion of the tags for the specified repository.
+The implementation MAY impose a maximum limit and return a partial set with pagination links.
 
 The following parameters SHOULD be specified on the request:
 
 | Name   | Kind  | Description                                                                                 |
 |--------|-------|---------------------------------------------------------------------------------------------|
 | `name` | path  | Name of the target repository.                                                              |
-| `n`    | query | Limit the number of entries in each response. It not present, all entries will be returned. |
+| `n`    | query | Limit the number of entries in each response. If not present, all entries will be returned. |
 | `last` | query | Result set will include values lexically after last.                                        |
 
 ###### On Success: OK
