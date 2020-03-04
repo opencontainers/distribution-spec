@@ -36,9 +36,12 @@ const (
       pre.fail-message {
         background: #f9a5a5;
         padding: 20px;
+        margin-right: 10px;
         display: inline-block;
         border-radius: 4px;
         font-size: 1.25em;
+        width: 94%;
+        overflow-x: auto;
       }
       .green {
         background: #c8ffc8;
