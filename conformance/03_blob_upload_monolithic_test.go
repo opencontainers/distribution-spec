@@ -19,10 +19,11 @@ var test03BlobUploadMonolithic = func() {
 		})
 
 		g.Specify("POST request with digest and blob should yield a 201", func() {
+			//SkipIfNotEnabled(push)
 			req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
 				SetHeader("Content-Length", configContentLength).
 				SetHeader("Content-Type", "application/octet-stream").
-				SetQueryParam("digest", configDigest).
+				SetQueryParam("digest", blobDigest).
 				SetBody(configContent)
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
@@ -32,7 +33,7 @@ var test03BlobUploadMonolithic = func() {
 		})
 
 		g.Specify("GET request to blob URL from prior request should yield 200", func() {
-			req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configDigest))
+			req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
 			Expect(resp.StatusCode()).To(Equal(http.StatusOK))
@@ -50,7 +51,7 @@ var test03BlobUploadMonolithic = func() {
 			req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
 				SetHeader("Content-Length", configContentLength).
 				SetHeader("Content-Type", "application/octet-stream").
-				SetQueryParam("digest", configDigest).
+				SetQueryParam("digest", blobDigest).
 				SetBody(configContent)
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
@@ -60,7 +61,7 @@ var test03BlobUploadMonolithic = func() {
 		})
 
 		g.Specify("GET request to existing blob should yield 200 response", func() {
-			req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configDigest))
+			req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
 			Expect(resp.StatusCode()).To(Equal(http.StatusOK))

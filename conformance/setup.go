@@ -1,7 +1,10 @@
 package conformance
 
 import (
+	"bytes"
 	"fmt"
+	g "github.com/onsi/ginkgo"
+	"log"
 	"os"
 	"strconv"
 
@@ -9,7 +12,6 @@ import (
 	godigest "github.com/opencontainers/go-digest"
 )
 
-// TODO: import from opencontainers/distribution-spec
 type (
 	TagList struct {
 		Name string   `json:"name"`
@@ -35,6 +37,33 @@ const (
 	UNSUPPORTED
 )
 
+const (
+	envTrue                 = "1"
+	envVarPush              = "OCI_TEST_PUSH"
+	envVarDiscovery         = "OCI_TEST_DISCOVERY"
+	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
+	envVarBlobDigest        = "OCI_BLOB_DIGEST"
+	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
+	envVarTagName           = "OCI_TAG_NAME"
+	push                    = 1 << iota
+	discovery
+	contentManagement
+)
+
+var (
+	testMap = map[string]int{
+		envVarPush:              push,
+		envVarDiscovery:         discovery,
+		envVarContentManagement: contentManagement,
+	}
+
+	requiredVars = map[string][]string{
+		envVarPush: {envVarBlobDigest, envVarManifestDigest, envVarTagName},
+		envVarDiscovery: {envVarTagName},
+		envVarContentManagement: {envVarManifestDigest, envVarTagName, envVarBlobDigest},
+	}
+)
+
 var (
 	blobA                  []byte
 	blobALength            string
@@ -50,7 +79,7 @@ var (
 	client                 *reggie.Client
 	configContent          []byte
 	configContentLength    string
-	configDigest           string
+	blobDigest             string
 	dummyDigest            string
 	errorCodes             []string
 	firstTag               string
@@ -64,6 +93,7 @@ var (
 	reportJUnitFilename    string
 	reportHTMLFilename     string
 	httpWriter             *httpDebugWriter
+	testsToRun             int
 	suiteDescription       string
 	Version                = "unknown"
 )
@@ -74,6 +104,13 @@ func init() {
 	username := os.Getenv("OCI_USERNAME")
 	password := os.Getenv("OCI_PASSWORD")
 	debug := os.Getenv("OCI_DEBUG") == "true"
+
+	for envVar, enableTest := range testMap {
+		if os.Getenv(envVar) == envTrue {
+			testsToRun |= enableTest
+		}
+	}
+	ValidateRequiredEnvVars()
 
 	var err error
 
@@ -91,14 +128,20 @@ func init() {
 
 	configContent = []byte("{}\n")
 	configContentLength = strconv.Itoa(len(configContent))
-	configDigest = godigest.FromBytes(configContent).String()
+	blobDigest = godigest.FromBytes(configContent).String()
+	if v := os.Getenv(envVarBlobDigest); v != "" {
+		manifestDigest = os.Getenv(v)
+	}
 
 	manifestContent = []byte(fmt.Sprintf(
 		"{ \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\", \"config\":  { \"digest\": \"%s\", "+
 			"\"mediaType\": \"application/vnd.oci.image.config.v1+json\","+" \"size\": %s }, \"layers\": [], "+
 			"\"schemaVersion\": 2 }",
-		configDigest, configContentLength))
+		blobDigest, configContentLength))
 	manifestDigest = godigest.FromBytes(manifestContent).String()
+	if v := os.Getenv(envVarManifestDigest); v != "" {
+		manifestDigest = os.Getenv(v)
+	}
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
 
@@ -138,4 +181,58 @@ func init() {
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"
 	suiteDescription = "OCI Distribution Conformance Tests"
+}
+
+func SkipIfNotEnabled(test int) {
+	report := generateSkipReport()
+	if userDisabled(test) {
+		g.Skip(report)
+	}
+}
+
+func ValidateRequiredEnvVars() {
+	buf := new(bytes.Buffer)
+	var validationFailed = false
+	for envVar, test := range testMap {
+		if userDisabled(test) {
+			report, ok := validate(envVar)
+			if !ok {
+				validationFailed = true
+				fmt.Fprintf(buf, report)
+			}
+		}
+	}
+
+	if validationFailed {
+		log.Fatal(buf.String())
+	}
+}
+
+func generateSkipReport() string {
+	buf := new(bytes.Buffer)
+	fmt.Fprintf(buf, "you have skipped this test; if this is an error, check your environment variable settings:\n")
+	for k := range testMap {
+		fmt.Fprintf(buf, "\t%s=%s\n", k, os.Getenv(k))
+	}
+	return buf.String()
+}
+
+func userDisabled(test int) bool {
+	return !(test & testsToRun > 0)
+}
+
+func validate(envVarInQuestion string) (string, bool) {
+	buf := new(bytes.Buffer)
+	var allSupplied = true
+	fmt.Fprintf(buf, "\ndisabling %s requires all of the following environment variables to be set. " +
+		"here is your current configuration:\n", envVarInQuestion)
+	for _, envVar := range requiredVars[envVarInQuestion] {
+		yesNo := "✓"
+		if os.Getenv(envVar) == "" {
+			allSupplied = false
+			yesNo = "✘"
+		}
+		fmt.Fprintf(buf, "\t%s %s=%s\n", yesNo, envVar, os.Getenv(envVar))
+	}
+	return buf.String(), allSupplied
 }
