@@ -51,14 +51,19 @@ var test06TagsList = func() {
 			err = json.Unmarshal(jsonData, tagList)
 			Expect(err).To(BeNil())
 			Expect(len(tagList.Tags)).To(Equal(numResults))
-			lastTagList = *tagList
+			lastTagList = &TagList{
+				Name: tagList.Name,
+				Tags: tagList.Tags,
+			}
 		})
 
 		g.Specify("GET start of tag is set by `last` query parameter", func() {
 			numResults := numTags / 2
+			Expect(len(lastTagList.Tags)).To(BeNumerically(">=", 0))
+			lastTag := lastTagList.Tags[numResults-1]
 			req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list").
 				SetQueryParam("n", strconv.Itoa(numResults)).
-				SetQueryParam("last", lastTagList.Tags[numResults-1])
+				SetQueryParam("last", lastTag)
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
 			Expect(resp.StatusCode()).To(Equal(http.StatusOK))

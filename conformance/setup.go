@@ -55,7 +55,7 @@ var (
 	errorCodes             []string
 	firstTag               string
 	lastResponse           *reggie.Response
-	lastTagList            TagList
+	lastTagList            *TagList
 	manifestContent        []byte
 	invalidManifestContent []byte
 	manifestDigest         string
