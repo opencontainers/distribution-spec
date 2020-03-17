@@ -121,16 +121,17 @@ func init() {
 		reggie.WithUsernamePassword(username, password),
 		reggie.WithDebug(true),
 		reggie.WithUserAgent("distribution-spec-conformance-tests"))
-	client.SetLogger(logger)
 	if err != nil {
 		panic(err)
 	}
+
+	client.SetLogger(logger)
 
 	configContent = []byte("{}\n")
 	configContentLength = strconv.Itoa(len(configContent))
 	blobDigest = godigest.FromBytes(configContent).String()
 	if v := os.Getenv(envVarBlobDigest); v != "" {
-		manifestDigest = os.Getenv(v)
+		blobDigest = v
 	}
 
 	manifestContent = []byte(fmt.Sprintf(
@@ -140,7 +141,7 @@ func init() {
 		blobDigest, configContentLength))
 	manifestDigest = godigest.FromBytes(manifestContent).String()
 	if v := os.Getenv(envVarManifestDigest); v != "" {
-		manifestDigest = os.Getenv(v)
+		manifestDigest = v
 	}
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")

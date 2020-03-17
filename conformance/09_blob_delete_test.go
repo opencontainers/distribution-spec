@@ -17,6 +17,7 @@ var test09BlobDelete = func() {
 			Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
 		})
 
+
 		g.Specify("GET request to deleted blob URL should yield 404 response", func() {
 			req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 			resp, err := client.Do(req)
