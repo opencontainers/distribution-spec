@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 const(
@@ -25,6 +26,7 @@ var contentManagementTest = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetHeader("Content-Length", configContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
@@ -35,6 +37,7 @@ var contentManagementTest = func() {
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+
 				tagToDelete = testTagName
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete)).
@@ -46,10 +49,26 @@ var contentManagementTest = func() {
 				Expect(location).ToNot(BeEmpty())
 				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
 			})
+
+			g.Specify("Discovery - check how many tags there are before anything gets deleted", func() {
+				if userDisabled(discovery) {
+					i, err := strconv.Atoi(os.Getenv(envVarNumberOfTags))
+					Expect(err).To(BeNil())
+					numTags = i
+				}
+				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				tagList := &TagList{}
+				jsonData := []byte(resp.String())
+				err = json.Unmarshal(jsonData, tagList)
+				numTags = len(tagList.Tags)
+			})
 		})
 
 		g.Context("Test deletion endpoints", func() {
-			g.Specify("DELETE request to manifest tag should return 202 or 400", func() {
+			g.Specify("DELETE request to manifest tag should return 202, unless tag deletion is disallowed (400)", func() {
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete))
 				resp, err := client.Do(req)
@@ -63,6 +82,17 @@ var contentManagementTest = func() {
 					Expect(errorResponses).ToNot(BeEmpty())
 					Expect(errorResponses[0].Code).To(Equal(errorCodes[UNSUPPORTED]))
 				}
+			})
+
+			g.Specify("DELETE request to manifest (digest) should yield 202 response unless already deleted", func() {
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				// In the case that the previous request was accepted, this may or may not fail (which is ok)
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusAccepted),
+					Equal(http.StatusNotFound),
+				))
 			})
 
 			g.Specify("GET request to deleted manifest URL should yield 404 response, unless delete is disallowed", func() {
