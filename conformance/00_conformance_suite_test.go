@@ -22,6 +22,7 @@ func TestConformance(t *testing.T) {
 		pullTest()
 		pushTest()
 		discoveryTest()
+		contentManagementTest()
 	})
 	RegisterFailHandler(g.Fail)
 	reporters := []g.Reporter{newHTMLReporter(reportHTMLFilename), reporters.NewJUnitReporter(reportJUnitFilename)}

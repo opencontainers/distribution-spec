@@ -44,6 +44,7 @@ const (
 	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
 	envVarBlobDigest        = "OCI_BLOB_DIGEST"
 	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
+	envVarTagToDelete       = "OCI_DELETE_TAG"
 	envVarTagName           = "OCI_TAG_NAME"
 	push                    = 1 << iota
 	discovery
@@ -58,8 +59,8 @@ var (
 	}
 
 	reqVarsForDisabledFlow = map[string][]string{
-		envVarPush: {envVarBlobDigest, envVarManifestDigest, envVarTagName},
-		envVarDiscovery: {envVarTagName},
+		envVarPush:              {envVarBlobDigest, envVarManifestDigest, envVarTagName, envVarTagToDelete},
+		envVarDiscovery:         {envVarTagName},
 		envVarContentManagement: {envVarManifestDigest, envVarTagName, envVarBlobDigest},
 	}
 )
@@ -93,6 +94,7 @@ var (
 	reportJUnitFilename    string
 	reportHTMLFilename     string
 	httpWriter             *httpDebugWriter
+	tagToDelete            string
 	testsToRun             int
 	suiteDescription       string
 	Version                = "unknown"
@@ -219,13 +221,13 @@ func generateSkipReport() string {
 }
 
 func userDisabled(test int) bool {
-	return !(test & testsToRun > 0)
+	return !(test&testsToRun > 0)
 }
 
 func checkRequiredVars(mainVarToValidate string) (string, bool) {
 	buf := new(bytes.Buffer)
 	var allSupplied = true
-	fmt.Fprintf(buf, "\ndisabling %s requires all of the following environment variables to be set. " +
+	fmt.Fprintf(buf, "\ndisabling %s requires all of the following environment variables to be set. "+
 		"here is your current configuration:\n", mainVarToValidate)
 	for _, subVarForDisabledFlow := range reqVarsForDisabledFlow[mainVarToValidate] {
 		yesNo := "✓"

@@ -84,7 +84,7 @@ var pullTest = func() {
 			})
 
 			g.Specify("GET request to manifest URL (tag) should yield 200 response", func() {
-				tag := tagName()
+				tag := tagName(lastResponse)
 				Expect(tag).ToNot(BeEmpty())
 				req := client.NewRequest(GET, "/v2/<name>/manifests/<reference>", WithReference(tag)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -96,10 +96,10 @@ var pullTest = func() {
 	})
 }
 
-func tagName() string {
+func tagName(lastResponse *Response) string {
 	tl := &TagList{}
 	if lastResponse != nil {
-		jsonData := tagResponse.Body()
+		jsonData := lastResponse.Body()
 		err := json.Unmarshal(jsonData, tl)
 		if err != nil && len(tl.Tags) > 0 {
 			return tl.Tags[0]
