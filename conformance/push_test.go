@@ -9,7 +9,7 @@ import (
 )
 
 var pushTest = func() {
-	g.Context("Test push endpoints", func() {
+	g.Context("Push", func() {
 		g.Context("Setup", func() {
 
 		})

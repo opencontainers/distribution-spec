@@ -15,7 +15,7 @@ var (
 )
 
 var pullTest = func() {
-	g.Context("Test pull endpoints", func() {
+	g.Context("Pull", func() {
 		g.Context("Setup", func() {
 			g.Specify("Push", func() {
 				SkipIfDisabled(push)
@@ -50,7 +50,7 @@ var pullTest = func() {
 			})
 		})
 
-		g.Context("test pull endpoints", func() {
+		g.Context("Test pull endpoints", func() {
 
 			g.Specify("GET nonexistent blob should result in 404 response", func() {
 				req := client.NewRequest(GET, "/v2/<name>/blobs/<digest>",

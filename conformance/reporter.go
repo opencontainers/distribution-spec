@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	suiteIndex           = 2
+	flowIndex            = 2
 	categoryIndex        = 3
-	titleIndex           = 4
+	specIndex            = 4
 	setupString          = "Setup"
 	htmlTemplate  string = `<html>
   <head>
@@ -206,60 +206,27 @@ const (
 	</div>
 </div>
     <div>
-      {{with .SpecSummaryMap}}
-        {{$x := .M}}
-        {{range $i, $k := .Keys}}
-          <h2>{{$k}}</h2>
-          {{$v := index $x $k}}
-{{range $r, $setup := $v.GetSetupSnapshots}}
-              <div class="result grey">
-                <div id="output-box-{{$setup.ID}}-button" class="toggle" style="cursor: auto;">s</div>
-                <h3 style="display: inline;">{{$setup.Title}}</h3>
-                <br>
-                <div id="output-box-{{$setup.ID}}" style="display: none;">
-                  <pre class="pre-box">{{$setup.CapturedOutput}}</pre>
-                </div>
-			  </div>
-{{end}}
-          {{range $z, $s := $v.GetTestSnapshots}}
-            {{if eq $s.State 4}}
-              <div class="result red">
-                <div id="output-box-{{$s.ID}}-button" class="toggle"
-                  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-                <h3 style="display: inline;">{{$s.Title}}</h3>
-                <br>
-                <div>
-                  <div id="output-box-{{$s.ID}}" style="display: none;">
-                    <pre class="pre-box">{{$s.CapturedOutput}}</pre>
-                  </div>
-                </div>
-                <pre class="fail-message">{{$s.Failure.Message}}</pre>
-                <br>
-              </div>
-    </div>
-            {{else if eq $s.State 3}}
-              <div class="result green">
-                <div id="output-box-{{$s.ID}}-button" class="toggle"
-                  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-                <h3 style="display: inline;">{{$s.Title}}</h3>
-                <br>
-                <div id="output-box-{{$s.ID}}" style="display: none;">
-                  <pre class="pre-box">{{$s.CapturedOutput}}</pre>
-                </div>
-			  </div>
-            {{else if eq $s.State 2}}
-              <div class="result grey">
-                <div id="output-box-{{$s.ID}}-button" class="toggle" style="cursor: auto;">s</div>
-                <h3 style="display: inline;">{{$s.Title}}</h3>
-                <br>
-                <div id="output-box-{{$s.ID}}" style="display: none;">
-                  <pre class="pre-box">{{$s.CapturedOutput}}</pre>
-                </div>
-			  </div>
-            {{end}}
-          {{end}}
-        {{end}}
-      {{end}}
+      {{with .Suite}}
+        {{$suite := .M}}
+        {{range $i, $suiteKey := .Keys}}
+		  <h1>{{$suiteKey}}</h1>
+          {{$wf := index $suite $suiteKey}}
+		  {{with $wf}}
+			{{$workflow := .M}}
+			{{range $j, $workflowKey := .Keys}}
+				<h2>&nbsp;{{$workflowKey}}</h2><br>
+				{{$ctg := index $workflow $workflowKey}}
+				{{with $ctg}}
+					{{$category := .M}}
+					{{range $k, $categoryKey := .Keys}}
+						<h3>&nbsp;&nbsp;{{$categoryKey}}<h3><br>
+					{{end}}<br>
+				{{end}}
+			{{end}}
+		  {{end}}
+		{{end}}
+     {{end}}
+	</div>
   </body>
 </html>
 `
@@ -278,7 +245,23 @@ type (
 	}
 
 	summaryMap2 struct {
-		
+		M map[string]map[string]map[string]specSnapshot
+	}
+
+	suite struct {
+		M map[string]*workflow
+		Keys []string
+		Size int
+	}
+
+	workflow struct {
+		M map[string]*category
+		Keys []string
+	}
+
+	category struct {
+		M map[string]specSnapshot
+		Keys []string
 	}
 
 	specSnapshot struct {
@@ -289,10 +272,6 @@ type (
 		Suite    string
 		IsSetup  bool
 	}
-
-	suite map[string]category
-
-	category map[string]snapShotList
 
 	snapShotList []specSnapshot
 
@@ -314,6 +293,19 @@ func (sm *summaryMap) Add(key string, sum *specSnapshot) {
 	if !sm.containsKey(key) {
 		sm.Keys = append(sm.Keys, key)
 	}
+}
+
+func (sm summaryMap2) Add(sum *specSnapshot) {
+	suite := sum.Suite
+	category := sum.Category
+	title := sum.Title
+	if _, ok := sm.M[suite]; !ok {
+		sm.M[suite] = make(map[string]map[string]specSnapshot)
+	}
+	if _, ok := sm.M[suite][category]; !ok {
+		sm.M[suite][category] = make(map[string]specSnapshot)
+	}
+	sm.M[suite][category][title] = *sum
 }
 
 func (ssl snapShotList) GetSetupSnapshots() (list snapShotList) {
@@ -347,8 +339,8 @@ func (sm *summaryMap) containsKey(key string) bool {
 
 func newSpecSnapshot(sum *types.SpecSummary, id int) *specSnapshot {
 	var isSetup bool
-	suite := sum.ComponentTexts[suiteIndex]
-	title := sum.ComponentTexts[titleIndex]
+	suite := sum.ComponentTexts[flowIndex]
+	title := sum.ComponentTexts[specIndex]
 	category := sum.ComponentTexts[categoryIndex]
 	if category == setupString {
 		isSetup = true
@@ -404,6 +396,7 @@ func (l *httpDebugLogger) output(format string, v ...interface{}) {
 type (
 	HTMLReporter struct {
 		htmlReportFilename   string
+		Suite                suite
 		SpecSummaryMap       summaryMap
 		EnvironmentVariables []string
 		SuiteSummary         *types.SuiteSummary
@@ -429,6 +422,10 @@ func newHTMLReporter(htmlReportFilename string) *HTMLReporter {
 		htmlReportFilename: htmlReportFilename,
 		debugLogger:        httpWriter,
 		SpecSummaryMap:     summaryMap{M: make(map[string]snapShotList)},
+		Suite: suite{
+			M:    make(map[string]*workflow),
+			Keys: []string{},
+		},
 	}
 }
 
@@ -439,10 +436,31 @@ func (reporter *HTMLReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 	}
 	specSummary.CapturedOutput = b.String()
 
-	header := specSummary.ComponentTexts[categoryIndex]
-	summary := newSpecSnapshot(specSummary, reporter.SpecSummaryMap.Size)
-	reporter.SpecSummaryMap.Add(header, summary)
+	//header := specSummary.ComponentTexts[categoryIndex]
+	snapshot := newSpecSnapshot(specSummary, reporter.SpecSummaryMap.Size)
+	reporter.Save(snapshot)
 	reporter.debugIndex = len(reporter.debugLogger.CapturedOutput)
+}
+
+func (reporter *HTMLReporter) Save(snapshot *specSnapshot) {
+	suite := &reporter.Suite
+	ct := snapshot.ComponentTexts
+	suiteName, categoryName, specTitle := ct[flowIndex], ct[categoryIndex], ct[specIndex]
+	//make the map of categories
+	if _, ok := suite.M[suiteName]; !ok {
+		suite.M[suiteName] = &workflow{M: make(map[string]*category), Keys: []string{}}
+		suite.Keys = append(suite.Keys, suiteName)
+	}
+	//make the map of snapshots
+	if _, ok := suite.M[suiteName].M[categoryName]; !ok {
+		suite.M[suiteName].M[categoryName] = &category{M: make(map[string]specSnapshot), Keys: []string{}}
+		z := suite.M[suiteName]
+		z.Keys = append(z.Keys, categoryName)
+	}
+	z := suite.M[suiteName].M[categoryName]
+	z.Keys = append(z.Keys, specTitle)
+	suite.M[suiteName].M[categoryName].M[specTitle] = *snapshot
+	suite.Size++
 }
 
 func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
