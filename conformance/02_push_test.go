@@ -2,13 +2,14 @@ package conformance
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
 )
 
-var pushTest = func() {
+var test02Push = func() {
 	g.Context("Push", func() {
 		g.Context("Setup", func() {
 

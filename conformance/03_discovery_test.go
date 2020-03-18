@@ -2,14 +2,15 @@ package conformance
 
 import (
 	"encoding/json"
+	"net/http"
+	"strconv"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"strconv"
 )
 
-var discoveryTest = func() {
+var test03Discovery = func() {
 	g.Context("Discovery", func() {
 		g.Context("Setup", func() {
 			g.Specify("Push", func() {

@@ -3,18 +3,19 @@ package conformance
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+
 	. "github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"os"
 )
 
 var (
 	tagResponse *Response
 )
 
-var pullTest = func() {
+var test01Pull = func() {
 	g.Context("Pull", func() {
 		g.Context("Setup", func() {
 			g.Specify("Push", func() {

@@ -3,10 +3,11 @@ package conformance
 import (
 	"bytes"
 	"fmt"
-	g "github.com/onsi/ginkgo"
 	"log"
 	"os"
 	"strconv"
+
+	g "github.com/onsi/ginkgo"
 
 	"github.com/bloodorangeio/reggie"
 	godigest "github.com/opencontainers/go-digest"

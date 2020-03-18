@@ -2,19 +2,20 @@ package conformance
 
 import (
 	"encoding/json"
-	"github.com/bloodorangeio/reggie"
-	g "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/bloodorangeio/reggie"
+	g "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-const(
+const (
 	testTagName = "tagTest0"
 )
 
-var contentManagementTest = func() {
+var test04ContentManagement = func() {
 	g.Context("Content Management", func() {
 		g.Context("Setup", func() {
 			g.Specify("Push - push a manifest with associated tags", func() {
