@@ -18,6 +18,12 @@ import (
 )
 
 const (
+	passed = iota
+	failed
+	skipped
+)
+
+const (
 	flowIndex            = 2
 	categoryIndex        = 3
 	specIndex            = 4
@@ -53,7 +59,7 @@ const (
         padding: 1.25em 0 1.25em 2em;
       }
       .grey {
-        background: grey;
+        background: lightgrey;
         padding: 1.25em 0 1.25em 2em;
       }
       .toggle {
@@ -219,7 +225,42 @@ const (
 				{{with $ctg}}
 					{{$category := .M}}
 					{{range $k, $categoryKey := .Keys}}
-						<h3>&nbsp;&nbsp;{{$categoryKey}}<h3><br>
+						{{$s := index $category $categoryKey}}
+							{{if eq $s.State 4}}
+							  <div class="result red">
+								<div id="output-box-{{$s.ID}}-button" class="toggle"
+								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
+								<h3 style="display: inline;">{{$s.Title}}</h3>
+								<br>
+								<div>
+								  <div id="output-box-{{$s.ID}}" style="display: none;">
+									<pre class="pre-box">{{$s.CapturedOutput}}</pre>
+								  </div>
+								</div>
+								<pre class="fail-message">{{$s.Failure.Message}}</pre>
+								<br>
+							  </div>
+							{{else if eq $s.State 3}}
+							  <div class="result green">
+								<div id="output-box-{{$s.ID}}-button" class="toggle"
+								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
+								<h3 style="display: inline;">{{$s.Title}}</h3>
+								<br>
+								<div id="output-box-{{$s.ID}}" style="display: none;">
+								  <pre class="pre-box">{{$s.CapturedOutput}}</pre>
+								</div>
+							  </div>
+							{{else if eq $s.State 2}}
+							  <div class="result grey">
+								<div id="output-box-{{$s.ID}}-button" class="toggle"
+								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
+								<h3 style="display: inline;">{{$s.Title}}</h3>
+								<br>
+								<div id="output-box-{{$s.ID}}" style="display: none;">
+								  <pre class="pre-box">{{$s.Failure.Message}}</pre>
+								</div>
+							  </div>
+							{{end}}
 					{{end}}<br>
 				{{end}}
 			{{end}}
@@ -237,15 +278,6 @@ type (
 		M    map[string]snapShotList
 		Keys []string
 		Size int
-	}
-	zMap struct {
-		M    map[string]interface{}
-		Keys []string
-		Size int
-	}
-
-	summaryMap2 struct {
-		M map[string]map[string]map[string]specSnapshot
 	}
 
 	suite struct {
@@ -293,37 +325,6 @@ func (sm *summaryMap) Add(key string, sum *specSnapshot) {
 	if !sm.containsKey(key) {
 		sm.Keys = append(sm.Keys, key)
 	}
-}
-
-func (sm summaryMap2) Add(sum *specSnapshot) {
-	suite := sum.Suite
-	category := sum.Category
-	title := sum.Title
-	if _, ok := sm.M[suite]; !ok {
-		sm.M[suite] = make(map[string]map[string]specSnapshot)
-	}
-	if _, ok := sm.M[suite][category]; !ok {
-		sm.M[suite][category] = make(map[string]specSnapshot)
-	}
-	sm.M[suite][category][title] = *sum
-}
-
-func (ssl snapShotList) GetSetupSnapshots() (list snapShotList) {
-	for _, v := range ssl {
-		if v.IsSetup {
-			list = append(list, v)
-		}
-	}
-	return
-}
-
-func (ssl snapShotList) GetTestSnapshots() (list snapShotList) {
-	for _, v := range ssl {
-		if !v.IsSetup {
-			list = append(list, v)
-		}
-	}
-	return
 }
 
 func (sm *summaryMap) containsKey(key string) bool {
@@ -437,7 +438,7 @@ func (reporter *HTMLReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 	specSummary.CapturedOutput = b.String()
 
 	//header := specSummary.ComponentTexts[categoryIndex]
-	snapshot := newSpecSnapshot(specSummary, reporter.SpecSummaryMap.Size)
+	snapshot := newSpecSnapshot(specSummary, reporter.Suite.Size)
 	reporter.Save(snapshot)
 	reporter.debugIndex = len(reporter.debugLogger.CapturedOutput)
 }
