@@ -19,7 +19,7 @@ var test03BlobUploadMonolithic = func() {
 		})
 
 		g.Specify("POST request with digest and blob should yield a 201", func() {
-			//SkipIfNotEnabled(push)
+			//SkipIfDisabled(push)
 			req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
 				SetHeader("Content-Length", configContentLength).
 				SetHeader("Content-Type", "application/octet-stream").

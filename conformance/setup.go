@@ -57,7 +57,7 @@ var (
 		envVarContentManagement: contentManagement,
 	}
 
-	requiredVars = map[string][]string{
+	reqVarsForDisabledFlow = map[string][]string{
 		envVarPush: {envVarBlobDigest, envVarManifestDigest, envVarTagName},
 		envVarDiscovery: {envVarTagName},
 		envVarContentManagement: {envVarManifestDigest, envVarTagName, envVarBlobDigest},
@@ -184,7 +184,7 @@ func init() {
 	suiteDescription = "OCI Distribution Conformance Tests"
 }
 
-func SkipIfNotEnabled(test int) {
+func SkipIfDisabled(test int) {
 	report := generateSkipReport()
 	if userDisabled(test) {
 		g.Skip(report)
@@ -196,7 +196,7 @@ func ValidateRequiredEnvVars() {
 	var validationFailed = false
 	for envVar, test := range testMap {
 		if userDisabled(test) {
-			report, ok := validate(envVar)
+			report, ok := checkRequiredVars(envVar)
 			if !ok {
 				validationFailed = true
 				fmt.Fprintf(buf, report)
@@ -222,18 +222,18 @@ func userDisabled(test int) bool {
 	return !(test & testsToRun > 0)
 }
 
-func validate(envVarInQuestion string) (string, bool) {
+func checkRequiredVars(mainVarToValidate string) (string, bool) {
 	buf := new(bytes.Buffer)
 	var allSupplied = true
 	fmt.Fprintf(buf, "\ndisabling %s requires all of the following environment variables to be set. " +
-		"here is your current configuration:\n", envVarInQuestion)
-	for _, envVar := range requiredVars[envVarInQuestion] {
+		"here is your current configuration:\n", mainVarToValidate)
+	for _, subVarForDisabledFlow := range reqVarsForDisabledFlow[mainVarToValidate] {
 		yesNo := "✓"
-		if os.Getenv(envVar) == "" {
+		if os.Getenv(subVarForDisabledFlow) == "" {
 			allSupplied = false
 			yesNo = "✘"
 		}
-		fmt.Fprintf(buf, "\t%s %s=%s\n", yesNo, envVar, os.Getenv(envVar))
+		fmt.Fprintf(buf, "\t%s %s=%s\n", yesNo, subVarForDisabledFlow, os.Getenv(subVarForDisabledFlow))
 	}
 	return buf.String(), allSupplied
 }

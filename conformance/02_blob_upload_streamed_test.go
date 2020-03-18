@@ -10,7 +10,7 @@ import (
 var test02BlobUploadStreamed = func() {
 	g.Context("Blob Upload Streamed", func() {
 		g.Specify("PATCH request with blob in body should yield 202 response", func() {
-			//SkipIfNotEnabled(push)
+			//SkipIfDisabled(push)
 			req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 			resp, err := client.Do(req)
 			Expect(err).To(BeNil())
@@ -27,7 +27,7 @@ var test02BlobUploadStreamed = func() {
 		})
 
 		g.Specify("PUT request to session URL with digest should yield 201 response", func() {
-			//SkipIfNotEnabled(push)
+			//SkipIfDisabled(push)
 			req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
 				SetQueryParam("digest", blobADigest).
 				SetHeader("Content-Type", "application/octet-stream").

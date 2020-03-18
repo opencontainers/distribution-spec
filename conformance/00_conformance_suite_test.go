@@ -20,6 +20,7 @@ func TestConformance(t *testing.T) {
 		//test08ManifestDelete()
 		//test09BlobDelete()
 		pullTest()
+		pushTest()
 	})
 	RegisterFailHandler(g.Fail)
 	reporters := []g.Reporter{newHTMLReporter(reportHTMLFilename), reporters.NewJUnitReporter(reportJUnitFilename)}
