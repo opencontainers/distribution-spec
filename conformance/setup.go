@@ -61,9 +61,9 @@ var (
 	}
 
 	reqVarsForDisabledFlow = map[string][]string{
-		envVarPush:              {envVarBlobDigest, envVarManifestDigest, envVarTagName, envVarTagToDelete},
-		envVarDiscovery:         {envVarTagName, envVarNumberOfTags},
-		envVarContentManagement: {envVarManifestDigest, envVarTagName, envVarBlobDigest},
+		envVarPush:              {},
+		envVarDiscovery:         {},
+		envVarContentManagement: {},
 	}
 )
 
@@ -229,8 +229,8 @@ func userDisabled(test int) bool {
 func checkRequiredVars(mainVarToValidate string) (string, bool) {
 	buf := new(bytes.Buffer)
 	var allSupplied = true
-	fmt.Fprintf(buf, "\ndisabling %s requires all of the following environment variables to be set. "+
-		"here is your current configuration:\n", mainVarToValidate)
+	fmt.Fprintf(buf, "\nDisabling %s requires all of the following environment variables to be set. "+
+		"Here is your current configuration:\n\n", mainVarToValidate)
 	for _, subVarForDisabledFlow := range reqVarsForDisabledFlow[mainVarToValidate] {
 		yesNo := "✓"
 		if os.Getenv(subVarForDisabledFlow) == "" {

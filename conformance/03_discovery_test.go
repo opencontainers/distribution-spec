@@ -13,9 +13,6 @@ import (
 var test03Discovery = func() {
 	g.Context("Discovery", func() {
 		g.Context("Setup", func() {
-			g.Specify("Push", func() {
-
-			})
 		})
 
 		g.Context("Test discovery endpoints", func() {
