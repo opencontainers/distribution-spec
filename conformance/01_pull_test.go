@@ -101,9 +101,7 @@ var test01Pull = func() {
 
 			g.Specify("Delete blobs created during setup", func() {
 				req := client.NewRequest(DELETE, "/v2/<name>/blobs/<digest>", WithDigest(blobDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				_, _ = client.Do(req)
 			})
 		})
 	})
