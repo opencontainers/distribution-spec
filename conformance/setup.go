@@ -45,7 +45,6 @@ const (
 	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
 	envVarBlobDigest        = "OCI_BLOB_DIGEST"
 	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
-	envVarTagToDelete       = "OCI_DELETE_TAG"
 	envVarTagName           = "OCI_TAG_NAME"
 	envVarNumberOfTags      = "OCI_NUMBER_OF_TAGS"
 	push                    = 1 << iota
