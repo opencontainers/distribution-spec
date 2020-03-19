@@ -11,9 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var (
-	tagResponse *Response
-)
+const testTagName = "tagTest0"
 
 var test01Pull = func() {
 	g.Context("Pull", func() {
@@ -44,7 +42,6 @@ var test01Pull = func() {
 				tagList := &TagList{}
 				jsonData := []byte(resp.String())
 				json.Unmarshal(jsonData, tagList)
-				numTags = len(tagList.Tags)
 			})
 		})
 

@@ -81,8 +81,8 @@ OCI_TAG_LIST=
 
 ##### Content Management (delete)
 Enable by setting `OCI_TEST_CONTENT_MANAGEMENT=1`
-The content management workflow explicitly depends upon the push workflow, and there is no
-way to test content management without also supporting push. No addional variables are required
+The content management workflow explicitly depends upon the push and discovery workflows, and there is no
+way to test content management without also supporting push and discovery. No addional variables are required
 to test the content management workflow
 
 #### Container Image

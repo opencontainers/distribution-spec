@@ -2,51 +2,39 @@ package conformance
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
-)
-
-const (
-	testTagName = "tagTest0"
 )
 
 var test04ContentManagement = func() {
+	const defaultTagName = "tagTest0"
+	var tagToDelete string
+	var numTags int
 	g.Context("Content Management - Requires push and delete actions", func() {
 		g.Context("Setup", func() {
 			g.Specify("Push - push a manifest with associated tags", func() {
-				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				resp, _ := client.Do(req)
 
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetHeader("Content-Length", configContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetQueryParam("digest", blobDigest).
 					SetBody(configContent)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				location := resp.Header().Get("Location")
-				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				resp, _ = client.Do(req)
 
-				tagToDelete = testTagName
+				tagToDelete = defaultTagName
 				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(manifestContent)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				location = resp.Header().Get("Location")
-				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				resp, _ = client.Do(req)
 			})
 
 			g.Specify("Discovery - check how many tags there are before anything gets deleted", func() {
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

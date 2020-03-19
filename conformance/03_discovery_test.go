@@ -18,11 +18,14 @@ var (
 )
 
 var test03Discovery = func() {
+	var numTags = 4
 	g.Context("Discovery", func() {
+		var lastResponse *reggie.Response
+		var firstTag string
 		g.Context("Setup", func() {
 			g.Specify("Push tags to repository", func() {
 				SkipIfDisabled(push)
-				for i := 0; i < 4; i++ {
+				for i := 0; i < numTags ; i++ {
 					tag := fmt.Sprintf("test%d", i)
 					if i == 0 {
 						firstTag = tag
@@ -103,17 +106,3 @@ var test03Discovery = func() {
 	})
 }
 
-func getTagList(resp *reggie.Response) []string {
-	if userDisabled(push) {
-		return strings.Split(os.Getenv(envVarTagList), ",")
-	}
-
-	jsonData := resp.Body()
-	tagList := &TagList{}
-	err := json.Unmarshal(jsonData, tagList)
-	if err != nil {
-		return []string{}
-	}
-
-	return tagList.Tags
-}

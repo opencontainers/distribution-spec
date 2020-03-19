@@ -11,6 +11,8 @@ import (
 
 var test02Push = func() {
 	g.Context("Push", func() {
+		var lastResponse *reggie.Response
+		var firstTag string
 		g.Context("Setup", func() {
 
 		})

@@ -2,9 +2,11 @@ package conformance
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	g "github.com/onsi/ginkgo"
 
@@ -73,23 +75,19 @@ var (
 	blobBChunk2Length      string
 	blobBChunk1Range       string
 	blobBChunk2Range       string
+	blobDigest             string
 	client                 *reggie.Client
 	configContent          []byte
 	configContentLength    string
-	blobDigest             string
 	dummyDigest            string
 	errorCodes             []string
-	firstTag               string
-	lastResponse           *reggie.Response
 	manifestContent        []byte
 	invalidManifestContent []byte
 	manifestDigest         string
 	nonexistentManifest    string
-	numTags                int
 	reportJUnitFilename    string
 	reportHTMLFilename     string
 	httpWriter             *httpDebugWriter
-	tagToDelete            string
 	testsToRun             int
 	suiteDescription       string
 	Version                = "unknown"
@@ -198,4 +196,19 @@ func generateSkipReport() string {
 
 func userDisabled(test int) bool {
 	return !(test&testsToRun > 0)
+}
+
+func getTagList(resp *reggie.Response) []string {
+	if userDisabled(push) {
+		return strings.Split(os.Getenv(envVarTagList), ",")
+	}
+
+	jsonData := resp.Body()
+	tagList := &TagList{}
+	err := json.Unmarshal(jsonData, tagList)
+	if err != nil {
+		return []string{}
+	}
+
+	return tagList.Tags
 }
