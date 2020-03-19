@@ -3,18 +3,18 @@ package conformance
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"os"
-
 	. "github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"net/http"
 )
 
-const testTagName = "tagTest0"
 
 var test01Pull = func() {
 	g.Context("Pull", func() {
+
+		var tagResponse *Response
+
 		g.Context("Setup", func() {
 			g.Specify("Push", func() {
 				req := client.NewRequest(POST, "/v2/<name>/blobs/uploads/")
@@ -80,7 +80,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("GET request to manifest path (tag) should yield 200 response", func() {
-				tag := tagName(lastResponse)
+				tag := getTagName(tagResponse)
 				Expect(tag).ToNot(BeEmpty())
 				req := client.NewRequest(GET, "/v2/<name>/manifests/<reference>", WithReference(tag)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -125,19 +125,3 @@ var test01Pull = func() {
 	})
 }
 
-func tagName(lastResponse *Response) string {
-	tl := &TagList{}
-	if lastResponse != nil {
-		jsonData := lastResponse.Body()
-		err := json.Unmarshal(jsonData, tl)
-		if err != nil && len(tl.Tags) > 0 {
-			return tl.Tags[0]
-		}
-	}
-
-	if tn := os.Getenv(envVarTagName); tn != "" {
-		return tn
-	}
-
-	return testTagName
-}

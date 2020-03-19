@@ -10,10 +10,12 @@ import (
 )
 
 var test04ContentManagement = func() {
-	const defaultTagName = "tagTest0"
-	var tagToDelete string
-	var numTags int
 	g.Context("Content Management - Requires push and delete actions", func() {
+
+		const defaultTagName = "tagTest0"
+		var tagToDelete string
+		var numTags int
+
 		g.Context("Setup", func() {
 			g.Specify("Push - push a manifest with associated tags", func() {
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")

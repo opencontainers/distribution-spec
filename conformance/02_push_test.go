@@ -11,8 +11,9 @@ import (
 
 var test02Push = func() {
 	g.Context("Push", func() {
+
 		var lastResponse *reggie.Response
-		var firstTag string
+
 		g.Context("Setup", func() {
 
 		})
@@ -183,9 +184,6 @@ var test02Push = func() {
 				SkipIfDisabled(push)
 				for i := 0; i < 4; i++ {
 					tag := fmt.Sprintf("test%d", i)
-					if i == 0 {
-						firstTag = tag
-					}
 					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(tag)).
 						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").

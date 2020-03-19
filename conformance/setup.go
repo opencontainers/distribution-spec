@@ -49,6 +49,7 @@ const (
 	envVarTagName           = "OCI_TAG_NAME"
 	envVarNumberOfTags      = "OCI_NUMBER_OF_TAGS"
 	envVarTagList           = "OCI_TAG_LIST"
+	testTagName             = "tagTest0"
 	pull                    = 0
 	push                    = 1 << iota
 	discovery
@@ -211,4 +212,21 @@ func getTagList(resp *reggie.Response) []string {
 	}
 
 	return tagList.Tags
+}
+
+func getTagName(lastResponse *reggie.Response) string {
+	tl := &TagList{}
+	if lastResponse != nil {
+		jsonData := lastResponse.Body()
+		err := json.Unmarshal(jsonData, tl)
+		if err != nil && len(tl.Tags) > 0 {
+			return tl.Tags[0]
+		}
+	}
+
+	if tn := os.Getenv(envVarTagName); tn != "" {
+		return tn
+	}
+
+	return testTagName
 }
