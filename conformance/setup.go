@@ -3,7 +3,6 @@ package conformance
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
@@ -47,6 +46,8 @@ const (
 	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
 	envVarTagName           = "OCI_TAG_NAME"
 	envVarNumberOfTags      = "OCI_NUMBER_OF_TAGS"
+	envVarTagList           = "OCI_TAG_LIST"
+	pull                    = 0
 	push                    = 1 << iota
 	discovery
 	contentManagement
@@ -57,12 +58,6 @@ var (
 		envVarPush:              push,
 		envVarDiscovery:         discovery,
 		envVarContentManagement: contentManagement,
-	}
-
-	reqVarsForDisabledFlow = map[string][]string{
-		envVarPush:              {},
-		envVarDiscovery:         {},
-		envVarContentManagement: {},
 	}
 )
 
@@ -86,7 +81,6 @@ var (
 	errorCodes             []string
 	firstTag               string
 	lastResponse           *reggie.Response
-	lastTagList            TagList
 	manifestContent        []byte
 	invalidManifestContent []byte
 	manifestDigest         string
@@ -113,7 +107,6 @@ func init() {
 			testsToRun |= enableTest
 		}
 	}
-	ValidateRequiredEnvVars()
 
 	var err error
 
@@ -194,24 +187,6 @@ func SkipIfDisabled(test int) {
 	}
 }
 
-func ValidateRequiredEnvVars() {
-	buf := new(bytes.Buffer)
-	var validationFailed = false
-	for envVar, test := range testMap {
-		if userDisabled(test) {
-			report, ok := checkRequiredVars(envVar)
-			if !ok {
-				validationFailed = true
-				fmt.Fprintf(buf, report)
-			}
-		}
-	}
-
-	if validationFailed {
-		log.Fatal(buf.String())
-	}
-}
-
 func generateSkipReport() string {
 	buf := new(bytes.Buffer)
 	fmt.Fprintf(buf, "you have skipped this test; if this is an error, check your environment variable settings:\n")
@@ -223,20 +198,4 @@ func generateSkipReport() string {
 
 func userDisabled(test int) bool {
 	return !(test&testsToRun > 0)
-}
-
-func checkRequiredVars(mainVarToValidate string) (string, bool) {
-	buf := new(bytes.Buffer)
-	var allSupplied = true
-	fmt.Fprintf(buf, "\nDisabling %s requires all of the following environment variables to be set. "+
-		"Here is your current configuration:\n\n", mainVarToValidate)
-	for _, subVarForDisabledFlow := range reqVarsForDisabledFlow[mainVarToValidate] {
-		yesNo := "✓"
-		if os.Getenv(subVarForDisabledFlow) == "" {
-			allSupplied = false
-			yesNo = "✘"
-		}
-		fmt.Fprintf(buf, "\t%s %s=%s\n", yesNo, subVarForDisabledFlow, os.Getenv(subVarForDisabledFlow))
-	}
-	return buf.String(), allSupplied
 }

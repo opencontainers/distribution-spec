@@ -2,13 +2,10 @@ package conformance
 
 import (
 	"encoding/json"
-	"net/http"
-	"os"
-	"strconv"
-
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"net/http"
 )
 
 const (
@@ -50,11 +47,6 @@ var test04ContentManagement = func() {
 
 			g.Specify("Discovery - check how many tags there are before anything gets deleted", func() {
 				SkipIfDisabled(contentManagement)
-				if userDisabled(discovery) {
-					i, err := strconv.Atoi(os.Getenv(envVarNumberOfTags))
-					Expect(err).To(BeNil())
-					numTags = i
-				}
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
