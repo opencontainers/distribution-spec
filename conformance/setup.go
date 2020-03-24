@@ -8,9 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	g "github.com/onsi/ginkgo"
-
 	"github.com/bloodorangeio/reggie"
+	g "github.com/onsi/ginkgo"
 	godigest "github.com/opencontainers/go-digest"
 )
 
@@ -37,9 +36,7 @@ const (
 	UNAUTHORIZED
 	DENIED
 	UNSUPPORTED
-)
 
-const (
 	envTrue                 = "1"
 	envVarPush              = "OCI_TEST_PUSH"
 	envVarDiscovery         = "OCI_TEST_DISCOVERY"
@@ -50,8 +47,9 @@ const (
 	envVarNumberOfTags      = "OCI_NUMBER_OF_TAGS"
 	envVarTagList           = "OCI_TAG_LIST"
 	testTagName             = "tagTest0"
-	pull                    = 0
-	push                    = 1 << iota
+
+	pull = 0
+	push = 1 << iota
 	discovery
 	contentManagement
 )
@@ -62,9 +60,7 @@ var (
 		envVarDiscovery:         discovery,
 		envVarContentManagement: contentManagement,
 	}
-)
 
-var (
 	blobA                  []byte
 	blobALength            string
 	blobADigest            string

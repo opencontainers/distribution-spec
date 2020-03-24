@@ -18,12 +18,6 @@ import (
 )
 
 const (
-	passed = iota
-	failed
-	skipped
-)
-
-const (
 	flowIndex            = 2
 	categoryIndex        = 3
 	specIndex            = 4
@@ -281,18 +275,18 @@ type (
 	}
 
 	suite struct {
-		M map[string]*workflow
+		M    map[string]*workflow
 		Keys []string
 		Size int
 	}
 
 	workflow struct {
-		M map[string]*category
+		M    map[string]*category
 		Keys []string
 	}
 
 	category struct {
-		M map[string]specSnapshot
+		M    map[string]specSnapshot
 		Keys []string
 	}
 
@@ -315,6 +309,28 @@ type (
 	httpDebugLogger struct {
 		l *log.Logger
 		w io.Writer
+	}
+
+	HTMLReporter struct {
+		htmlReportFilename   string
+		Suite                suite
+		SpecSummaryMap       summaryMap
+		EnvironmentVariables []string
+		SuiteSummary         *types.SuiteSummary
+		debugLogger          *httpDebugWriter
+		debugIndex           int
+		PercentPassed        int
+		PercentFailed        int
+		PercentSkipped       int
+		startTime            time.Time
+		endTime              time.Time
+		StartTimeString      string
+		EndTimeString        string
+		RunTime              string
+		AllPassed            bool
+		AllFailed            bool
+		AllSkipped           bool
+		Version              string
 	}
 )
 
@@ -393,30 +409,6 @@ func (l *httpDebugLogger) output(format string, v ...interface{}) {
 		l.Errorf(err.Error())
 	}
 }
-
-type (
-	HTMLReporter struct {
-		htmlReportFilename   string
-		Suite                suite
-		SpecSummaryMap       summaryMap
-		EnvironmentVariables []string
-		SuiteSummary         *types.SuiteSummary
-		debugLogger          *httpDebugWriter
-		debugIndex           int
-		PercentPassed        int
-		PercentFailed        int
-		PercentSkipped       int
-		startTime            time.Time
-		endTime              time.Time
-		StartTimeString      string
-		EndTimeString        string
-		RunTime              string
-		AllPassed            bool
-		AllFailed            bool
-		AllSkipped           bool
-		Version              string
-	}
-)
 
 func newHTMLReporter(htmlReportFilename string) *HTMLReporter {
 	return &HTMLReporter{

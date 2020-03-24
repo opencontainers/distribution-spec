@@ -3,11 +3,12 @@ package conformance
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"strconv"
 )
 
 var test03Discovery = func() {
@@ -18,16 +19,18 @@ var test03Discovery = func() {
 		var lastResponse *reggie.Response
 
 		g.Context("Setup", func() {
-			g.Specify("Push tags to repository", func() {
-				SkipIfDisabled(push)
-				for i := 0; i < numTags ; i++ {
-					tag := fmt.Sprintf("test%d", i)
-					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(tag)).
-						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-						SetBody(manifestContent)
-					client.Do(req)
-				}
+			g.Specify("Populate registry", func() {
+				g.Specify("Tags", func() {
+					SkipIfDisabled(push)
+					for i := 0; i < numTags; i++ {
+						tag := fmt.Sprintf("test%d", i)
+						req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+							reggie.WithReference(tag)).
+							SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+							SetBody(manifestContent)
+						client.Do(req)
+					}
+				})
 			})
 		})
 
@@ -90,6 +93,10 @@ var test03Discovery = func() {
 				Expect(tagList).To(ContainElement(tagList[numResults]))
 			})
 		})
+
+		g.Context("Teardown", func() {
+			// TODO: delete tags?
+			// No teardown required at this time for discovery tests
+		})
 	})
 }
-

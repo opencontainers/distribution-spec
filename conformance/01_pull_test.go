@@ -3,40 +3,43 @@ package conformance
 import (
 	"encoding/json"
 	"fmt"
-	. "github.com/bloodorangeio/reggie"
+	"net/http"
+
+	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
 )
-
 
 var test01Pull = func() {
 	g.Context("Pull", func() {
 
-		var tagResponse *Response
+		var tagResponse *reggie.Response
 
 		g.Context("Setup", func() {
-			g.Specify("Push", func() {
-				req := client.NewRequest(POST, "/v2/<name>/blobs/uploads/")
-				resp, _ := client.Do(req)
+			g.Specify("Populate registry with test resources", func() {
+				g.Specify("Blob", func() {
+					req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+					resp, _ := client.Do(req)
+					req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+						SetQueryParam("digest", blobDigest).
+						SetHeader("Content-Type", "application/octet-stream").
+						SetHeader("Content-Length", fmt.Sprintf("%d", len(configContent))).
+						SetBody(configContent)
+					client.Do(req)
+				})
 
-				req = client.NewRequest(PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", blobDigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", fmt.Sprintf("%d", len(configContent))).
-					SetBody(configContent)
-				resp, _ = client.Do(req)
-
-				tag := testTagName
-				req = client.NewRequest(PUT, "/v2/<name>/manifests/<reference>",
-					WithReference(tag)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifestContent)
-				resp, _ = client.Do(req)
+				g.Specify("Manifest", func() {
+					tag := testTagName
+					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+						reggie.WithReference(tag)).
+						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+						SetBody(manifestContent)
+					client.Do(req)
+				})
 			})
 
-			g.Specify("Discovery", func() {
-				req := client.NewRequest(GET, "/v2/<name>/tags/list")
+			g.Specify("Get list of current tags", func() {
+				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, _ := client.Do(req)
 				tagResponse = resp
 				tagList := &TagList{}
@@ -47,32 +50,32 @@ var test01Pull = func() {
 
 		g.Context("Pull blobs", func() {
 			g.Specify("GET nonexistent blob should result in 404 response", func() {
-				req := client.NewRequest(GET, "/v2/<name>/blobs/<digest>",
-					WithDigest(dummyDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
+					reggie.WithDigest(dummyDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 			})
 
 			g.Specify("GET request to existing blob URL should yield 200", func() {
-				req := client.NewRequest(GET, "/v2/<name>/blobs/<digest>", WithDigest(blobDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
 		})
 
-		g.Context("Pull manifests", func () {
+		g.Context("Pull manifests", func() {
 			g.Specify("GET nonexistent manifest should return 404", func() {
-				req := client.NewRequest(GET, "/v2/<name>/manifests/<reference>",
-					WithReference(nonexistentManifest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(nonexistentManifest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 			})
 
 			g.Specify("GET request to manifest path (digest) should yield 200 response", func() {
-				req := client.NewRequest(GET, "/v2/<name>/manifests/<digest>", WithDigest(manifestDigest)).
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -82,7 +85,7 @@ var test01Pull = func() {
 			g.Specify("GET request to manifest path (tag) should yield 200 response", func() {
 				tag := getTagName(tagResponse)
 				Expect(tag).ToNot(BeEmpty())
-				req := client.NewRequest(GET, "/v2/<name>/manifests/<reference>", WithReference(tag)).
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>", reggie.WithReference(tag)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -92,8 +95,8 @@ var test01Pull = func() {
 
 		g.Context("Error codes", func() {
 			g.Specify("400 response body should contain OCI-conforming JSON message", func() {
-				req := client.NewRequest(PUT, "/v2/<name>/manifests/<reference>",
-					WithReference("sha256:totallywrong")).
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference("sha256:totallywrong")).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(invalidManifestContent)
 				resp, err := client.Do(req)
@@ -112,16 +115,17 @@ var test01Pull = func() {
 		})
 
 		g.Context("Teardown", func() {
-			g.Specify("Delete manifest created during setup", func() {
-				req := client.NewRequest(DELETE, "/v2/<name>/manifests/<digest>", WithDigest(manifestDigest))
-				client.Do(req)
-			})
+			g.Specify("Delete resources created in setup", func() {
+				g.Specify("Manifest", func() {
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					client.Do(req)
+				})
 
-			g.Specify("Delete blobs created during setup", func() {
-				req := client.NewRequest(DELETE, "/v2/<name>/blobs/<digest>", WithDigest(blobDigest))
-				client.Do(req)
+				g.Specify("Blob", func() {
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+					client.Do(req)
+				})
 			})
 		})
 	})
 }
-

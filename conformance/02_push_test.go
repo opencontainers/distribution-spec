@@ -15,7 +15,7 @@ var test02Push = func() {
 		var lastResponse *reggie.Response
 
 		g.Context("Setup", func() {
-
+			// No setup required at this time for push tests
 		})
 
 		g.Context("Blob Upload Streamed", func() {
@@ -205,5 +205,10 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
 		})
+
+		g.Context("Teardown", func() {
+			// No teardown required at this time for push tests
+		})
+
 	})
 }
