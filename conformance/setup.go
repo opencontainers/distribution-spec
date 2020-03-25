@@ -44,11 +44,9 @@ const (
 	envVarBlobDigest        = "OCI_BLOB_DIGEST"
 	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
 	envVarTagName           = "OCI_TAG_NAME"
-	envVarNumberOfTags      = "OCI_NUMBER_OF_TAGS"
 	envVarTagList           = "OCI_TAG_LIST"
 	testTagName             = "tagTest0"
 
-	pull = 0
 	push = 1 << iota
 	discovery
 	contentManagement

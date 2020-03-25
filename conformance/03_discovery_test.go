@@ -88,7 +88,7 @@ var test03Discovery = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 				Expect(err).To(BeNil())
 				Expect(len(tagList)).To(BeNumerically("<=", numResults))
-				Expect(tagList).To(ContainElement(tagList[numResults]))
+				Expect(tagList).To(ContainElement(tagList[numResults-1]))
 			})
 		})
 
