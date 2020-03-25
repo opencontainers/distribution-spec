@@ -17,30 +17,28 @@ var test04ContentManagement = func() {
 		var numTags int
 
 		g.Context("Setup", func() {
-			g.Specify("Populate registry with test resources", func() {
-				g.Specify("Blob", func() {
-					req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-					resp, _ := client.Do(req)
+			g.Specify("Populate registry with test blob", func() {
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, _ := client.Do(req)
 
-					req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-						SetHeader("Content-Length", configContentLength).
-						SetHeader("Content-Type", "application/octet-stream").
-						SetQueryParam("digest", blobDigest).
-						SetBody(configContent)
-					client.Do(req)
-				})
-
-				g.Specify("Tag", func() {
-					tagToDelete = defaultTagName
-					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(tagToDelete)).
-						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-						SetBody(manifestContent)
-					client.Do(req)
-				})
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetHeader("Content-Length", configContentLength).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetQueryParam("digest", blobDigest).
+					SetBody(configContent)
+				client.Do(req)
 			})
 
-			g.Specify("Discovery - check how many tags there are before anything gets deleted", func() {
+			g.Specify("Populate registry with test tag", func() {
+				tagToDelete = defaultTagName
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(tagToDelete)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(manifestContent)
+				client.Do(req)
+			})
+
+			g.Specify("Check how many tags there are before anything gets deleted", func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

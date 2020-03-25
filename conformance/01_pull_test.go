@@ -16,29 +16,27 @@ var test01Pull = func() {
 		var tagResponse *reggie.Response
 
 		g.Context("Setup", func() {
-			g.Specify("Populate registry with test resources", func() {
-				g.Specify("Blob", func() {
-					req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-					resp, _ := client.Do(req)
-					req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-						SetQueryParam("digest", blobDigest).
-						SetHeader("Content-Type", "application/octet-stream").
-						SetHeader("Content-Length", fmt.Sprintf("%d", len(configContent))).
-						SetBody(configContent)
-					client.Do(req)
-				})
-
-				g.Specify("Manifest", func() {
-					tag := testTagName
-					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(tag)).
-						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-						SetBody(manifestContent)
-					client.Do(req)
-				})
+			g.Specify("Populate registry with test blob", func() {
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, _ := client.Do(req)
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", blobDigest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", fmt.Sprintf("%d", len(configContent))).
+					SetBody(configContent)
+				client.Do(req)
 			})
 
-			g.Specify("Get list of current tags", func() {
+			g.Specify("Populate registry with test manifest", func() {
+				tag := testTagName
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(tag)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(manifestContent)
+				client.Do(req)
+			})
+
+			g.Specify("Retrieve list of current tags", func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, _ := client.Do(req)
 				tagResponse = resp
@@ -115,16 +113,14 @@ var test01Pull = func() {
 		})
 
 		g.Context("Teardown", func() {
-			g.Specify("Delete resources created in setup", func() {
-				g.Specify("Manifest", func() {
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
-					client.Do(req)
-				})
+			g.Specify("Delete manifest created in setup", func() {
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+				client.Do(req)
+			})
 
-				g.Specify("Blob", func() {
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
-					client.Do(req)
-				})
+			g.Specify("Delete blob created in setup", func() {
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+				client.Do(req)
 			})
 		})
 	})
