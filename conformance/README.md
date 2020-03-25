@@ -79,11 +79,11 @@ with push disabled:
 OCI_TAG_LIST=
 ```
 
-##### Content Management (delete)
-Enable by setting `OCI_TEST_CONTENT_MANAGEMENT=1`
-The content management workflow explicitly depends upon the push and discovery workflows, and there is no
-way to test content management without also supporting push and discovery. No addional variables are required
-to test the content management workflow
+##### Management (delete etc.)
+Enable by setting `OCI_TEST_MANAGEMENT=1`
+The management workflow explicitly depends upon the push and discovery workflows, and there is no
+way to test content management without also supporting push and discovery. No additional variables are required
+to test the management workflow
 
 #### Container Image
 

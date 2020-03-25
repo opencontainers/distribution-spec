@@ -37,26 +37,26 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue                 = "1"
-	envVarPush              = "OCI_TEST_PUSH"
-	envVarDiscovery         = "OCI_TEST_DISCOVERY"
-	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
-	envVarBlobDigest        = "OCI_BLOB_DIGEST"
-	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
-	envVarTagName           = "OCI_TAG_NAME"
-	envVarTagList           = "OCI_TAG_LIST"
-	testTagName             = "tagTest0"
+	envTrue              = "1"
+	envVarPush           = "OCI_TEST_PUSH"
+	envVarDiscovery      = "OCI_TEST_DISCOVERY"
+	envVarManagement     = "OCI_TEST_MANAGEMENT"
+	envVarBlobDigest     = "OCI_BLOB_DIGEST"
+	envVarManifestDigest = "OCI_MANIFEST_DIGEST"
+	envVarTagName        = "OCI_TAG_NAME"
+	envVarTagList        = "OCI_TAG_LIST"
+	testTagName          = "tagTest0"
 
 	push = 1 << iota
 	discovery
-	contentManagement
+	management
 )
 
 var (
 	testMap = map[string]int{
-		envVarPush:              push,
-		envVarDiscovery:         discovery,
-		envVarContentManagement: contentManagement,
+		envVarPush:       push,
+		envVarDiscovery:  discovery,
+		envVarManagement: management,
 	}
 
 	blobA                  []byte

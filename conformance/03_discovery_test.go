@@ -21,6 +21,7 @@ var test03Discovery = func() {
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test tags", func() {
 				SkipIfDisabled(push)
+				SkipIfDisabled(discovery)
 				for i := 0; i < numTags; i++ {
 					tag := fmt.Sprintf("test%d", i)
 					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
