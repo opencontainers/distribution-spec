@@ -8,9 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	g "github.com/onsi/ginkgo"
-
 	"github.com/bloodorangeio/reggie"
+	g "github.com/onsi/ginkgo"
 	godigest "github.com/opencontainers/go-digest"
 )
 
@@ -37,34 +36,29 @@ const (
 	UNAUTHORIZED
 	DENIED
 	UNSUPPORTED
-)
 
-const (
-	envTrue                 = "1"
-	envVarPush              = "OCI_TEST_PUSH"
-	envVarDiscovery         = "OCI_TEST_DISCOVERY"
-	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
-	envVarBlobDigest        = "OCI_BLOB_DIGEST"
-	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
-	envVarTagName           = "OCI_TAG_NAME"
-	envVarNumberOfTags      = "OCI_NUMBER_OF_TAGS"
-	envVarTagList           = "OCI_TAG_LIST"
-	testTagName             = "tagTest0"
-	pull                    = 0
-	push                    = 1 << iota
+	envTrue              = "1"
+	envVarPush           = "OCI_TEST_PUSH"
+	envVarDiscovery      = "OCI_TEST_DISCOVERY"
+	envVarManagement     = "OCI_TEST_MANAGEMENT"
+	envVarBlobDigest     = "OCI_BLOB_DIGEST"
+	envVarManifestDigest = "OCI_MANIFEST_DIGEST"
+	envVarTagName        = "OCI_TAG_NAME"
+	envVarTagList        = "OCI_TAG_LIST"
+	testTagName          = "tagTest0"
+
+	push = 1 << iota
 	discovery
-	contentManagement
+	management
 )
 
 var (
 	testMap = map[string]int{
-		envVarPush:              push,
-		envVarDiscovery:         discovery,
-		envVarContentManagement: contentManagement,
+		envVarPush:       push,
+		envVarDiscovery:  discovery,
+		envVarManagement: management,
 	}
-)
 
-var (
 	blobA                  []byte
 	blobALength            string
 	blobADigest            string
@@ -91,6 +85,10 @@ var (
 	httpWriter             *httpDebugWriter
 	testsToRun             int
 	suiteDescription       string
+	runPullSetup           bool
+	runPushSetup           bool
+	runDiscoverySetup      bool
+	runManagementSetup     bool
 	Version                = "unknown"
 )
 
@@ -174,14 +172,33 @@ func init() {
 		UNSUPPORTED:           "UNSUPPORTED",
 	}
 
+	runPullSetup = true
+	runPushSetup = true
+	runDiscoverySetup = true
+	runManagementSetup = true
+
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"
 	suiteDescription = "OCI Distribution Conformance Tests"
 }
 
 func SkipIfDisabled(test int) {
-	report := generateSkipReport()
 	if userDisabled(test) {
+		report := generateSkipReport()
+		g.Skip(report)
+	}
+}
+
+func RunOnlyIf(v bool) {
+	if v {
+		report := generateSkipReport()
+		g.Skip(report)
+	}
+}
+
+func RunOnlyIfNot(v bool) {
+	if !v {
+		report := generateSkipReport()
 		g.Skip(report)
 	}
 }

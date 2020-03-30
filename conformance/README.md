@@ -32,58 +32,78 @@ This will produce `junit.xml` and `report.html` with the results.
 Note: for some registries, you may need to create `OCI_NAMESPACE` ahead of time.
 
 #### Testing registry workflows
-##### Setup and teardown
-Setup and teardown will be performed for each workflow that is tested. If actions taken during
-test setup fail, the workflow tests will likely fail as well since they depend on a successful
-setup. However, the setup may require actions outside of the scope of a given workflow. For example,
-the setup for the pull workflow tests will attempt to use push actions, which the workflow tests will
-later attempt to pull. If push is not supported by a registry, pull workflow failures can be avoided
-by providing more information via environment variables. See the sections below for a list of environment
-variables required for each workflow when other workflows are disabled.
+
+The tests are broken down into 4 major categories:
+
+1. Pull
+2. Push
+3. Discovery
+4. Management
+
+In addition, each category has its own setup and teardown processes where appropriate.
 
 ##### Pull
-With no additional environment variables set, the OCI tests will check for
-conformance with the OCI spec on pull actions only. For convenience, the test setup will
-attempt to push blobs and use those blobs for the pull actions. The teardown will
-remove any blobs created by the setup. The setup and teardown are optional and
-do not directly affect test results. However, if the setup fails, subsequent pull
-tests may fail since they will be looking for specific blobs and manifests. To
-prevent these cascading variables, a registry can supply a blob digest, manifest
-digest, and manifest tag relating to blobs and manifests that are known to exist in the
-repository. This information is supplied via the following environment variables:
+
+The Pull tests validate that content can be retrieved from a registry.
+
+These tests are *always* run, as this is the baseline for registry conformance.
+
+Regardless of whether the Push tests are enabled, as part of setup for the Pull tests,
+content will be uploaded to the registry.
+If you wish to prevent this, you can set the following environment variables pointing
+to content already present in the registry:
+
 ```
-with push disabled:
-OCI_MANIFEST_DIGEST=
-OCI_TAG_NAME=
-OCI_BLOB_DIGEST=
+# Optional: set to prevent automatic setup
+OCI_MANIFEST_DIGEST=<digest>
+OCI_TAG_NAME=<tag>
+OCI_BLOB_DIGEST=<digest>
 ```
 
 ##### Push
-To enable testing for the push workflow, set `OCI_TEST_PUSH=1` prior to running the
-tests. All tests pertaining to the push workflow will be disabled unless this variable
-is set to specifically `1`. Aside from this, no additional environment variables are required
-for the push workflow.
+
+The Push tests validate that content can be uploaded to a registry.
+
+To enable the Push tests, you must explicitly set the following in the environment:
+
+```
+# Required to enable
+OCI_TEST_PUSH=1
+```
 
 ##### Discovery
-Enable by setting `OCI_TEST_DISCOVERY=1`
-The discovery workflow will test the `/v2/<name>/tags/list` endpoint, with different combinations
-of query parameters to test content discovery. For more information on what should be supported for
-the discovery flow, refer to the OCI distribution specification. The setup for these tests will
-push a manifest with several associated tags. If push is disabled, supply a list of tags via the
-`OCI_TAG_LIST` environment variable, with the tags separated by commas. For example,
-`OCI_TAG_LIST=test0,test1,test2,test3`. It is expected that this is the exact list of tags that will
-be found via a request to `/v2/<name>/tags/list`
+
+The Discovery tests validate that the contents of a registry can be discovered.
+
+To enable the Discovery tests, you must explicitly set the following in the environment:
 
 ```
-with push disabled:
-OCI_TAG_LIST=
+# Required to enable
+OCI_TEST_DISCOVERY=1
 ```
 
-##### Content Management (delete)
-Enable by setting `OCI_TEST_CONTENT_MANAGEMENT=1`
-The content management workflow explicitly depends upon the push and discovery workflows, and there is no
-way to test content management without also supporting push and discovery. No addional variables are required
-to test the content management workflow
+As part of setup of these tests, a manifest and associated tags will be pushed to the registry.
+If you wish to prevent this, you can set the following environment variable pointing
+to list of tags to be returned from `GET /v2/<name>/tags/list`:
+
+```
+# Optional: set to prevent automatic setup
+OCI_TAG_LIST=<tag1>,<tag2>,<tag3>,<tag4>
+```
+
+##### Management
+
+The Management tests validate that the contents of a registry can be deleted or otherwise modified.
+
+To enable the Management tests, you must explicitly set the following in the environment:
+
+```
+# Required to enable
+OCI_TEST_MANAGEMENT=1
+```
+
+Note: The Management tests explicitly depend upon the Push and Discovery tests, as there is no
+way to test content management without also supporting push and discovery.
 
 #### Container Image
 

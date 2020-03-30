@@ -3,11 +3,12 @@ package conformance
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"strconv"
 )
 
 var test03Discovery = func() {
@@ -18,8 +19,9 @@ var test03Discovery = func() {
 		var lastResponse *reggie.Response
 
 		g.Context("Setup", func() {
-			g.Specify("Push tags to repository", func() {
-				SkipIfDisabled(push)
+			g.Specify("Populate registry with test tags", func() {
+				RunOnlyIf(runDiscoverySetup)
+				SkipIfDisabled(discovery)
 				for i := 0; i < numTags; i++ {
 					tag := fmt.Sprintf("test%d", i)
 					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
@@ -87,8 +89,13 @@ var test03Discovery = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 				Expect(err).To(BeNil())
 				Expect(len(tagList)).To(BeNumerically("<=", numResults))
-				Expect(tagList).To(ContainElement(tagList[numResults]))
+				Expect(tagList).To(ContainElement(tagList[numResults-1]))
 			})
+		})
+
+		g.Context("Teardown", func() {
+			// TODO: delete tags?
+			// No teardown required at this time for discovery tests
 		})
 	})
 }

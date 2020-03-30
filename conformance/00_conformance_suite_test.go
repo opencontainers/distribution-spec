@@ -13,7 +13,7 @@ func TestConformance(t *testing.T) {
 		test01Pull()
 		test02Push()
 		test03Discovery()
-		test04ContentManagement()
+		test04Management()
 	})
 
 	RegisterFailHandler(g.Fail)

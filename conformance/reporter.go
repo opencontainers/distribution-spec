@@ -18,12 +18,6 @@ import (
 )
 
 const (
-	passed = iota
-	failed
-	skipped
-)
-
-const (
 	flowIndex            = 2
 	categoryIndex        = 3
 	specIndex            = 4
@@ -33,11 +27,14 @@ const (
     <title>OCI Distribution Conformance Tests</title>
     <style>
 	  body {
-	    padding: 30px;
-	  }
+        padding: 10px 20px 10px 20px;
+        font-family: -apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,Hiragino Sans GB,Microsoft YaHei,Helvetica Neue,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
+        background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAG0lEQVQYV2Pce7zwv7NlPyMDFMAZGAIwlRgqAFydCAVv5m4UAAAAAElFTkSuQmCC") repeat;
+		// background made with http://www.patternify.com/
+      }
       .result {
-        padding: 1.25em 0 .25em 2em;
-        border: 2px solid #e2e2e2;
+        padding: 1.25em 0 .25em 0.8em;
+        border: 1px solid #e1e1e1;
         border-radius: 5px;
         margin-top: 10px;
       }
@@ -56,11 +53,11 @@ const (
       }
       .green {
         background: #c8ffc8;
-        padding: 1.25em 0 1.25em 2em;
+        padding: 1.25em 0 1.25em 0.8em;
       }
       .grey {
         background: lightgrey;
-        padding: 1.25em 0 1.25em 2em;
+        padding: 1.25em 0 1.25em 0.8em;
       }
       .toggle {
         border: 2px solid #3e3e3e;
@@ -92,7 +89,9 @@ const (
 		width: 75%;
 		height: auto;
 		padding: 0 0 .5em 0;
-		border: 1px solid grey;
+		border-radius: 6px;
+        border: 1px solid #cccddd;
+		background: white;
 	  }
 	  .summary-bullet {
 		width: 100%;
@@ -107,6 +106,8 @@ const (
 	  }
 	  .bullet-right {
 		width: auto;
+		font-family: monospace;
+		font-size: 1.2em;
 	  }
 	  .quick-summary {
 		width: 70%;
@@ -131,7 +132,7 @@ const (
 		margin: 0 .5em 0 auto;
 		display: flex;
 		height: 25px;
-		width: 50%;
+		width: 45%;
 	  }
 	  .meter-green {
 		height: 100%;
@@ -148,6 +149,18 @@ const (
 		background: grey;
 		width: {{ .PercentSkipped -}}%;
 	  }
+      .subcategory {
+		background: white;
+		padding: 0px 20px 20px 20px;
+        border: 1px solid #cccddd;
+		border-radius: 6px;
+      }
+      h2 {
+        margin-top: 45px;
+      }
+      h4 {
+        vertical-align: bottom;
+      }
     </style>
     <script>
       function toggleOutput(id) {
@@ -215,12 +228,13 @@ const (
       {{with .Suite}}
         {{$suite := .M}}
         {{range $i, $suiteKey := .Keys}}
-		  <h1>{{$suiteKey}}</h1>
+		  <h2>{{$suiteKey}}</h2>
+          <div class="subcategory">
           {{$wf := index $suite $suiteKey}}
 		  {{with $wf}}
 			{{$workflow := .M}}
 			{{range $j, $workflowKey := .Keys}}
-				<h2>&nbsp;{{$workflowKey}}</h2><br>
+				<h3>{{$workflowKey}}</h3>
 				{{$ctg := index $workflow $workflowKey}}
 				{{with $ctg}}
 					{{$category := .M}}
@@ -230,7 +244,7 @@ const (
 							  <div class="result red">
 								<div id="output-box-{{$s.ID}}-button" class="toggle"
 								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-								<h3 style="display: inline;">{{$s.Title}}</h3>
+								<h4 style="display: inline;">{{$s.Title}}</h4>
 								<br>
 								<div>
 								  <div id="output-box-{{$s.ID}}" style="display: none;">
@@ -244,7 +258,7 @@ const (
 							  <div class="result green">
 								<div id="output-box-{{$s.ID}}-button" class="toggle"
 								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-								<h3 style="display: inline;">{{$s.Title}}</h3>
+								<h4 style="display: inline;">{{$s.Title}}</h4>
 								<br>
 								<div id="output-box-{{$s.ID}}" style="display: none;">
 								  <pre class="pre-box">{{$s.CapturedOutput}}</pre>
@@ -254,7 +268,7 @@ const (
 							  <div class="result grey">
 								<div id="output-box-{{$s.ID}}-button" class="toggle"
 								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-								<h3 style="display: inline;">{{$s.Title}}</h3>
+								<h4 style="display: inline;">{{$s.Title}}</h4>
 								<br>
 								<div id="output-box-{{$s.ID}}" style="display: none;">
 								  <pre class="pre-box">{{$s.Failure.Message}}</pre>
@@ -265,6 +279,7 @@ const (
 				{{end}}
 			{{end}}
 		  {{end}}
+          </div>
 		{{end}}
      {{end}}
 	</div>
@@ -281,18 +296,18 @@ type (
 	}
 
 	suite struct {
-		M map[string]*workflow
+		M    map[string]*workflow
 		Keys []string
 		Size int
 	}
 
 	workflow struct {
-		M map[string]*category
+		M    map[string]*category
 		Keys []string
 	}
 
 	category struct {
-		M map[string]specSnapshot
+		M    map[string]specSnapshot
 		Keys []string
 	}
 
@@ -315,6 +330,28 @@ type (
 	httpDebugLogger struct {
 		l *log.Logger
 		w io.Writer
+	}
+
+	HTMLReporter struct {
+		htmlReportFilename   string
+		Suite                suite
+		SpecSummaryMap       summaryMap
+		EnvironmentVariables []string
+		SuiteSummary         *types.SuiteSummary
+		debugLogger          *httpDebugWriter
+		debugIndex           int
+		PercentPassed        int
+		PercentFailed        int
+		PercentSkipped       int
+		startTime            time.Time
+		endTime              time.Time
+		StartTimeString      string
+		EndTimeString        string
+		RunTime              string
+		AllPassed            bool
+		AllFailed            bool
+		AllSkipped           bool
+		Version              string
 	}
 )
 
@@ -393,30 +430,6 @@ func (l *httpDebugLogger) output(format string, v ...interface{}) {
 		l.Errorf(err.Error())
 	}
 }
-
-type (
-	HTMLReporter struct {
-		htmlReportFilename   string
-		Suite                suite
-		SpecSummaryMap       summaryMap
-		EnvironmentVariables []string
-		SuiteSummary         *types.SuiteSummary
-		debugLogger          *httpDebugWriter
-		debugIndex           int
-		PercentPassed        int
-		PercentFailed        int
-		PercentSkipped       int
-		startTime            time.Time
-		endTime              time.Time
-		StartTimeString      string
-		EndTimeString        string
-		RunTime              string
-		AllPassed            bool
-		AllFailed            bool
-		AllSkipped           bool
-		Version              string
-	}
-)
 
 func newHTMLReporter(htmlReportFilename string) *HTMLReporter {
 	return &HTMLReporter{
@@ -508,6 +521,13 @@ func (reporter *HTMLReporter) SpecSuiteWillBegin(config config.GinkgoConfigType,
 		"OCI_DEBUG",
 		"OCI_PASSWORD",
 		"OCI_USERNAME",
+		envVarPush,
+		envVarDiscovery,
+		envVarManagement,
+		envVarBlobDigest,
+		envVarManifestDigest,
+		envVarTagName,
+		envVarTagList,
 	}
 	for _, v := range varsToCheck {
 		var replacement string
