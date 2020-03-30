@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
@@ -37,15 +36,15 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue              = "1"
-	envVarPush           = "OCI_TEST_PUSH"
-	envVarDiscovery      = "OCI_TEST_DISCOVERY"
-	envVarManagement     = "OCI_TEST_MANAGEMENT"
-	envVarBlobDigest     = "OCI_BLOB_DIGEST"
-	envVarManifestDigest = "OCI_MANIFEST_DIGEST"
-	envVarTagName        = "OCI_TAG_NAME"
-	envVarTagList        = "OCI_TAG_LIST"
-	testTagName          = "tagTest0"
+	envTrue                  = "1"
+	envVarPush               = "OCI_TEST_PUSH"
+	envVarDiscovery          = "OCI_TEST_DISCOVERY"
+	envVarManagement         = "OCI_TEST_MANAGEMENT"
+	envVarBlobDigest         = "OCI_BLOB_DIGEST"
+	envVarManifestDigest     = "OCI_MANIFEST_DIGEST"
+	envVarTagName            = "OCI_TAG_NAME"
+	envVarTagList            = "OCI_TAG_LIST"
+	testTagName              = "tagTest0"
 
 	push = 1 << iota
 	discovery
@@ -177,6 +176,16 @@ func init() {
 	runDiscoverySetup = true
 	runManagementSetup = true
 
+	if os.Getenv(envVarTagName) != "" &&
+		os.Getenv(envVarManifestDigest) != "" &&
+		os.Getenv(envVarBlobDigest) != "" {
+		runPullSetup = false
+	}
+
+	if os.Getenv(envVarTagList) != "" {
+		runDiscoverySetup = false
+	}
+
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"
 	suiteDescription = "OCI Distribution Conformance Tests"
@@ -190,16 +199,14 @@ func SkipIfDisabled(test int) {
 }
 
 func RunOnlyIf(v bool) {
-	if v {
-		report := generateSkipReport()
-		g.Skip(report)
+	if !v {
+		g.Skip("you have skipped this test.")
 	}
 }
 
 func RunOnlyIfNot(v bool) {
-	if !v {
-		report := generateSkipReport()
-		g.Skip(report)
+	if v {
+		g.Skip("you have skipped this test.")
 	}
 }
 
@@ -217,10 +224,6 @@ func userDisabled(test int) bool {
 }
 
 func getTagList(resp *reggie.Response) []string {
-	if userDisabled(push) {
-		return strings.Split(os.Getenv(envVarTagList), ",")
-	}
-
 	jsonData := resp.Body()
 	tagList := &TagList{}
 	err := json.Unmarshal(jsonData, tagList)
@@ -231,19 +234,15 @@ func getTagList(resp *reggie.Response) []string {
 	return tagList.Tags
 }
 
-func getTagName(lastResponse *reggie.Response) string {
+func getTagNameFromResponse(lastResponse *reggie.Response) (tagName string) {
 	tl := &TagList{}
 	if lastResponse != nil {
 		jsonData := lastResponse.Body()
 		err := json.Unmarshal(jsonData, tl)
-		if err != nil && len(tl.Tags) > 0 {
-			return tl.Tags[0]
+		if err == nil && len(tl.Tags) > 0 {
+			tagName = tl.Tags[0]
 		}
 	}
 
-	if tn := os.Getenv(envVarTagName); tn != "" {
-		return tn
-	}
-
-	return testTagName
+	return
 }

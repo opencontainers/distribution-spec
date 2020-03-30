@@ -1,9 +1,9 @@
 package conformance
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
@@ -13,7 +13,7 @@ import (
 var test01Pull = func() {
 	g.Context("Pull", func() {
 
-		var tagResponse *reggie.Response
+		var tag string
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
@@ -25,7 +25,8 @@ var test01Pull = func() {
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", fmt.Sprintf("%d", len(configContent))).
 					SetBody(configContent)
-				client.Do(req)
+				_, err := client.Do(req)
+				_ = err
 			})
 
 			g.Specify("Populate registry with test manifest", func() {
@@ -35,28 +36,20 @@ var test01Pull = func() {
 					reggie.WithReference(tag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(manifestContent)
-				client.Do(req)
+				_, err := client.Do(req)
+				_ = err
 			})
 
-			g.Specify("Retrieve list of current tags", func() {
+			g.Specify("Get the name of a tag", func() {
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, _ := client.Do(req)
-				tagResponse = resp
-				tagList := &TagList{}
-				jsonData := []byte(resp.String())
-				json.Unmarshal(jsonData, tagList)
+				tag = getTagNameFromResponse(resp)
 			})
 
-			g.Specify("Create mock registry response", func() {
+			g.Specify("Get tag name from environment", func() {
 				RunOnlyIfNot(runPullSetup)
-				// TODO: handle
-				// OCI_MANIFEST_DIGEST=<digest>
-				// OCI_TAG_NAME=<tag>
-				// OCI_BLOB_DIGEST=<digest>
-				//tagResponse = &reggie.Response{}
-				//tagResponse.RawResponse = &http.Response{}
-				//tagResponse.RawResponse.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(``)))
+				tag = os.Getenv(envVarTagName)
 			})
 		})
 
@@ -95,7 +88,6 @@ var test01Pull = func() {
 			})
 
 			g.Specify("GET request to manifest path (tag) should yield 200 response", func() {
-				tag := getTagName(tagResponse)
 				Expect(tag).ToNot(BeEmpty())
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>", reggie.WithReference(tag)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -130,13 +122,15 @@ var test01Pull = func() {
 			g.Specify("Delete manifest created in setup", func() {
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
-				client.Do(req)
+				_, err := client.Do(req)
+				_ = err
 			})
 
 			g.Specify("Delete blob created in setup", func() {
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
-				client.Do(req)
+				_, err := client.Do(req)
+				_ = err
 			})
 		})
 	})

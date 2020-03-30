@@ -1,10 +1,11 @@
 package conformance
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
@@ -16,7 +17,6 @@ var test03Discovery = func() {
 
 		var numTags = 4
 		var tagList []string
-		var lastResponse *reggie.Response
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test tags", func() {
@@ -24,12 +24,24 @@ var test03Discovery = func() {
 				SkipIfDisabled(discovery)
 				for i := 0; i < numTags; i++ {
 					tag := fmt.Sprintf("test%d", i)
+					tagList = append(tagList, tag)
 					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(tag)).
 						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 						SetBody(manifestContent)
-					client.Do(req)
+					_, err := client.Do(req)
+					_ = err
+					req = client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
+					resp, err := client.Do(req)
+					tagList = getTagList(resp)
+					_ = err
 				}
+			})
+
+			g.Specify("Populate registry with test tags (no push)", func() {
+				RunOnlyIfNot(runDiscoverySetup)
+				SkipIfDisabled(discovery)
+				tagList = strings.Split(os.Getenv(envVarTagList), ",")
 			})
 		})
 
@@ -40,25 +52,8 @@ var test03Discovery = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-				lastResponse = resp
-				tagList = getTagList(resp)
 				Expect(err).To(BeNil())
 				numTags = len(tagList)
-			})
-
-			g.Specify("GET request to manifest URL (tag) should yield 200 response", func() {
-				SkipIfDisabled(discovery)
-				tl := &TagList{}
-				jsonData := lastResponse.Body()
-				err := json.Unmarshal(jsonData, tl)
-				Expect(err).To(BeNil())
-				Expect(tl.Tags).ToNot(BeEmpty())
-				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(tl.Tags[0])).
-					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
 
 			g.Specify("GET number of tags should be limitable by `n` query parameter", func() {
@@ -80,6 +75,7 @@ var test03Discovery = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list").
 					SetQueryParam("n", strconv.Itoa(numResults))
 				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
 				tagList = getTagList(resp)
 				req = client.NewRequest(reggie.GET, "/v2/<name>/tags/list").
 					SetQueryParam("n", strconv.Itoa(numResults)).
@@ -94,8 +90,13 @@ var test03Discovery = func() {
 		})
 
 		g.Context("Teardown", func() {
-			// TODO: delete tags?
-			// No teardown required at this time for discovery tests
+			g.Specify("Delete created manifest & associated tags", func() {
+				RunOnlyIf(runDiscoverySetup)
+				SkipIfDisabled(discovery)
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+				_, err := client.Do(req)
+				_ = err
+			})
 		})
 	})
 }

@@ -28,7 +28,8 @@ var test04Management = func() {
 					SetHeader("Content-Type", "application/octet-stream").
 					SetQueryParam("digest", blobDigest).
 					SetBody(configContent)
-				client.Do(req)
+				_, err := client.Do(req)
+				_ = err
 			})
 
 			g.Specify("Populate registry with test tag", func() {
@@ -39,7 +40,8 @@ var test04Management = func() {
 					reggie.WithReference(tagToDelete)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(manifestContent)
-				client.Do(req)
+				_, err := client.Do(req)
+				_ = err
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {
@@ -52,6 +54,7 @@ var test04Management = func() {
 				tagList := &TagList{}
 				jsonData := []byte(resp.String())
 				err = json.Unmarshal(jsonData, tagList)
+				Expect(err).To(BeNil())
 				numTags = len(tagList.Tags)
 			})
 		})
