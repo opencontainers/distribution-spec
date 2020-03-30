@@ -18,6 +18,7 @@ var test04Management = func() {
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
+				RunOnlyIf(runManagementSetup)
 				SkipIfDisabled(management)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, _ := client.Do(req)
@@ -31,6 +32,7 @@ var test04Management = func() {
 			})
 
 			g.Specify("Populate registry with test tag", func() {
+				RunOnlyIf(runManagementSetup)
 				SkipIfDisabled(management)
 				tagToDelete = defaultTagName
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
@@ -41,6 +43,7 @@ var test04Management = func() {
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {
+				RunOnlyIf(runManagementSetup)
 				SkipIfDisabled(management)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
@@ -110,6 +113,7 @@ var test04Management = func() {
 
 		g.Context("Blob delete", func() {
 			g.Specify("DELETE request to blob URL should yield 202 response", func() {
+				RunOnlyIf(runManagementSetup)
 				SkipIfDisabled(management)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)
@@ -118,6 +122,7 @@ var test04Management = func() {
 			})
 
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
+				RunOnlyIf(runManagementSetup)
 				SkipIfDisabled(management)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)

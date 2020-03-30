@@ -85,6 +85,10 @@ var (
 	httpWriter             *httpDebugWriter
 	testsToRun             int
 	suiteDescription       string
+	runPullSetup           bool
+	runPushSetup           bool
+	runDiscoverySetup      bool
+	runManagementSetup     bool
 	Version                = "unknown"
 )
 
@@ -168,14 +172,33 @@ func init() {
 		UNSUPPORTED:           "UNSUPPORTED",
 	}
 
+	runPullSetup = true
+	runPushSetup = true
+	runDiscoverySetup = true
+	runManagementSetup = true
+
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"
 	suiteDescription = "OCI Distribution Conformance Tests"
 }
 
 func SkipIfDisabled(test int) {
-	report := generateSkipReport()
 	if userDisabled(test) {
+		report := generateSkipReport()
+		g.Skip(report)
+	}
+}
+
+func RunOnlyIf(v bool) {
+	if v {
+		report := generateSkipReport()
+		g.Skip(report)
+	}
+}
+
+func RunOnlyIfNot(v bool) {
+	if !v {
+		report := generateSkipReport()
 		g.Skip(report)
 	}
 }

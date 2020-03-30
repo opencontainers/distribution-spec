@@ -20,7 +20,7 @@ var test03Discovery = func() {
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test tags", func() {
-				SkipIfDisabled(push)
+				RunOnlyIf(runDiscoverySetup)
 				SkipIfDisabled(discovery)
 				for i := 0; i < numTags; i++ {
 					tag := fmt.Sprintf("test%d", i)

@@ -17,6 +17,7 @@ var test01Pull = func() {
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
+				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, _ := client.Do(req)
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
@@ -28,6 +29,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Populate registry with test manifest", func() {
+				RunOnlyIf(runPullSetup)
 				tag := testTagName
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tag)).
@@ -37,12 +39,24 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Retrieve list of current tags", func() {
+				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, _ := client.Do(req)
 				tagResponse = resp
 				tagList := &TagList{}
 				jsonData := []byte(resp.String())
 				json.Unmarshal(jsonData, tagList)
+			})
+
+			g.Specify("Create mock registry response", func() {
+				RunOnlyIfNot(runPullSetup)
+				// TODO: handle
+				// OCI_MANIFEST_DIGEST=<digest>
+				// OCI_TAG_NAME=<tag>
+				// OCI_BLOB_DIGEST=<digest>
+				//tagResponse = &reggie.Response{}
+				//tagResponse.RawResponse = &http.Response{}
+				//tagResponse.RawResponse.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(``)))
 			})
 		})
 
@@ -114,11 +128,13 @@ var test01Pull = func() {
 
 		g.Context("Teardown", func() {
 			g.Specify("Delete manifest created in setup", func() {
+				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 				client.Do(req)
 			})
 
 			g.Specify("Delete blob created in setup", func() {
+				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				client.Do(req)
 			})
