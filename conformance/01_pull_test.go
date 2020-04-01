@@ -25,8 +25,11 @@ var test01Pull = func() {
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", fmt.Sprintf("%d", len(configContent))).
 					SetBody(configContent)
-				_, err := client.Do(req)
-				_ = err
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
 			})
 
 			g.Specify("Populate registry with test manifest", func() {
@@ -36,8 +39,11 @@ var test01Pull = func() {
 					reggie.WithReference(tag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(manifestContent)
-				_, err := client.Do(req)
-				_ = err
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
 			})
 
 			g.Specify("Get the name of a tag", func() {
@@ -121,16 +127,24 @@ var test01Pull = func() {
 		g.Context("Teardown", func() {
 			g.Specify("Delete manifest created in setup", func() {
 				RunOnlyIf(runPullSetup)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
-				_, err := client.Do(req)
-				_ = err
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
 			})
 
 			g.Specify("Delete blob created in setup", func() {
 				RunOnlyIf(runPullSetup)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
-				_, err := client.Do(req)
-				_ = err
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
 			})
 		})
 	})

@@ -36,15 +36,15 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue                  = "1"
-	envVarPush               = "OCI_TEST_PUSH"
-	envVarContentDiscovery          = "OCI_TEST_CONTENT_DISCOVERY"
-	envVarContentManagement         = "OCI_TEST_CONTENT_MANAGEMENT"
-	envVarBlobDigest         = "OCI_BLOB_DIGEST"
-	envVarManifestDigest     = "OCI_MANIFEST_DIGEST"
-	envVarTagName            = "OCI_TAG_NAME"
-	envVarTagList            = "OCI_TAG_LIST"
-	testTagName              = "tagTest0"
+	envTrue                 = "1"
+	envVarPush              = "OCI_TEST_PUSH"
+	envVarContentDiscovery  = "OCI_TEST_CONTENT_DISCOVERY"
+	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
+	envVarBlobDigest        = "OCI_BLOB_DIGEST"
+	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
+	envVarTagName           = "OCI_TAG_NAME"
+	envVarTagList           = "OCI_TAG_LIST"
+	testTagName             = "tagtest0"
 
 	push = 1 << iota
 	contentDiscovery
@@ -58,37 +58,37 @@ var (
 		envVarContentManagement: contentManagement,
 	}
 
-	blobA                  []byte
-	blobALength            string
-	blobADigest            string
-	blobB                  []byte
-	blobBDigest            string
-	blobBChunk1            []byte
-	blobBChunk1Length      string
-	blobBChunk2            []byte
-	blobBChunk2Length      string
-	blobBChunk1Range       string
-	blobBChunk2Range       string
-	blobDigest             string
-	client                 *reggie.Client
-	configContent          []byte
-	configContentLength    string
-	dummyDigest            string
-	errorCodes             []string
-	manifestContent        []byte
-	invalidManifestContent []byte
-	manifestDigest         string
-	nonexistentManifest    string
-	reportJUnitFilename    string
-	reportHTMLFilename     string
-	httpWriter             *httpDebugWriter
-	testsToRun             int
-	suiteDescription       string
-	runPullSetup           bool
-	runPushSetup           bool
-	runContentDiscoverySetup      bool
-	runContentManagementSetup     bool
-	Version                = "unknown"
+	blobA                     []byte
+	blobALength               string
+	blobADigest               string
+	blobB                     []byte
+	blobBDigest               string
+	blobBChunk1               []byte
+	blobBChunk1Length         string
+	blobBChunk2               []byte
+	blobBChunk2Length         string
+	blobBChunk1Range          string
+	blobBChunk2Range          string
+	blobDigest                string
+	client                    *reggie.Client
+	configContent             []byte
+	configContentLength       string
+	dummyDigest               string
+	errorCodes                []string
+	manifestContent           []byte
+	invalidManifestContent    []byte
+	manifestDigest            string
+	nonexistentManifest       string
+	reportJUnitFilename       string
+	reportHTMLFilename        string
+	httpWriter                *httpDebugWriter
+	testsToRun                int
+	suiteDescription          string
+	runPullSetup              bool
+	runPushSetup              bool
+	runContentDiscoverySetup  bool
+	runContentManagementSetup bool
+	Version                   = "unknown"
 )
 
 func init() {

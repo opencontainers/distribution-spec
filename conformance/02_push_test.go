@@ -207,7 +207,27 @@ var test02Push = func() {
 		})
 
 		g.Context("Teardown", func() {
-			// No teardown required at this time for push tests
+			g.Specify("Delete manifest created in setup", func() {
+				RunOnlyIf(runPullSetup)
+				SkipIfDisabled(contentManagement)
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+			})
+
+			g.Specify("Delete blob created in setup", func() {
+				RunOnlyIf(runPullSetup)
+				SkipIfDisabled(contentManagement)
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+			})
 		})
 
 	})

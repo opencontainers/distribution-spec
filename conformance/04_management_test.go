@@ -10,9 +10,9 @@ import (
 )
 
 var test04ContentManagement = func() {
-	g.Context("ContentManagement", func() {
+	g.Context("Content Management", func() {
 
-		const defaultTagName = "tagTest0"
+		const defaultTagName = "tagtest0"
 		var tagToDelete string
 		var numTags int
 
@@ -28,8 +28,11 @@ var test04ContentManagement = func() {
 					SetHeader("Content-Type", "application/octet-stream").
 					SetQueryParam("digest", blobDigest).
 					SetBody(configContent)
-				_, err := client.Do(req)
-				_ = err
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
 			})
 
 			g.Specify("Populate registry with test tag", func() {
@@ -40,8 +43,11 @@ var test04ContentManagement = func() {
 					reggie.WithReference(tagToDelete)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(manifestContent)
-				_, err := client.Do(req)
-				_ = err
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {

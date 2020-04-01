@@ -13,7 +13,7 @@ import (
 )
 
 var test03ContentDiscovery = func() {
-	g.Context("ContentDiscovery", func() {
+	g.Context("Content Discovery", func() {
 
 		var numTags = 4
 		var tagList []string
@@ -29,10 +29,13 @@ var test03ContentDiscovery = func() {
 						reggie.WithReference(tag)).
 						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 						SetBody(manifestContent)
-					_, err := client.Do(req)
-					_ = err
-					req = client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300)))
+					req = client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
+					resp, err = client.Do(req)
 					tagList = getTagList(resp)
 					_ = err
 				}
@@ -93,9 +96,13 @@ var test03ContentDiscovery = func() {
 			g.Specify("Delete created manifest & associated tags", func() {
 				RunOnlyIf(runContentDiscoverySetup)
 				SkipIfDisabled(contentDiscovery)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
-				_, err := client.Do(req)
-				_ = err
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
 			})
 		})
 	})
