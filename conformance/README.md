@@ -35,10 +35,13 @@ Note: for some registries, you may need to create `OCI_NAMESPACE` ahead of time.
 
 The tests are broken down into 4 major categories:
 
-1. Pull
-2. Push
-3. Discovery
-4. Management
+1. Pull - Highest priority - All OCI registries MUST support pulling OCI container
+images.
+2. Push - Registries need a way to get content to be pulled, but clients can/should
+be more forgiving here. For example, if needing to fallback after an unsupported endpoint.
+3. Content Discovery - Includes tag listing (and possibly search in the future).
+4. Content Management - Lowest Priority - Includes tag, blob, and repo deletion.
+(Note: Many registries may have other ways to accomplish this than the OCI API.)
 
 In addition, each category has its own setup and teardown processes where appropriate.
 

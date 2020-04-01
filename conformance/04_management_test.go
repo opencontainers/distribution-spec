@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var test04Management = func() {
-	g.Context("Management", func() {
+var test04ContentManagement = func() {
+	g.Context("ContentManagement", func() {
 
 		const defaultTagName = "tagTest0"
 		var tagToDelete string
@@ -18,8 +18,8 @@ var test04Management = func() {
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
-				RunOnlyIf(runManagementSetup)
-				SkipIfDisabled(management)
+				RunOnlyIf(runContentManagementSetup)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, _ := client.Do(req)
 
@@ -33,8 +33,8 @@ var test04Management = func() {
 			})
 
 			g.Specify("Populate registry with test tag", func() {
-				RunOnlyIf(runManagementSetup)
-				SkipIfDisabled(management)
+				RunOnlyIf(runContentManagementSetup)
+				SkipIfDisabled(contentManagement)
 				tagToDelete = defaultTagName
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete)).
@@ -45,8 +45,8 @@ var test04Management = func() {
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {
-				RunOnlyIf(runManagementSetup)
-				SkipIfDisabled(management)
+				RunOnlyIf(runContentManagementSetup)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -61,7 +61,7 @@ var test04Management = func() {
 
 		g.Context("Manifest delete", func() {
 			g.Specify("DELETE request to manifest tag should return 202, unless tag deletion is disallowed (400)", func() {
-				SkipIfDisabled(management)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete))
 				resp, err := client.Do(req)
@@ -78,7 +78,7 @@ var test04Management = func() {
 			})
 
 			g.Specify("DELETE request to manifest (digest) should yield 202 response unless already deleted", func() {
-				SkipIfDisabled(management)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -90,7 +90,7 @@ var test04Management = func() {
 			})
 
 			g.Specify("GET request to deleted manifest URL should yield 404 response, unless delete is disallowed", func() {
-				SkipIfDisabled(management)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -101,7 +101,7 @@ var test04Management = func() {
 			})
 
 			g.Specify("GET request to tags list should reflect manifest deletion", func() {
-				SkipIfDisabled(management)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -116,8 +116,8 @@ var test04Management = func() {
 
 		g.Context("Blob delete", func() {
 			g.Specify("DELETE request to blob URL should yield 202 response", func() {
-				RunOnlyIf(runManagementSetup)
-				SkipIfDisabled(management)
+				RunOnlyIf(runContentManagementSetup)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -125,8 +125,8 @@ var test04Management = func() {
 			})
 
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
-				RunOnlyIf(runManagementSetup)
-				SkipIfDisabled(management)
+				RunOnlyIf(runContentManagementSetup)
+				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

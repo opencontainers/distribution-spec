@@ -38,8 +38,8 @@ const (
 
 	envTrue                  = "1"
 	envVarPush               = "OCI_TEST_PUSH"
-	envVarDiscovery          = "OCI_TEST_DISCOVERY"
-	envVarManagement         = "OCI_TEST_MANAGEMENT"
+	envVarContentDiscovery          = "OCI_TEST_CONTENT_DISCOVERY"
+	envVarContentManagement         = "OCI_TEST_CONTENT_MANAGEMENT"
 	envVarBlobDigest         = "OCI_BLOB_DIGEST"
 	envVarManifestDigest     = "OCI_MANIFEST_DIGEST"
 	envVarTagName            = "OCI_TAG_NAME"
@@ -47,15 +47,15 @@ const (
 	testTagName              = "tagTest0"
 
 	push = 1 << iota
-	discovery
-	management
+	contentDiscovery
+	contentManagement
 )
 
 var (
 	testMap = map[string]int{
-		envVarPush:       push,
-		envVarDiscovery:  discovery,
-		envVarManagement: management,
+		envVarPush:              push,
+		envVarContentDiscovery:  contentDiscovery,
+		envVarContentManagement: contentManagement,
 	}
 
 	blobA                  []byte
@@ -86,8 +86,8 @@ var (
 	suiteDescription       string
 	runPullSetup           bool
 	runPushSetup           bool
-	runDiscoverySetup      bool
-	runManagementSetup     bool
+	runContentDiscoverySetup      bool
+	runContentManagementSetup     bool
 	Version                = "unknown"
 )
 
@@ -173,8 +173,8 @@ func init() {
 
 	runPullSetup = true
 	runPushSetup = true
-	runDiscoverySetup = true
-	runManagementSetup = true
+	runContentDiscoverySetup = true
+	runContentManagementSetup = true
 
 	if os.Getenv(envVarTagName) != "" &&
 		os.Getenv(envVarManifestDigest) != "" &&
@@ -183,7 +183,7 @@ func init() {
 	}
 
 	if os.Getenv(envVarTagList) != "" {
-		runDiscoverySetup = false
+		runContentDiscoverySetup = false
 	}
 
 	reportJUnitFilename = "junit.xml"

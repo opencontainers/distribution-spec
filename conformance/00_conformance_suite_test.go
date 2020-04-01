@@ -12,8 +12,8 @@ func TestConformance(t *testing.T) {
 	g.Describe(suiteDescription, func() {
 		test01Pull()
 		test02Push()
-		test03Discovery()
-		test04Management()
+		test03ContentDiscovery()
+		test04ContentManagement()
 	})
 
 	RegisterFailHandler(g.Fail)
