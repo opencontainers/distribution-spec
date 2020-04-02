@@ -74,15 +74,15 @@ To enable the Push tests, you must explicitly set the following in the environme
 OCI_TEST_PUSH=1
 ```
 
-##### Discovery
+##### Content Discovery
 
-The Discovery tests validate that the contents of a registry can be discovered.
+The Content Discovery tests validate that the contents of a registry can be discovered.
 
-To enable the Discovery tests, you must explicitly set the following in the environment:
+To enable the Content Discovery tests, you must explicitly set the following in the environment:
 
 ```
 # Required to enable
-OCI_TEST_DISCOVERY=1
+OCI_TEST_CONTENT_DISCOVERY=1
 ```
 
 As part of setup of these tests, a manifest and associated tags will be pushed to the registry.
@@ -94,19 +94,19 @@ to list of tags to be returned from `GET /v2/<name>/tags/list`:
 OCI_TAG_LIST=<tag1>,<tag2>,<tag3>,<tag4>
 ```
 
-##### Management
+##### Content Management
 
-The Management tests validate that the contents of a registry can be deleted or otherwise modified.
+The Content Management tests validate that the contents of a registry can be deleted or otherwise modified.
 
-To enable the Management tests, you must explicitly set the following in the environment:
+To enable the Content Management tests, you must explicitly set the following in the environment:
 
 ```
 # Required to enable
-OCI_TEST_MANAGEMENT=1
+OCI_TEST_CONTENT_MANAGEMENT=1
 ```
 
-Note: The Management tests explicitly depend upon the Push and Discovery tests, as there is no
-way to test content management without also supporting push and discovery.
+Note: The Content Management tests explicitly depend upon the Push and Content Discovery tests, as there is no
+way to test content management without also supporting push and content discovery.
 
 #### Container Image
 

@@ -34,11 +34,11 @@ var test03ContentDiscovery = func() {
 					Expect(resp.StatusCode()).To(SatisfyAll(
 						BeNumerically(">=", 200),
 						BeNumerically("<", 300)))
-					req = client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
-					resp, err = client.Do(req)
-					tagList = getTagList(resp)
-					_ = err
 				}
+				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
+				resp, err := client.Do(req)
+				tagList = getTagList(resp)
+				_ = err
 			})
 
 			g.Specify("Populate registry with test tags (no push)", func() {

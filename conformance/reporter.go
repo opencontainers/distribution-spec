@@ -182,15 +182,15 @@ const (
 	<div class="summary-bullet">
 		<div class="bullet-left">Summary:</div>
 		<div class="quick-summary">
-			{{- if not .AllFailed -}}
+			{{- if gt .SuiteSummary.NumberOfPassedSpecs 0 -}}
 				<span class="darkgreen">
 				{{- if .AllPassed -}}All {{ end -}}{{ .SuiteSummary.NumberOfPassedSpecs }} passed</span>
 			{{- end -}}
-			{{- if not .AllPassed -}}
+			{{- if gt .SuiteSummary.NumberOfFailedSpecs 0 -}}
 				<span class="darkred">
 				{{- if .AllFailed -}}All {{ end -}}{{ .SuiteSummary.NumberOfFailedSpecs }} failed</span>
 			{{- end -}}
-			{{- if not .AllPassed -}}
+			{{- if gt .SuiteSummary.NumberOfSkippedSpecs 0 -}}
 				<span class="darkgrey">
 				{{- if .AllSkipped -}}All {{ end -}}{{ .SuiteSummary.NumberOfSkippedSpecs }} skipped</span>
 			{{- end -}}
