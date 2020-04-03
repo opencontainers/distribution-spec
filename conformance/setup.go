@@ -1,15 +1,17 @@
 package conformance
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/bloodorangeio/reggie"
+	g "github.com/onsi/ginkgo"
 	godigest "github.com/opencontainers/go-digest"
 )
 
-// TODO: import from opencontainers/distribution-spec
 type (
 	TagList struct {
 		Name string   `json:"name"`
@@ -33,39 +35,60 @@ const (
 	UNAUTHORIZED
 	DENIED
 	UNSUPPORTED
+
+	envTrue                 = "1"
+	envVarPush              = "OCI_TEST_PUSH"
+	envVarContentDiscovery  = "OCI_TEST_CONTENT_DISCOVERY"
+	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
+	envVarBlobDigest        = "OCI_BLOB_DIGEST"
+	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
+	envVarTagName           = "OCI_TAG_NAME"
+	envVarTagList           = "OCI_TAG_LIST"
+	testTagName             = "tagtest0"
+
+	push = 1 << iota
+	contentDiscovery
+	contentManagement
 )
 
 var (
-	blobA                  []byte
-	blobALength            string
-	blobADigest            string
-	blobB                  []byte
-	blobBDigest            string
-	blobBChunk1            []byte
-	blobBChunk1Length      string
-	blobBChunk2            []byte
-	blobBChunk2Length      string
-	blobBChunk1Range       string
-	blobBChunk2Range       string
-	client                 *reggie.Client
-	configContent          []byte
-	configContentLength    string
-	configDigest           string
-	dummyDigest            string
-	errorCodes             []string
-	firstTag               string
-	lastResponse           *reggie.Response
-	lastTagList            TagList
-	manifestContent        []byte
-	invalidManifestContent []byte
-	manifestDigest         string
-	nonexistentManifest    string
-	numTags                int
-	reportJUnitFilename    string
-	reportHTMLFilename     string
-	httpWriter             *httpDebugWriter
-	suiteDescription       string
-	Version                = "unknown"
+	testMap = map[string]int{
+		envVarPush:              push,
+		envVarContentDiscovery:  contentDiscovery,
+		envVarContentManagement: contentManagement,
+	}
+
+	blobA                     []byte
+	blobALength               string
+	blobADigest               string
+	blobB                     []byte
+	blobBDigest               string
+	blobBChunk1               []byte
+	blobBChunk1Length         string
+	blobBChunk2               []byte
+	blobBChunk2Length         string
+	blobBChunk1Range          string
+	blobBChunk2Range          string
+	blobDigest                string
+	client                    *reggie.Client
+	configContent             []byte
+	configContentLength       string
+	dummyDigest               string
+	errorCodes                []string
+	manifestContent           []byte
+	invalidManifestContent    []byte
+	manifestDigest            string
+	nonexistentManifest       string
+	reportJUnitFilename       string
+	reportHTMLFilename        string
+	httpWriter                *httpDebugWriter
+	testsToRun                int
+	suiteDescription          string
+	runPullSetup              bool
+	runPushSetup              bool
+	runContentDiscoverySetup  bool
+	runContentManagementSetup bool
+	Version                   = "unknown"
 )
 
 func init() {
@@ -74,6 +97,12 @@ func init() {
 	username := os.Getenv("OCI_USERNAME")
 	password := os.Getenv("OCI_PASSWORD")
 	debug := os.Getenv("OCI_DEBUG") == "true"
+
+	for envVar, enableTest := range testMap {
+		if os.Getenv(envVar) == envTrue {
+			testsToRun |= enableTest
+		}
+	}
 
 	var err error
 
@@ -84,21 +113,28 @@ func init() {
 		reggie.WithUsernamePassword(username, password),
 		reggie.WithDebug(true),
 		reggie.WithUserAgent("distribution-spec-conformance-tests"))
-	client.SetLogger(logger)
 	if err != nil {
 		panic(err)
 	}
 
+	client.SetLogger(logger)
+
 	configContent = []byte("{}\n")
 	configContentLength = strconv.Itoa(len(configContent))
-	configDigest = godigest.FromBytes(configContent).String()
+	blobDigest = godigest.FromBytes(configContent).String()
+	if v := os.Getenv(envVarBlobDigest); v != "" {
+		blobDigest = v
+	}
 
 	manifestContent = []byte(fmt.Sprintf(
 		"{ \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\", \"config\":  { \"digest\": \"%s\", "+
 			"\"mediaType\": \"application/vnd.oci.image.config.v1+json\","+" \"size\": %s }, \"layers\": [], "+
 			"\"schemaVersion\": 2 }",
-		configDigest, configContentLength))
+		blobDigest, configContentLength))
 	manifestDigest = godigest.FromBytes(manifestContent).String()
+	if v := os.Getenv(envVarManifestDigest); v != "" {
+		manifestDigest = v
+	}
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
 
@@ -135,7 +171,78 @@ func init() {
 		UNSUPPORTED:           "UNSUPPORTED",
 	}
 
+	runPullSetup = true
+	runPushSetup = true
+	runContentDiscoverySetup = true
+	runContentManagementSetup = true
+
+	if os.Getenv(envVarTagName) != "" &&
+		os.Getenv(envVarManifestDigest) != "" &&
+		os.Getenv(envVarBlobDigest) != "" {
+		runPullSetup = false
+	}
+
+	if os.Getenv(envVarTagList) != "" {
+		runContentDiscoverySetup = false
+	}
+
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"
 	suiteDescription = "OCI Distribution Conformance Tests"
+}
+
+func SkipIfDisabled(test int) {
+	if userDisabled(test) {
+		report := generateSkipReport()
+		g.Skip(report)
+	}
+}
+
+func RunOnlyIf(v bool) {
+	if !v {
+		g.Skip("you have skipped this test.")
+	}
+}
+
+func RunOnlyIfNot(v bool) {
+	if v {
+		g.Skip("you have skipped this test.")
+	}
+}
+
+func generateSkipReport() string {
+	buf := new(bytes.Buffer)
+	fmt.Fprintf(buf, "you have skipped this test; if this is an error, check your environment variable settings:\n")
+	for k := range testMap {
+		fmt.Fprintf(buf, "\t%s=%s\n", k, os.Getenv(k))
+	}
+	return buf.String()
+}
+
+func userDisabled(test int) bool {
+	return !(test&testsToRun > 0)
+}
+
+func getTagList(resp *reggie.Response) []string {
+	jsonData := resp.Body()
+	tagList := &TagList{}
+	err := json.Unmarshal(jsonData, tagList)
+	if err != nil {
+		return []string{}
+	}
+
+	return tagList.Tags
+}
+
+func getTagNameFromResponse(lastResponse *reggie.Response) (tagName string) {
+	tl := &TagList{}
+	if lastResponse != nil {
+		jsonData := lastResponse.Body()
+		err := json.Unmarshal(jsonData, tl)
+		if err == nil && len(tl.Tags) > 0 {
+			tagName = tl.Tags[0]
+		}
+	}
+
+	return
 }

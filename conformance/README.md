@@ -31,6 +31,83 @@ This will produce `junit.xml` and `report.html` with the results.
 
 Note: for some registries, you may need to create `OCI_NAMESPACE` ahead of time.
 
+#### Testing registry workflows
+
+The tests are broken down into 4 major categories:
+
+1. Pull - Highest priority - All OCI registries MUST support pulling OCI container
+images.
+2. Push - Registries need a way to get content to be pulled, but clients can/should
+be more forgiving here. For example, if needing to fallback after an unsupported endpoint.
+3. Content Discovery - Includes tag listing (and possibly search in the future).
+4. Content Management - Lowest Priority - Includes tag, blob, and repo deletion.
+(Note: Many registries may have other ways to accomplish this than the OCI API.)
+
+In addition, each category has its own setup and teardown processes where appropriate.
+
+##### Pull
+
+The Pull tests validate that content can be retrieved from a registry.
+
+These tests are *always* run, as this is the baseline for registry conformance.
+
+Regardless of whether the Push tests are enabled, as part of setup for the Pull tests,
+content will be uploaded to the registry.
+If you wish to prevent this, you can set the following environment variables pointing
+to content already present in the registry:
+
+```
+# Optional: set to prevent automatic setup
+OCI_MANIFEST_DIGEST=<digest>
+OCI_TAG_NAME=<tag>
+OCI_BLOB_DIGEST=<digest>
+```
+
+##### Push
+
+The Push tests validate that content can be uploaded to a registry.
+
+To enable the Push tests, you must explicitly set the following in the environment:
+
+```
+# Required to enable
+OCI_TEST_PUSH=1
+```
+
+##### Content Discovery
+
+The Content Discovery tests validate that the contents of a registry can be discovered.
+
+To enable the Content Discovery tests, you must explicitly set the following in the environment:
+
+```
+# Required to enable
+OCI_TEST_CONTENT_DISCOVERY=1
+```
+
+As part of setup of these tests, a manifest and associated tags will be pushed to the registry.
+If you wish to prevent this, you can set the following environment variable pointing
+to list of tags to be returned from `GET /v2/<name>/tags/list`:
+
+```
+# Optional: set to prevent automatic setup
+OCI_TAG_LIST=<tag1>,<tag2>,<tag3>,<tag4>
+```
+
+##### Content Management
+
+The Content Management tests validate that the contents of a registry can be deleted or otherwise modified.
+
+To enable the Content Management tests, you must explicitly set the following in the environment:
+
+```
+# Required to enable
+OCI_TEST_CONTENT_MANAGEMENT=1
+```
+
+Note: The Content Management tests explicitly depend upon the Push and Content Discovery tests, as there is no
+way to test content management without also supporting push and content discovery.
+
 #### Container Image
 
 You may use the [Dockerfile](./Dockerfile) located in this directory
