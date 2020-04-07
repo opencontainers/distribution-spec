@@ -11,7 +11,7 @@ import (
 )
 
 var test01Pull = func() {
-	g.Context("Pull", func() {
+	g.Context(titlePull, func() {
 
 		var tag string
 

@@ -13,7 +13,7 @@ import (
 )
 
 var test03ContentDiscovery = func() {
-	g.Context("Content Discovery", func() {
+	g.Context(titleContentDiscovery, func() {
 
 		var numTags = 4
 		var tagList []string

@@ -176,115 +176,118 @@ const (
 	}
     </script>
   </head>
-  <body>
-    <h1>OCI Distribution Conformance Tests</h1>
-<div class="summary">
-	<div class="summary-bullet">
-		<div class="bullet-left">Summary:</div>
-		<div class="quick-summary">
-			{{- if gt .SuiteSummary.NumberOfPassedSpecs 0 -}}
-				<span class="darkgreen">
-				{{- if .AllPassed -}}All {{ end -}}{{ .SuiteSummary.NumberOfPassedSpecs }} passed</span>
-			{{- end -}}
-			{{- if gt .SuiteSummary.NumberOfFailedSpecs 0 -}}
-				<span class="darkred">
-				{{- if .AllFailed -}}All {{ end -}}{{ .SuiteSummary.NumberOfFailedSpecs }} failed</span>
-			{{- end -}}
-			{{- if gt .SuiteSummary.NumberOfSkippedSpecs 0 -}}
-				<span class="darkgrey">
-				{{- if .AllSkipped -}}All {{ end -}}{{ .SuiteSummary.NumberOfSkippedSpecs }} skipped</span>
-			{{- end -}}
-		  <div class="meter">
-			<div class="meter-green"></div><div class="meter-red"></div><div class="meter-grey"></div>
-		  </div>
+<body>
+	<h1>OCI Distribution Conformance Tests</h1>
+	<div class="summary">
+		<div class="summary-bullet">
+			<div class="bullet-left">Summary:</div>
+			<div class="quick-summary">
+				{{- if gt .SuiteSummary.NumberOfPassedSpecs 0 -}}
+					<span class="darkgreen">
+					{{- if .AllPassed -}}All {{ end -}}{{ .SuiteSummary.NumberOfPassedSpecs }} passed</span>
+				{{- end -}}
+				{{- if gt .SuiteSummary.NumberOfFailedSpecs 0 -}}
+					<span class="darkred">
+					{{- if .AllFailed -}}All {{ end -}}{{ .SuiteSummary.NumberOfFailedSpecs }} failed</span>
+				{{- end -}}
+				{{- if gt .SuiteSummary.NumberOfSkippedSpecs 0 -}}
+					<span class="darkgrey">
+					{{- if .AllSkipped -}}All {{ end -}}{{ .SuiteSummary.NumberOfSkippedSpecs }} skipped</span>
+				{{- end -}}
+				<div class="meter">
+					<div class="meter-green"></div>
+					<div class="meter-red"></div>
+					<div class="meter-grey"></div>
+				</div>
+			</div>
+		</div>
+		<div class="summary-bullet">
+			<div class="bullet-left">Start time:</div>
+			<div class="bullet-right">{{ .StartTimeString }}</div>
+		</div>
+		<div class="summary-bullet">
+			<div class="bullet-left">End time:</div>
+			<div class="bullet-right">{{ .EndTimeString }}</div>
+		</div>
+		<div class="summary-bullet">
+			<div class="bullet-left">Elapsed time:</div>
+			<div class="bullet-right">{{ .RunTime }}</div>
+		</div>
+		<div class="summary-bullet">
+			<div class="bullet-left">Test version:</div>
+			<div class="bullet-right">{{ .Version }}</div>
+		</div>
+		<div class="summary-bullet">
+			<div class="bullet-left">Configuration:</div>
+			<div class="bullet-right">
+				{{ range $i, $s := .EnvironmentVariables }}
+				  {{ $s }}<br />
+				{{ end }}
+			</div>
 		</div>
 	</div>
-	<div class="summary-bullet">
-		<div class="bullet-left">Start time:</div>
-		<div class="bullet-right">{{ .StartTimeString }}</div>
+	<div>
+    {{with .Suite}}
+      {{$suite := .M}}
+      {{range $i, $suiteKey := .Keys}}
+        {{$wf := index $suite $suiteKey}}
+        {{with $wf}}
+          {{ if .IsEnabled }}
+            <h2>{{$suiteKey}}</h2>
+            <div class="subcategory">
+            {{$workflow := .M}}
+            {{range $j, $workflowKey := .Keys}}
+              <h3>{{$workflowKey}}</h3>
+              {{$ctg := index $workflow $workflowKey}}
+              {{with $ctg}}
+                {{$category := .M}}
+                {{range $k, $categoryKey := .Keys}}
+                  {{$s := index $category $categoryKey}}
+                  {{if eq $s.State 4}}
+                    <div class="result red">
+                      <div id="output-box-{{$s.ID}}-button" class="toggle"
+                        onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
+                      <h4 style="display: inline;">{{$s.Title}}</h4>
+                      <br>
+                      <div>
+                        <div id="output-box-{{$s.ID}}" style="display: none;">
+                          <pre class="pre-box">{{$s.CapturedOutput}}</pre>
+                        </div>
+                      </div>
+                      <pre class="fail-message">{{$s.Failure.Message}}</pre>
+                      <br>
+                    </div>
+                  {{else if eq $s.State 3}}
+                    <div class="result green">
+                      <div id="output-box-{{$s.ID}}-button" class="toggle"
+                        onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
+                      <h4 style="display: inline;">{{$s.Title}}</h4>
+                      <br>
+                      <div id="output-box-{{$s.ID}}" style="display: none;">
+                        <pre class="pre-box">{{$s.CapturedOutput}}</pre>
+                      </div>
+                    </div>
+                  {{else if eq $s.State 2}}
+                    <div class="result grey">
+                      <div id="output-box-{{$s.ID}}-button" class="toggle"
+                        onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
+                      <h4 style="display: inline;">{{$s.Title}}</h4>
+                      <br>
+                      <div id="output-box-{{$s.ID}}" style="display: none;">
+                        <pre class="pre-box">{{$s.Failure.Message}}</pre>
+                      </div>
+                    </div>
+                  {{end}}
+                {{end}}<br>
+              {{end}}
+            {{end}}
+          {{end}}
+        {{end}}
+      </div>
+      {{end}}
+    {{end}}
 	</div>
-	<div class="summary-bullet">
-		<div class="bullet-left">End time:</div>
-		<div class="bullet-right">{{ .EndTimeString }}</div>
-	</div>
-	<div class="summary-bullet">
-		<div class="bullet-left">Elapsed time:</div>
-		<div class="bullet-right">{{ .RunTime }}</div>
-	</div>
-	<div class="summary-bullet">
-		<div class="bullet-left">Test version:</div>
-		<div class="bullet-right">{{ .Version }}</div>
-	</div>
-	<div class="summary-bullet">
-		<div class="bullet-left">Configuration:</div>
-		<div class="bullet-right">
-			{{ range $i, $s := .EnvironmentVariables }}
-				{{ $s }}<br />
-			{{ end }}
-		</div>
-	</div>
-</div>
-    <div>
-      {{with .Suite}}
-        {{$suite := .M}}
-        {{range $i, $suiteKey := .Keys}}
-		  <h2>{{$suiteKey}}</h2>
-          <div class="subcategory">
-          {{$wf := index $suite $suiteKey}}
-		  {{with $wf}}
-			{{$workflow := .M}}
-			{{range $j, $workflowKey := .Keys}}
-				<h3>{{$workflowKey}}</h3>
-				{{$ctg := index $workflow $workflowKey}}
-				{{with $ctg}}
-					{{$category := .M}}
-					{{range $k, $categoryKey := .Keys}}
-						{{$s := index $category $categoryKey}}
-							{{if eq $s.State 4}}
-							  <div class="result red">
-								<div id="output-box-{{$s.ID}}-button" class="toggle"
-								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-								<h4 style="display: inline;">{{$s.Title}}</h4>
-								<br>
-								<div>
-								  <div id="output-box-{{$s.ID}}" style="display: none;">
-									<pre class="pre-box">{{$s.CapturedOutput}}</pre>
-								  </div>
-								</div>
-								<pre class="fail-message">{{$s.Failure.Message}}</pre>
-								<br>
-							  </div>
-							{{else if eq $s.State 3}}
-							  <div class="result green">
-								<div id="output-box-{{$s.ID}}-button" class="toggle"
-								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-								<h4 style="display: inline;">{{$s.Title}}</h4>
-								<br>
-								<div id="output-box-{{$s.ID}}" style="display: none;">
-								  <pre class="pre-box">{{$s.CapturedOutput}}</pre>
-								</div>
-							  </div>
-							{{else if eq $s.State 2}}
-							  <div class="result grey">
-								<div id="output-box-{{$s.ID}}-button" class="toggle"
-								  onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
-								<h4 style="display: inline;">{{$s.Title}}</h4>
-								<br>
-								<div id="output-box-{{$s.ID}}" style="display: none;">
-								  <pre class="pre-box">{{$s.Failure.Message}}</pre>
-								</div>
-							  </div>
-							{{end}}
-					{{end}}<br>
-				{{end}}
-			{{end}}
-		  {{end}}
-          </div>
-		{{end}}
-     {{end}}
-	</div>
-  </body>
-</html>
+</body></html>
 `
 )
 
@@ -302,8 +305,9 @@ type (
 	}
 
 	workflow struct {
-		M    map[string]*category
-		Keys []string
+		M         map[string]*category
+		IsEnabled bool
+		Keys      []string
 	}
 
 	category struct {
@@ -340,6 +344,7 @@ type (
 		SuiteSummary         *types.SuiteSummary
 		debugLogger          *httpDebugWriter
 		debugIndex           int
+		enabledMap           map[string]bool
 		PercentPassed        int
 		PercentFailed        int
 		PercentSkipped       int
@@ -431,10 +436,27 @@ func (l *httpDebugLogger) output(format string, v ...interface{}) {
 	}
 }
 
-func newHTMLReporter(htmlReportFilename string) *HTMLReporter {
+func newHTMLReporter(htmlReportFilename string) (h *HTMLReporter) {
+	enabledMap := map[string]bool{
+		titlePull:              true,
+		titlePush:              true,
+		titleContentDiscovery:  true,
+		titleContentManagement: true,
+	}
+
+	if os.Getenv(envVarHideSkippedWorkflows) == "1" {
+		enabledMap = map[string]bool{
+			titlePull:              true,
+			titlePush:              !userDisabled(push),
+			titleContentDiscovery:  !userDisabled(contentDiscovery),
+			titleContentManagement: !userDisabled(contentManagement),
+		}
+	}
+
 	return &HTMLReporter{
 		htmlReportFilename: htmlReportFilename,
 		debugLogger:        httpWriter,
+		enabledMap:         enabledMap,
 		SpecSummaryMap:     summaryMap{M: make(map[string]snapShotList)},
 		Suite: suite{
 			M:    make(map[string]*workflow),
@@ -450,19 +472,19 @@ func (reporter *HTMLReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 	}
 	specSummary.CapturedOutput = b.String()
 
-	//header := specSummary.ComponentTexts[categoryIndex]
 	snapshot := newSpecSnapshot(specSummary, reporter.Suite.Size)
-	reporter.Save(snapshot)
+	reporter.save(snapshot)
 	reporter.debugIndex = len(reporter.debugLogger.CapturedOutput)
 }
 
-func (reporter *HTMLReporter) Save(snapshot *specSnapshot) {
+func (reporter *HTMLReporter) save(snapshot *specSnapshot) {
 	suite := &reporter.Suite
 	ct := snapshot.ComponentTexts
 	suiteName, categoryName, specTitle := ct[flowIndex], ct[categoryIndex], ct[specIndex]
 	//make the map of categories
 	if _, ok := suite.M[suiteName]; !ok {
-		suite.M[suiteName] = &workflow{M: make(map[string]*category), Keys: []string{}}
+		suite.M[suiteName] = &workflow{M: make(map[string]*category), Keys: []string{},
+			IsEnabled: reporter.enabledMap[suiteName]}
 		suite.Keys = append(suite.Keys, suiteName)
 	}
 	//make the map of snapshots

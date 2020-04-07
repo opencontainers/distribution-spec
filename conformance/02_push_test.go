@@ -10,7 +10,7 @@ import (
 )
 
 var test02Push = func() {
-	g.Context("Push", func() {
+	g.Context(titlePush, func() {
 
 		var lastResponse *reggie.Response
 
