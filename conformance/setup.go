@@ -119,7 +119,16 @@ func init() {
 
 	client.SetLogger(logger)
 
-	configContent = []byte("{}\n")
+	configContent = []byte(`
+{
+    "architecture": "amd64",
+    "os": "linux",
+    "rootfs": {
+        "diff_ids": [],
+        "type": "layers"
+    }
+}
+`)
 	configContentLength = strconv.Itoa(len(configContent))
 	blobDigest = godigest.FromBytes(configContent).String()
 	if v := os.Getenv(envVarBlobDigest); v != "" {
