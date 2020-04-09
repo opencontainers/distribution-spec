@@ -29,7 +29,7 @@ var test02Push = func() {
 
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetBody(blobA)
+					SetBody(testBlobA)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
@@ -39,9 +39,9 @@ var test02Push = func() {
 			g.Specify("PUT request to session URL with digest should yield 201 response", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
-					SetQueryParam("digest", blobADigest).
+					SetQueryParam("digest", testBlobADigest).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", blobALength)
+					SetHeader("Content-Length", testBlobALength)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
@@ -63,10 +63,10 @@ var test02Push = func() {
 			g.Specify("POST request with digest and blob should yield a 201", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
-					SetHeader("Content-Length", configContentLength).
+					SetHeader("Content-Length", configBlobContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", blobDigest).
-					SetBody(configContent)
+					SetQueryParam("digest", configBlobDigest).
+					SetBody(configBlobContent)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
@@ -76,7 +76,7 @@ var test02Push = func() {
 
 			g.Specify("GET request to blob URL from prior request should yield 200", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
@@ -94,10 +94,10 @@ var test02Push = func() {
 			g.Specify("PUT upload of a blob should yield a 201 Response", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
-					SetHeader("Content-Length", configContentLength).
+					SetHeader("Content-Length", configBlobContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", blobDigest).
-					SetBody(configContent)
+					SetQueryParam("digest", configBlobDigest).
+					SetBody(configBlobContent)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
@@ -107,7 +107,32 @@ var test02Push = func() {
 
 			g.Specify("GET request to existing blob should yield 200 response", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
+
+			g.Specify("PUT upload of a layer blob should yield a 201 Response", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetHeader("Content-Length", layerBlobContentLength).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetQueryParam("digest", layerBlobDigest).
+					SetBody(layerBlobData)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+			})
+
+			g.Specify("GET request to existing layer should yield 200 response", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
@@ -126,9 +151,9 @@ var test02Push = func() {
 
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", blobBChunk2Length).
-					SetHeader("Content-Range", blobBChunk2Range).
-					SetBody(blobBChunk2)
+					SetHeader("Content-Length", testBlobBChunk2Length).
+					SetHeader("Content-Range", testBlobBChunk2Range).
+					SetBody(testBlobBChunk2)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable))
@@ -145,9 +170,9 @@ var test02Push = func() {
 
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", blobBChunk1Length).
-					SetHeader("Content-Range", blobBChunk1Range).
-					SetBody(blobBChunk1)
+					SetHeader("Content-Length", testBlobBChunk1Length).
+					SetHeader("Content-Range", testBlobBChunk1Range).
+					SetBody(testBlobBChunk1)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
@@ -157,11 +182,11 @@ var test02Push = func() {
 			g.Specify("PUT request with final chunk should return 201", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
-					SetHeader("Content-Length", blobBChunk2Length).
-					SetHeader("Content-Range", blobBChunk2Range).
+					SetHeader("Content-Length", testBlobBChunk2Length).
+					SetHeader("Content-Range", testBlobBChunk2Range).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", blobBDigest).
-					SetBody(blobBChunk2)
+					SetQueryParam("digest", testBlobBDigest).
+					SetBody(testBlobBChunk2)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
@@ -207,10 +232,23 @@ var test02Push = func() {
 		})
 
 		g.Context("Teardown", func() {
-			g.Specify("Delete blob created in tests", func() {
+			g.Specify("Delete config blob created in tests", func() {
+				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
 				SkipIfDisabled(contentManagement)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+			})
+
+			g.Specify("Delete layer blob created in setup", func() {
+				SkipIfDisabled(push)
+				RunOnlyIf(runPushSetup)
+				SkipIfDisabled(contentManagement)
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -219,6 +257,7 @@ var test02Push = func() {
 			})
 
 			g.Specify("Delete manifest created in tests", func() {
+				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
 				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
