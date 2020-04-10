@@ -77,6 +77,20 @@ To enable the Push tests, you must explicitly set the following in the environme
 OCI_TEST_PUSH=1
 ```
 
+Some registries may require a workaround for Authorization during the push flow. To set your own scope, set the following in the environment:
+
+```
+# Set the auth scope
+OCI_AUTH_SCOPE="repository:mystuff/myrepo:pull,push"
+```
+
+Some registries currently require at least one layer to be uploaded (and referenced in the appropriate section of the manifest) before a manifest upload will succeed. By default, the layers section of the manifest will be empty. If a workaround is needed, you may set the following in the environment:
+
+```
+# Enable layer upload
+OCI_UPLOAD_LAYER=1
+```
+
 ##### Content Discovery
 
 The Content Discovery tests validate that the contents of a registry can be discovered.

@@ -1,5 +1,5 @@
-github.com/bloodorangeio/reggie v0.3.3 h1:ZL4hV5X+HAS3o9RNrvljlpvvtpVlc7fEzDv6ykur8UI=
-github.com/bloodorangeio/reggie v0.3.3/go.mod h1:u7HqihAZy812d6ysiuDawpHJYtpGSNL2E/4Cyu/mtZg=
+github.com/bloodorangeio/reggie v0.4.0 h1:x4Y4gsC9qcFcQASEwME3frs9bWAHGb3EfsRWwdnwxSg=
+github.com/bloodorangeio/reggie v0.4.0/go.mod h1:u7HqihAZy812d6ysiuDawpHJYtpGSNL2E/4Cyu/mtZg=
 github.com/fsnotify/fsnotify v1.4.7 h1:IXs+QLmnXW2CcXuY+8Mzv/fWEsPGWxqefPtCP5CnV9I=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/go-resty/resty/v2 v2.1.0 h1:Z6IefCpUMfnvItVJaJXWv/pMiiD11So35QgwEELsldE=

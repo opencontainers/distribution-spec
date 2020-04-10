@@ -19,6 +19,30 @@ type (
 		Name string   `json:"name"`
 		Tags []string `json:"tags"`
 	}
+
+	Manifest struct {
+		MediaType     string       `json:"mediaType"`
+		Config        Descriptor   `json:"config"`
+		Layers        []Descriptor `json:"layers"`
+		SchemaVersion int          `json:"schemaVersion"`
+	}
+
+	Descriptor struct {
+		MediaType string `json:"mediaType"`
+		Size      int    `json:"size"`
+		Digest    string `json:"digest"`
+	}
+
+	ManifestConfig struct {
+		Architecture string `json:"architecture"`
+		OS           string `json:"os"`
+		RootFS       RootFS `json:"rootfs"`
+	}
+
+	RootFS struct {
+		DiffIDs []struct{} `json:"diff_ids"`
+		Type    string     `json:"type"`
+	}
 )
 
 const (
@@ -143,16 +167,19 @@ func init() {
 
 	client.SetLogger(logger)
 
-	configBlobContent = []byte(`
-{
-    "architecture": "amd64",
-    "os": "linux",
-    "rootfs": {
-        "diff_ids": [],
-        "type": "layers"
-    }
-}
-`)
+	config := ManifestConfig{
+		Architecture: "amd64",
+		OS:           "linux",
+		RootFS: RootFS{
+			DiffIDs: []struct{}{},
+			Type:    "layers",
+		},
+	}
+	configBlobContent, err = json.MarshalIndent(&config, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	configBlobContentLength = strconv.Itoa(len(configBlobContent))
 	configBlobDigest = godigest.FromBytes(configBlobContent).String()
 	if v := os.Getenv(envVarBlobDigest); v != "" {
@@ -167,23 +194,28 @@ func init() {
 	layerBlobDigest = godigest.FromBytes(layerBlobData).String()
 	layerBlobContentLength = fmt.Sprintf("%d", len(layerBlobData))
 
-	manifestContent = []byte(fmt.Sprintf(`
-{
-  "mediaType": "application/vnd.oci.image.manifest.v1+json",
-  "config":  {
-    "mediaType": "application/vnd.oci.image.config.v1+json",
-    "size": %s,
-    "digest": "%s"
-  },
-  "layers": [
-    {
-      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
-      "size": %s,
-      "digest": "%s"
-    }
-  ],
-  "schemaVersion": 2
-}`, configBlobContentLength, configBlobDigest, layerBlobContentLength, layerBlobDigest))
+	layers := []Descriptor{}
+	if b := os.Getenv(envVarUploadLayer); b == envTrue {
+		layers = append(layers, Descriptor{
+			MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+			Size:      len(layerBlobData),
+			Digest:    layerBlobDigest,
+		})
+	}
+	manifest := Manifest{
+		MediaType: "application/vnd.oci.image.manifest.v1+json",
+		Config: Descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    configBlobDigest,
+			Size:      len(configBlobContent),
+		},
+		Layers:        layers,
+		SchemaVersion: 2,
+	}
+	manifestContent, err = json.MarshalIndent(&manifest, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	manifestDigest = godigest.FromBytes(manifestContent).String()
 	if v := os.Getenv(envVarManifestDigest); v != "" {
