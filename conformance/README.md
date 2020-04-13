@@ -108,6 +108,15 @@ OCI_TEST_CONTENT_MANAGEMENT=1
 Note: The Content Management tests explicitly depend upon the Push and Content Discovery tests, as there is no
 way to test content management without also supporting push and content discovery.
 
+#### HTML Report
+By default, the HTML report will show tests from all workflows. To hide workflows that have been disabled from
+the report, you must set the following in the environment:
+
+```
+# Required to hide disabled workflows
+OCI_HIDE_SKIPPED_WORKFLOWS=1
+```
+
 #### Container Image
 
 You may use the [Dockerfile](./Dockerfile) located in this directory

@@ -10,7 +10,7 @@ import (
 )
 
 var test04ContentManagement = func() {
-	g.Context("Content Management", func() {
+	g.Context(titleContentManagement, func() {
 
 		const defaultTagName = "tagtest0"
 		var tagToDelete string

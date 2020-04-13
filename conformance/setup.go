@@ -36,15 +36,21 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue                 = "1"
-	envVarPush              = "OCI_TEST_PUSH"
-	envVarContentDiscovery  = "OCI_TEST_CONTENT_DISCOVERY"
-	envVarContentManagement = "OCI_TEST_CONTENT_MANAGEMENT"
-	envVarBlobDigest        = "OCI_BLOB_DIGEST"
-	envVarManifestDigest    = "OCI_MANIFEST_DIGEST"
-	envVarTagName           = "OCI_TAG_NAME"
-	envVarTagList           = "OCI_TAG_LIST"
-	testTagName             = "tagtest0"
+	envTrue                    = "1"
+	envVarPush                 = "OCI_TEST_PUSH"
+	envVarContentDiscovery     = "OCI_TEST_CONTENT_DISCOVERY"
+	envVarContentManagement    = "OCI_TEST_CONTENT_MANAGEMENT"
+	envVarBlobDigest           = "OCI_BLOB_DIGEST"
+	envVarManifestDigest       = "OCI_MANIFEST_DIGEST"
+	envVarTagName              = "OCI_TAG_NAME"
+	envVarTagList              = "OCI_TAG_LIST"
+	envVarHideSkippedWorkflows = "OCI_HIDE_SKIPPED_WORKFLOWS"
+	testTagName                = "tagtest0"
+
+	titlePull              = "Pull"
+	titlePush              = "Push"
+	titleContentDiscovery  = "Content Discovery"
+	titleContentManagement = "Content Management"
 
 	push = 1 << iota
 	contentDiscovery
