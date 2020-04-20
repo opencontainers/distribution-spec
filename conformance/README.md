@@ -49,7 +49,10 @@ In addition, each category has its own setup and teardown processes where approp
 
 The Pull tests validate that content can be retrieved from a registry.
 
-These tests are *always* run, as this is the baseline for registry conformance.
+These tests are run when the following is set in the environment:
+```
+OCI_TEST_PULL=1
+```
 
 Regardless of whether the Push tests are enabled, as part of setup for the Pull tests,
 content will be uploaded to the registry.

@@ -37,6 +37,7 @@ const (
 	UNSUPPORTED
 
 	envTrue                    = "1"
+	envVarPull                 = "OCI_TEST_PULL"
 	envVarPush                 = "OCI_TEST_PUSH"
 	envVarContentDiscovery     = "OCI_TEST_CONTENT_DISCOVERY"
 	envVarContentManagement    = "OCI_TEST_CONTENT_MANAGEMENT"
@@ -52,13 +53,15 @@ const (
 	titleContentDiscovery  = "Content Discovery"
 	titleContentManagement = "Content Management"
 
-	push = 1 << iota
+	pull = 1 << iota
+	push
 	contentDiscovery
 	contentManagement
 )
 
 var (
 	testMap = map[string]int{
+		envVarPull:              pull,
 		envVarPush:              push,
 		envVarContentDiscovery:  contentDiscovery,
 		envVarContentManagement: contentManagement,

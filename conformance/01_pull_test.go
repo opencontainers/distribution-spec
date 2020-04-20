@@ -17,6 +17,7 @@ var test01Pull = func() {
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
+				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, _ := client.Do(req)
@@ -33,6 +34,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Populate registry with test manifest", func() {
+				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				tag := testTagName
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
@@ -47,6 +49,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Get the name of a tag", func() {
+				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, _ := client.Do(req)
@@ -54,6 +57,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Get tag name from environment", func() {
+				SkipIfDisabled(pull)
 				RunOnlyIfNot(runPullSetup)
 				tag = os.Getenv(envVarTagName)
 			})
@@ -61,6 +65,7 @@ var test01Pull = func() {
 
 		g.Context("Pull blobs", func() {
 			g.Specify("GET nonexistent blob should result in 404 response", func() {
+				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
 					reggie.WithDigest(dummyDigest))
 				resp, err := client.Do(req)
@@ -69,6 +74,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("GET request to existing blob URL should yield 200", func() {
+				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -78,6 +84,7 @@ var test01Pull = func() {
 
 		g.Context("Pull manifests", func() {
 			g.Specify("GET nonexistent manifest should return 404", func() {
+				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(nonexistentManifest))
 				resp, err := client.Do(req)
@@ -86,6 +93,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("GET request to manifest path (digest) should yield 200 response", func() {
+				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
@@ -94,6 +102,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("GET request to manifest path (tag) should yield 200 response", func() {
+				SkipIfDisabled(pull)
 				Expect(tag).ToNot(BeEmpty())
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>", reggie.WithReference(tag)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -105,6 +114,7 @@ var test01Pull = func() {
 
 		g.Context("Error codes", func() {
 			g.Specify("400 response body should contain OCI-conforming JSON message", func() {
+				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference("sha256:totallywrong")).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
@@ -126,6 +136,7 @@ var test01Pull = func() {
 
 		g.Context("Teardown", func() {
 			g.Specify("Delete blob created in setup", func() {
+				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
@@ -137,6 +148,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Delete manifest created in setup", func() {
+				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
