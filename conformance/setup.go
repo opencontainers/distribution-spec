@@ -9,6 +9,8 @@ import (
 	"os"
 	"strconv"
 
+	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	godigest "github.com/opencontainers/go-digest"
@@ -18,30 +20,6 @@ type (
 	TagList struct {
 		Name string   `json:"name"`
 		Tags []string `json:"tags"`
-	}
-
-	Manifest struct {
-		MediaType     string       `json:"mediaType"`
-		Config        Descriptor   `json:"config"`
-		Layers        []Descriptor `json:"layers"`
-		SchemaVersion int          `json:"schemaVersion"`
-	}
-
-	Descriptor struct {
-		MediaType string `json:"mediaType"`
-		Size      int    `json:"size"`
-		Digest    string `json:"digest"`
-	}
-
-	ManifestConfig struct {
-		Architecture string `json:"architecture"`
-		OS           string `json:"os"`
-		RootFS       RootFS `json:"rootfs"`
-	}
-
-	RootFS struct {
-		DiffIDs []struct{} `json:"diff_ids"`
-		Type    string     `json:"type"`
 	}
 )
 
@@ -62,17 +40,22 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue                    = "1"
-	envVarPull                 = "OCI_TEST_PULL"
-	envVarPush                 = "OCI_TEST_PUSH"
-	envVarContentDiscovery     = "OCI_TEST_CONTENT_DISCOVERY"
-	envVarContentManagement    = "OCI_TEST_CONTENT_MANAGEMENT"
-	envVarBlobDigest           = "OCI_BLOB_DIGEST"
-	envVarManifestDigest       = "OCI_MANIFEST_DIGEST"
-	envVarTagName              = "OCI_TAG_NAME"
-	envVarTagList              = "OCI_TAG_LIST"
-	envVarHideSkippedWorkflows = "OCI_HIDE_SKIPPED_WORKFLOWS"
-	testTagName                = "tagtest0"
+	envTrue                        = "1"
+	envVarPull                     = "OCI_TEST_PULL"
+	envVarPush                     = "OCI_TEST_PUSH"
+	envVarContentDiscovery         = "OCI_TEST_CONTENT_DISCOVERY"
+	envVarContentManagement        = "OCI_TEST_CONTENT_MANAGEMENT"
+	envVarPushEmptyLayer           = "OCI_SKIP_EMPTY_LAYER_PUSH_TEST"
+	envVarBlobDigest               = "OCI_BLOB_DIGEST"
+	envVarManifestDigest           = "OCI_MANIFEST_DIGEST"
+	envVarEmptyLayerManifestDigest = "OCI_EMPTY_LAYER_MANIFEST_DIGEST"
+	envVarTagName                  = "OCI_TAG_NAME"
+	envVarTagList                  = "OCI_TAG_LIST"
+	envVarHideSkippedWorkflows     = "OCI_HIDE_SKIPPED_WORKFLOWS"
+	envVarAuthScope                = "OCI_AUTH_SCOPE"
+
+	emptyLayerTestTag = "emptylayer"
+	testTagName       = "tagtest0"
 
 	titlePull              = "Pull"
 	titlePush              = "Push"
@@ -84,10 +67,10 @@ const (
 	contentDiscovery
 	contentManagement
 
-	// layerBase64String is a base64 encoding of a simple tarball, obtained like this:
-	// 		$ echo 'you bothered to find out what was in here. Congratulations!' > test.txt
-	// 		$ tar czvf test.tar.gz test.txt
-	// 		$ cat test.tar.gz | base64
+	//	layerBase64String is a base64 encoding of a simple tarball, obtained like this:
+	//		$ echo 'you bothered to find out what was in here. Congratulations!' > test.txt
+	//		$ tar czvf test.tar.gz test.txt
+	//		$ cat test.tar.gz | base64
 	layerBase64String = "H4sIAAAAAAAAA+3OQQrCMBCF4a49xXgBSUnaHMCTRBptQRNpp6i3t0UEV7oqIv7fYgbmzeJpHHSjVy0" +
 		"WZCa1c/MufWVe94N3RWlrZ72x3k/30nhbFWKWLPU0Dhp6keJ8im//PuU/6pZH2WVtYx8b0Sz7LjWSR5VLG6YRBumSzOlGtjkd+qD" +
 		"jMWiX07Befbs7AAAAAAAAAAAAAAAAAPyzO34MnqoAKAAA"
@@ -118,12 +101,14 @@ var (
 	configBlobContentLength   string
 	dummyDigest               string
 	errorCodes                []string
-	manifestContent           []byte
 	invalidManifestContent    []byte
 	layerBlobData             []byte
 	layerBlobDigest           string
 	layerBlobContentLength    string
+	manifestContent           []byte
 	manifestDigest            string
+	emptyLayerManifestContent []byte
+	emptyLayerManifestDigest  string
 	nonexistentManifest       string
 	reportJUnitFilename       string
 	reportHTMLFilename        string
@@ -134,6 +119,7 @@ var (
 	runPushSetup              bool
 	runContentDiscoverySetup  bool
 	runContentManagementSetup bool
+	skipEmptyLayerTest        bool
 	Version                   = "unknown"
 )
 
@@ -167,12 +153,12 @@ func init() {
 
 	client.SetLogger(logger)
 
-	config := ManifestConfig{
+	config := imagespec.Image{
 		Architecture: "amd64",
 		OS:           "linux",
-		RootFS: RootFS{
-			DiffIDs: []struct{}{},
+		RootFS: imagespec.RootFS{
 			Type:    "layers",
+			DiffIDs: []godigest.Digest{},
 		},
 	}
 	configBlobContent, err = json.MarshalIndent(&config, "", "\t")
@@ -181,7 +167,8 @@ func init() {
 	}
 
 	configBlobContentLength = strconv.Itoa(len(configBlobContent))
-	configBlobDigest = godigest.FromBytes(configBlobContent).String()
+	configBlobDigestRaw := godigest.FromBytes(configBlobContent)
+	configBlobDigest = configBlobDigestRaw.String()
 	if v := os.Getenv(envVarBlobDigest); v != "" {
 		configBlobDigest = v
 	}
@@ -191,27 +178,26 @@ func init() {
 		log.Fatal(err)
 	}
 
-	layerBlobDigest = godigest.FromBytes(layerBlobData).String()
+	layerBlobDigestRaw := godigest.FromBytes(layerBlobData)
+	layerBlobDigest = layerBlobDigestRaw.String()
 	layerBlobContentLength = fmt.Sprintf("%d", len(layerBlobData))
 
-	layers := []Descriptor{}
-	if b := os.Getenv(envVarUploadLayer); b == envTrue {
-		layers = append(layers, Descriptor{
-			MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
-			Size:      len(layerBlobData),
-			Digest:    layerBlobDigest,
-		})
-	}
-	manifest := Manifest{
-		MediaType: "application/vnd.oci.image.manifest.v1+json",
-		Config: Descriptor{
+	layers := []imagespec.Descriptor{{
+		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+		Size:      int64(len(layerBlobData)),
+		Digest:    layerBlobDigestRaw,
+	}}
+
+	manifest := imagespec.Manifest{
+		Config: imagespec.Descriptor{
 			MediaType: "application/vnd.oci.image.config.v1+json",
-			Digest:    configBlobDigest,
-			Size:      len(configBlobContent),
+			Digest:    configBlobDigestRaw,
+			Size:      int64(len(configBlobContent)),
 		},
-		Layers:        layers,
-		SchemaVersion: 2,
+		Layers: layers,
 	}
+	manifest.SchemaVersion = 2
+
 	manifestContent, err = json.MarshalIndent(&manifest, "", "\t")
 	if err != nil {
 		log.Fatal(err)
@@ -221,6 +207,27 @@ func init() {
 	if v := os.Getenv(envVarManifestDigest); v != "" {
 		manifestDigest = v
 	}
+
+	emptyLayerManifest := imagespec.Manifest{
+		Config: imagespec.Descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    configBlobDigestRaw,
+			Size:      int64(len(configBlobContent)),
+		},
+		Layers: []imagespec.Descriptor{},
+	}
+	emptyLayerManifest.SchemaVersion = 2
+
+	emptyLayerManifestContent, err = json.MarshalIndent(&emptyLayerManifest, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	emptyLayerManifestDigest = godigest.FromBytes(emptyLayerManifestContent).String()
+	if v := os.Getenv(envVarEmptyLayerManifestDigest); v != "" {
+		emptyLayerManifestDigest = v
+	}
+
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
 
@@ -261,6 +268,7 @@ func init() {
 	runPushSetup = true
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
+	skipEmptyLayerTest = false
 
 	if os.Getenv(envVarTagName) != "" &&
 		os.Getenv(envVarManifestDigest) != "" &&
@@ -270,6 +278,10 @@ func init() {
 
 	if os.Getenv(envVarTagList) != "" {
 		runContentDiscoverySetup = false
+	}
+
+	if os.Getenv(envVarPushEmptyLayer) == envTrue {
+		skipEmptyLayerTest = true
 	}
 
 	reportJUnitFilename = "junit.xml"

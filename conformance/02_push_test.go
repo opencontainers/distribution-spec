@@ -221,6 +221,19 @@ var test02Push = func() {
 				}
 			})
 
+			g.Specify("Registry should accept a manifest upload with no layers", func() {
+				RunOnlyIf(!skipEmptyLayerTest)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(emptyLayerTestTag)).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(emptyLayerManifestContent)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+			})
+
 			g.Specify("GET request to manifest URL (digest) should yield 200 response", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest)).

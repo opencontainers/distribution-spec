@@ -84,11 +84,14 @@ Some registries may require a workaround for Authorization during the push flow.
 OCI_AUTH_SCOPE="repository:mystuff/myrepo:pull,push"
 ```
 
-Some registries currently require at least one layer to be uploaded (and referenced in the appropriate section of the manifest) before a manifest upload will succeed. By default, the layers section of the manifest will be empty. If a workaround is needed, you may set the following in the environment:
+Most registries currently require at least one layer to be uploaded (and referenced in the appropriate section of the manifest)
+before a manifest upload will succeed. By default, the push tests will attempt to push two manifests: one with a single layer,
+and another with no layers. If the empty-layer test is causing a failure, it can be skipped by setting the following in the
+environment:
 
 ```
 # Enable layer upload
-OCI_UPLOAD_LAYER=1
+OCI_SKIP_EMPTY_LAYER_PUSH_TEST=1
 ```
 
 ##### Content Discovery
