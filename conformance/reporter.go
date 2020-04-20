@@ -446,7 +446,7 @@ func newHTMLReporter(htmlReportFilename string) (h *HTMLReporter) {
 
 	if os.Getenv(envVarHideSkippedWorkflows) == "1" {
 		enabledMap = map[string]bool{
-			titlePull:              true,
+			titlePull:              !userDisabled(pull),
 			titlePush:              !userDisabled(push),
 			titleContentDiscovery:  !userDisabled(contentDiscovery),
 			titleContentManagement: !userDisabled(contentManagement),
