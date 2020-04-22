@@ -2,10 +2,14 @@ package conformance
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
+
+	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
@@ -36,17 +40,22 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue                    = "1"
-	envVarPull                 = "OCI_TEST_PULL"
-	envVarPush                 = "OCI_TEST_PUSH"
-	envVarContentDiscovery     = "OCI_TEST_CONTENT_DISCOVERY"
-	envVarContentManagement    = "OCI_TEST_CONTENT_MANAGEMENT"
-	envVarBlobDigest           = "OCI_BLOB_DIGEST"
-	envVarManifestDigest       = "OCI_MANIFEST_DIGEST"
-	envVarTagName              = "OCI_TAG_NAME"
-	envVarTagList              = "OCI_TAG_LIST"
-	envVarHideSkippedWorkflows = "OCI_HIDE_SKIPPED_WORKFLOWS"
-	testTagName                = "tagtest0"
+	envTrue                        = "1"
+	envVarPull                     = "OCI_TEST_PULL"
+	envVarPush                     = "OCI_TEST_PUSH"
+	envVarContentDiscovery         = "OCI_TEST_CONTENT_DISCOVERY"
+	envVarContentManagement        = "OCI_TEST_CONTENT_MANAGEMENT"
+	envVarPushEmptyLayer           = "OCI_SKIP_EMPTY_LAYER_PUSH_TEST"
+	envVarBlobDigest               = "OCI_BLOB_DIGEST"
+	envVarManifestDigest           = "OCI_MANIFEST_DIGEST"
+	envVarEmptyLayerManifestDigest = "OCI_EMPTY_LAYER_MANIFEST_DIGEST"
+	envVarTagName                  = "OCI_TAG_NAME"
+	envVarTagList                  = "OCI_TAG_LIST"
+	envVarHideSkippedWorkflows     = "OCI_HIDE_SKIPPED_WORKFLOWS"
+	envVarAuthScope                = "OCI_AUTH_SCOPE"
+
+	emptyLayerTestTag = "emptylayer"
+	testTagName       = "tagtest0"
 
 	titlePull              = "Pull"
 	titlePush              = "Push"
@@ -57,6 +66,14 @@ const (
 	push
 	contentDiscovery
 	contentManagement
+
+	//	layerBase64String is a base64 encoding of a simple tarball, obtained like this:
+	//		$ echo 'you bothered to find out what was in here. Congratulations!' > test.txt
+	//		$ tar czvf test.tar.gz test.txt
+	//		$ cat test.tar.gz | base64
+	layerBase64String = "H4sIAAAAAAAAA+3OQQrCMBCF4a49xXgBSUnaHMCTRBptQRNpp6i3t0UEV7oqIv7fYgbmzeJpHHSjVy0" +
+		"WZCa1c/MufWVe94N3RWlrZ72x3k/30nhbFWKWLPU0Dhp6keJ8im//PuU/6pZH2WVtYx8b0Sz7LjWSR5VLG6YRBumSzOlGtjkd+qD" +
+		"jMWiX07Befbs7AAAAAAAAAAAAAAAAAPyzO34MnqoAKAAA"
 )
 
 var (
@@ -67,26 +84,31 @@ var (
 		envVarContentManagement: contentManagement,
 	}
 
-	blobA                     []byte
-	blobALength               string
-	blobADigest               string
-	blobB                     []byte
-	blobBDigest               string
-	blobBChunk1               []byte
-	blobBChunk1Length         string
-	blobBChunk2               []byte
-	blobBChunk2Length         string
-	blobBChunk1Range          string
-	blobBChunk2Range          string
-	blobDigest                string
+	testBlobA                 []byte
+	testBlobALength           string
+	testBlobADigest           string
+	testBlobB                 []byte
+	testBlobBDigest           string
+	testBlobBChunk1           []byte
+	testBlobBChunk1Length     string
+	testBlobBChunk2           []byte
+	testBlobBChunk2Length     string
+	testBlobBChunk1Range      string
+	testBlobBChunk2Range      string
+	configBlobDigest          string
 	client                    *reggie.Client
-	configContent             []byte
-	configContentLength       string
+	configBlobContent         []byte
+	configBlobContentLength   string
 	dummyDigest               string
 	errorCodes                []string
-	manifestContent           []byte
 	invalidManifestContent    []byte
+	layerBlobData             []byte
+	layerBlobDigest           string
+	layerBlobContentLength    string
+	manifestContent           []byte
 	manifestDigest            string
+	emptyLayerManifestContent []byte
+	emptyLayerManifestDigest  string
 	nonexistentManifest       string
 	reportJUnitFilename       string
 	reportHTMLFilename        string
@@ -97,14 +119,18 @@ var (
 	runPushSetup              bool
 	runContentDiscoverySetup  bool
 	runContentManagementSetup bool
+	skipEmptyLayerTest        bool
 	Version                   = "unknown"
 )
 
 func init() {
+	var err error
+
 	hostname := os.Getenv("OCI_ROOT_URL")
 	namespace := os.Getenv("OCI_NAMESPACE")
 	username := os.Getenv("OCI_USERNAME")
 	password := os.Getenv("OCI_PASSWORD")
+	authScope := os.Getenv(envVarAuthScope)
 	debug := os.Getenv("OCI_DEBUG") == "true"
 
 	for envVar, enableTest := range testMap {
@@ -113,61 +139,110 @@ func init() {
 		}
 	}
 
-	var err error
-
 	httpWriter = newHTTPDebugWriter(debug)
 	logger := newHTTPDebugLogger(httpWriter)
 	client, err = reggie.NewClient(hostname,
 		reggie.WithDefaultName(namespace),
 		reggie.WithUsernamePassword(username, password),
 		reggie.WithDebug(true),
-		reggie.WithUserAgent("distribution-spec-conformance-tests"))
+		reggie.WithUserAgent("distribution-spec-conformance-tests"),
+		reggie.WithAuthScope(authScope))
 	if err != nil {
 		panic(err)
 	}
 
 	client.SetLogger(logger)
 
-	configContent = []byte(`
-{
-    "architecture": "amd64",
-    "os": "linux",
-    "rootfs": {
-        "diff_ids": [],
-        "type": "layers"
-    }
-}
-`)
-	configContentLength = strconv.Itoa(len(configContent))
-	blobDigest = godigest.FromBytes(configContent).String()
-	if v := os.Getenv(envVarBlobDigest); v != "" {
-		blobDigest = v
+	config := imagespec.Image{
+		Architecture: "amd64",
+		OS:           "linux",
+		RootFS: imagespec.RootFS{
+			Type:    "layers",
+			DiffIDs: []godigest.Digest{},
+		},
+	}
+	configBlobContent, err = json.MarshalIndent(&config, "", "\t")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	manifestContent = []byte(fmt.Sprintf(
-		"{ \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\", \"config\":  { \"digest\": \"%s\", "+
-			"\"mediaType\": \"application/vnd.oci.image.config.v1+json\","+" \"size\": %s }, \"layers\": [], "+
-			"\"schemaVersion\": 2 }",
-		blobDigest, configContentLength))
+	configBlobContentLength = strconv.Itoa(len(configBlobContent))
+	configBlobDigestRaw := godigest.FromBytes(configBlobContent)
+	configBlobDigest = configBlobDigestRaw.String()
+	if v := os.Getenv(envVarBlobDigest); v != "" {
+		configBlobDigest = v
+	}
+
+	layerBlobData, err = base64.StdEncoding.DecodeString(layerBase64String)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	layerBlobDigestRaw := godigest.FromBytes(layerBlobData)
+	layerBlobDigest = layerBlobDigestRaw.String()
+	layerBlobContentLength = fmt.Sprintf("%d", len(layerBlobData))
+
+	layers := []imagespec.Descriptor{{
+		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+		Size:      int64(len(layerBlobData)),
+		Digest:    layerBlobDigestRaw,
+	}}
+
+	manifest := imagespec.Manifest{
+		Config: imagespec.Descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    configBlobDigestRaw,
+			Size:      int64(len(configBlobContent)),
+		},
+		Layers: layers,
+	}
+	manifest.SchemaVersion = 2
+
+	manifestContent, err = json.MarshalIndent(&manifest, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	manifestDigest = godigest.FromBytes(manifestContent).String()
 	if v := os.Getenv(envVarManifestDigest); v != "" {
 		manifestDigest = v
 	}
+
+	emptyLayerManifest := imagespec.Manifest{
+		Config: imagespec.Descriptor{
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Digest:    configBlobDigestRaw,
+			Size:      int64(len(configBlobContent)),
+		},
+		Layers: []imagespec.Descriptor{},
+	}
+	emptyLayerManifest.SchemaVersion = 2
+
+	emptyLayerManifestContent, err = json.MarshalIndent(&emptyLayerManifest, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	emptyLayerManifestDigest = godigest.FromBytes(emptyLayerManifestContent).String()
+	if v := os.Getenv(envVarEmptyLayerManifestDigest); v != "" {
+		emptyLayerManifestDigest = v
+	}
+
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
 
-	blobA = []byte("NBA Jam on my NBA toast")
-	blobALength = strconv.Itoa(len(blobA))
-	blobADigest = godigest.FromBytes(blobA).String()
+	testBlobA = []byte("NBA Jam on my NBA toast")
+	testBlobALength = strconv.Itoa(len(testBlobA))
+	testBlobADigest = godigest.FromBytes(testBlobA).String()
 
-	blobB = []byte("Hello, how are you today?")
-	blobBDigest = godigest.FromBytes(blobB).String()
-	blobBChunk1 = blobB[:3]
-	blobBChunk1Length = strconv.Itoa(len(blobBChunk1))
-	blobBChunk1Range = fmt.Sprintf("0-%d", len(blobBChunk1)-1)
-	blobBChunk2 = blobB[3:]
-	blobBChunk2Length = strconv.Itoa(len(blobBChunk2))
-	blobBChunk2Range = fmt.Sprintf("%d-%d", len(blobBChunk1), len(blobB)-1)
+	testBlobB = []byte("Hello, how are you today?")
+	testBlobBDigest = godigest.FromBytes(testBlobB).String()
+	testBlobBChunk1 = testBlobB[:3]
+	testBlobBChunk1Length = strconv.Itoa(len(testBlobBChunk1))
+	testBlobBChunk1Range = fmt.Sprintf("0-%d", len(testBlobBChunk1)-1)
+	testBlobBChunk2 = testBlobB[3:]
+	testBlobBChunk2Length = strconv.Itoa(len(testBlobBChunk2))
+	testBlobBChunk2Range = fmt.Sprintf("%d-%d", len(testBlobBChunk1), len(testBlobB)-1)
 
 	dummyDigest = godigest.FromString("hello world").String()
 
@@ -193,6 +268,7 @@ func init() {
 	runPushSetup = true
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
+	skipEmptyLayerTest = false
 
 	if os.Getenv(envVarTagName) != "" &&
 		os.Getenv(envVarManifestDigest) != "" &&
@@ -202,6 +278,10 @@ func init() {
 
 	if os.Getenv(envVarTagList) != "" {
 		runContentDiscoverySetup = false
+	}
+
+	if os.Getenv(envVarPushEmptyLayer) == envTrue {
+		skipEmptyLayerTest = true
 	}
 
 	reportJUnitFilename = "junit.xml"
