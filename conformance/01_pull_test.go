@@ -138,7 +138,6 @@ var test01Pull = func() {
 			g.Specify("Delete blob created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -150,7 +149,6 @@ var test01Pull = func() {
 			g.Specify("Delete manifest created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

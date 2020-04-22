@@ -15,11 +15,21 @@ This will produce an executable at `conformance.test`.
 
 Next, set environment variables with your registry details:
 ```
+# Registry details
 export OCI_ROOT_URL="https://r.myreg.io"
 export OCI_NAMESPACE="myorg/myrepo"
 export OCI_USERNAME="myuser"
 export OCI_PASSWORD="mypass"
-export OCI_DEBUG="true"
+
+# Which workflows to run
+export OCI_TEST_PULL=1
+export OCI_TEST_PUSH=1
+export OCI_TEST_CONTENT_DISCOVERY=1
+export OCI_TEST_CONTENT_MANAGEMENT=1
+
+# Extra settings
+export OCI_HIDE_SKIPPED_WORKFLOWS=0
+export OCI_DEBUG=0
 ```
 
 Lastly, run the tests:
@@ -139,7 +149,12 @@ docker run --rm \
   -e OCI_NAMESPACE="myorg/myrepo" \
   -e OCI_USERNAME="myuser" \
   -e OCI_PASSWORD="mypass" \
-  -e OCI_DEBUG="true" \
+  -e OCI_TEST_PULL=1 \
+  -e OCI_TEST_PUSH=1 \
+  -e OCI_TEST_CONTENT_DISCOVERY=1 \
+  -e OCI_TEST_CONTENT_MANAGEMENT=1 \
+  -e OCI_HIDE_SKIPPED_WORKFLOWS=0
+  -e OCI_DEBUG=0 \
   conformance:latest
 ```
 
@@ -168,6 +183,12 @@ jobs:
           OCI_NAMESPACE: mytestorg/mytestrepo
           OCI_USERNAME: ${{ secrets.MY_REGISTRY_USERNAME }}
           OCI_PASSWORD: ${{ secrets.MY_REGISTRY_PASSWORD }}
+          OCI_TEST_PULL: 1
+          OCI_TEST_PUSH: 1
+          OCI_TEST_CONTENT_DISCOVERY: 1
+          OCI_TEST_CONTENT_MANAGEMENT: 1
+          OCI_HIDE_SKIPPED_WORKFLOWS: 0
+          OCI_DEBUG: 0
       - run: mkdir -p .out/ && mv {report.html,junit.xml} .out/
         if: always()
       - name: Upload test results zip as build artifact

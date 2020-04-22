@@ -208,8 +208,8 @@ var test02Push = func() {
 
 		g.Context("Teardown", func() {
 			g.Specify("Delete blob created in tests", func() {
+				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -219,8 +219,8 @@ var test02Push = func() {
 			})
 
 			g.Specify("Delete manifest created in tests", func() {
+				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

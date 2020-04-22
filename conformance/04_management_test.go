@@ -18,8 +18,8 @@ var test04ContentManagement = func() {
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, _ := client.Do(req)
 
@@ -36,8 +36,8 @@ var test04ContentManagement = func() {
 			})
 
 			g.Specify("Populate registry with test tag", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				tagToDelete = defaultTagName
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete)).
@@ -51,8 +51,8 @@ var test04ContentManagement = func() {
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

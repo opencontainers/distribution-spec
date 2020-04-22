@@ -538,11 +538,12 @@ func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 //unused by HTML reporter
 func (reporter *HTMLReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
 	varsToCheck := []string{
-		"OCI_ROOT_URL",
-		"OCI_NAMESPACE",
-		"OCI_DEBUG",
-		"OCI_PASSWORD",
-		"OCI_USERNAME",
+		envVarRootURL,
+		envVarNamespace,
+		envVarUsername,
+		envVarPassword,
+		envVarDebug,
+		envVarPull,
 		envVarPush,
 		envVarContentDiscovery,
 		envVarContentManagement,
@@ -550,6 +551,7 @@ func (reporter *HTMLReporter) SpecSuiteWillBegin(config config.GinkgoConfigType,
 		envVarManifestDigest,
 		envVarTagName,
 		envVarTagList,
+		envVarHideSkippedWorkflows,
 	}
 	for _, v := range varsToCheck {
 		var replacement string

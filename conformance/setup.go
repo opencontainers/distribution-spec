@@ -36,7 +36,13 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue                    = "1"
+	envTrue = "1"
+
+	envVarRootURL              = "OCI_ROOT_URL"
+	envVarNamespace            = "OCI_NAMESPACE"
+	envVarUsername             = "OCI_USERNAME"
+	envVarPassword             = "OCI_PASSWORD"
+	envVarDebug                = "OCI_DEBUG"
 	envVarPull                 = "OCI_TEST_PULL"
 	envVarPush                 = "OCI_TEST_PUSH"
 	envVarContentDiscovery     = "OCI_TEST_CONTENT_DISCOVERY"
@@ -46,7 +52,8 @@ const (
 	envVarTagName              = "OCI_TAG_NAME"
 	envVarTagList              = "OCI_TAG_LIST"
 	envVarHideSkippedWorkflows = "OCI_HIDE_SKIPPED_WORKFLOWS"
-	testTagName                = "tagtest0"
+
+	testTagName = "tagtest0"
 
 	titlePull              = "Pull"
 	titlePush              = "Push"
@@ -101,11 +108,11 @@ var (
 )
 
 func init() {
-	hostname := os.Getenv("OCI_ROOT_URL")
-	namespace := os.Getenv("OCI_NAMESPACE")
-	username := os.Getenv("OCI_USERNAME")
-	password := os.Getenv("OCI_PASSWORD")
-	debug := os.Getenv("OCI_DEBUG") == "true"
+	hostname := os.Getenv(envVarRootURL)
+	namespace := os.Getenv(envVarNamespace)
+	username := os.Getenv(envVarUsername)
+	password := os.Getenv(envVarPassword)
+	debug := os.Getenv(envVarDebug) == envTrue
 
 	for envVar, enableTest := range testMap {
 		if os.Getenv(envVar) == envTrue {
