@@ -17,18 +17,36 @@ var test04ContentManagement = func() {
 		var numTags int
 
 		g.Context("Setup", func() {
-			g.Specify("Populate registry with test blob", func() {
+			g.Specify("Populate registry with test config blob", func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, _ := client.Do(req)
-
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetHeader("Content-Length", configContentLength).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", blobDigest).
-					SetBody(configContent)
 				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetHeader("Content-Length", configBlobContentLength).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetQueryParam("digest", configBlobDigest).
+					SetBody(configBlobContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+			})
+
+			g.Specify("Populate registry with test layer", func() {
+				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetQueryParam("digest", layerBlobDigest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", layerBlobContentLength).
+					SetBody(layerBlobData)
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
@@ -122,18 +140,25 @@ var test04ContentManagement = func() {
 
 		g.Context("Blob delete", func() {
 			g.Specify("DELETE request to blob URL should yield 202 response", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+				RunOnlyIf(runContentManagementSetup)
+				// config blob
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				// layer blob
+				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
 			})
 
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blobDigest))
+				RunOnlyIf(runContentManagementSetup)
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
