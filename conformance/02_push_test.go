@@ -222,7 +222,8 @@ var test02Push = func() {
 			})
 
 			g.Specify("Registry should accept a manifest upload with no layers", func() {
-				RunOnlyIf(!skipEmptyLayerTest)
+				SkipIfDisabled(push)
+				RunOnlyIfNot(skipEmptyLayerTest)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(emptyLayerTestTag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").

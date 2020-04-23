@@ -547,11 +547,14 @@ func (reporter *HTMLReporter) SpecSuiteWillBegin(config config.GinkgoConfigType,
 		envVarPush,
 		envVarContentDiscovery,
 		envVarContentManagement,
+		envVarPushEmptyLayer,
 		envVarBlobDigest,
 		envVarManifestDigest,
+		envVarEmptyLayerManifestDigest,
 		envVarTagName,
 		envVarTagList,
 		envVarHideSkippedWorkflows,
+		envVarAuthScope,
 	}
 	for _, v := range varsToCheck {
 		var replacement string
