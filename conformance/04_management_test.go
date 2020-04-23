@@ -18,12 +18,11 @@ var test04ContentManagement = func() {
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test config blob", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetHeader("Content-Length", configBlobContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
@@ -37,8 +36,8 @@ var test04ContentManagement = func() {
 			})
 
 			g.Specify("Populate registry with test layer", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -55,8 +54,8 @@ var test04ContentManagement = func() {
 			})
 
 			g.Specify("Populate registry with test tag", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				tagToDelete = defaultTagName
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete)).
@@ -70,8 +69,8 @@ var test04ContentManagement = func() {
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -141,8 +140,8 @@ var test04ContentManagement = func() {
 
 		g.Context("Blob delete", func() {
 			g.Specify("DELETE request to blob URL should yield 202 response", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				// config blob
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
@@ -157,8 +156,8 @@ var test04ContentManagement = func() {
 			})
 
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
-				RunOnlyIf(runContentManagementSetup)
 				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
