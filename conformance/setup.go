@@ -152,6 +152,7 @@ func init() {
 	}
 
 	client.SetLogger(logger)
+	client.SetCookieJar(nil)
 
 	config := imagespec.Image{
 		Architecture: "amd64",
