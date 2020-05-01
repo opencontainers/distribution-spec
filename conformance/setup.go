@@ -9,11 +9,10 @@ import (
 	"os"
 	"strconv"
 
-	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
-
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	godigest "github.com/opencontainers/go-digest"
+	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type (
@@ -40,7 +39,13 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue                        = "1"
+	envTrue = "1"
+
+	envVarRootURL                  = "OCI_ROOT_URL"
+	envVarNamespace                = "OCI_NAMESPACE"
+	envVarUsername                 = "OCI_USERNAME"
+	envVarPassword                 = "OCI_PASSWORD"
+	envVarDebug                    = "OCI_DEBUG"
 	envVarPull                     = "OCI_TEST_PULL"
 	envVarPush                     = "OCI_TEST_PUSH"
 	envVarContentDiscovery         = "OCI_TEST_CONTENT_DISCOVERY"
@@ -126,12 +131,12 @@ var (
 func init() {
 	var err error
 
-	hostname := os.Getenv("OCI_ROOT_URL")
-	namespace := os.Getenv("OCI_NAMESPACE")
-	username := os.Getenv("OCI_USERNAME")
-	password := os.Getenv("OCI_PASSWORD")
+	hostname := os.Getenv(envVarRootURL)
+	namespace := os.Getenv(envVarNamespace)
+	username := os.Getenv(envVarUsername)
+	password := os.Getenv(envVarPassword)
 	authScope := os.Getenv(envVarAuthScope)
-	debug := os.Getenv("OCI_DEBUG") == "true"
+	debug := os.Getenv(envVarDebug) == envTrue
 
 	for envVar, enableTest := range testMap {
 		if os.Getenv(envVar) == envTrue {

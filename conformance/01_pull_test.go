@@ -34,6 +34,7 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Populate registry with test layer", func() {
+				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, _ := client.Do(req)
@@ -154,7 +155,6 @@ var test01Pull = func() {
 			g.Specify("Delete config blob created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -164,9 +164,8 @@ var test01Pull = func() {
 			})
 
 			g.Specify("Delete layer blob created in setup", func() {
-				RunOnlyIf(runPullSetup)
 				SkipIfDisabled(pull)
-				SkipIfDisabled(contentManagement)
+				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -178,7 +177,6 @@ var test01Pull = func() {
 			g.Specify("Delete manifest created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

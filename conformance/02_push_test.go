@@ -222,7 +222,8 @@ var test02Push = func() {
 			})
 
 			g.Specify("Registry should accept a manifest upload with no layers", func() {
-				RunOnlyIf(!skipEmptyLayerTest)
+				SkipIfDisabled(push)
+				RunOnlyIfNot(skipEmptyLayerTest)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(emptyLayerTestTag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
@@ -248,7 +249,6 @@ var test02Push = func() {
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -260,7 +260,6 @@ var test02Push = func() {
 			g.Specify("Delete layer blob created in setup", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -272,7 +271,6 @@ var test02Push = func() {
 			g.Specify("Delete manifest created in tests", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -281,6 +279,5 @@ var test02Push = func() {
 					BeNumerically("<", 300)))
 			})
 		})
-
 	})
 }
