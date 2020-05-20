@@ -14,8 +14,6 @@ The goal of this specification is to standardize container image distribution ba
 ### Table of Contents
 
 - [Introduction](spec.md)
-- [Notational Conventions](#notational-conventions)
-- [Historical Context](#historical-context)
 - [Scope](#scope)
   - [Future](#future)
 - [Use Cases](#use-cases)
@@ -23,18 +21,9 @@ The goal of this specification is to standardize container image distribution ba
   - [Resumable Push](#resumable-push)
   - [Resumable Pull](#resumable-pull)
   - [Layer Upload De-duplication](#layer-upload-de-duplication)
-- [Changes](#changes)
 - [Overview](#overview)
-  - [Errors](#errors)
-  - [API Version Check](#api-version-check)
   - [Content Digests](#content-digests)
-  - [Pulling An Image](#pulling-an-image)
-  - [Pushing An Image](#pushing-an-image)
-  - [Listing Repositories](#listing-repositories)
-  - [Listing Image Tags](#listing-image-tags)
-  - [Deleting an Image](#deleting-an-image)
 - [Detail](#detail)
-  - [Errors](#errors-2)
   - [Base](#base)
   - [Tags](#tags)
   - [Manifest](#manifest)
@@ -56,15 +45,6 @@ The goal of this specification is to standardize container image distribution ba
     - [PATCH Blob Upload](#patch-blob-upload)
     - [PUT Blob Upload](#put-blob-upload)
     - [DELETE Blob Upload](#delete-blob-upload)
-
-## Notational Conventions
-
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
-
-The key words "unspecified", "undefined", and "implementation-defined" are to be interpreted as described in the [rationale for the C99 standard][c99-unspecified].
-
-An implementation is not compliant if it fails to satisfy one or more of the MUST, MUST NOT, REQUIRED, SHALL, or SHALL NOT requirements for the protocols it implements.
-An implementation is compliant if it satisfies all the MUST, MUST NOT, REQUIRED, SHALL, and SHALL NOT requirements for the protocols it implements.
 
 ## Historical Context
 
@@ -128,14 +108,6 @@ When process B attempts to upload the layer, the registry indicates that its not
 
 If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry (Note: we MAY modify this to prevent dogpile with some locking mechanism).
 
-## Changes
-
-The V2 specification has been written to work as a living document, specifying only what is certain and leaving what is not specified open or to future changes.
-Only non-conflicting additions SHOULD be made to the API and accepted changes SHOULD avoid preventing future changes from happening.
-
-The [changes.md](changes.md) doc SHOULD be updated when changes are made to the specification, indicating what is different.
-Optionally, we MAY start marking parts of the specification to correspond with the versions enumerated here.
-
 ## Overview
 
 This section covers client flows and details of the API endpoints.
@@ -170,56 +142,6 @@ All endpoints SHOULD support aggressive http caching, compression and range head
 The new API attempts to leverage HTTP semantics where possible but MAY break from standards to implement targeted features.
 
 For detail on individual endpoints, please see the [_Detail_](#detail) section.
-
-### Errors
-
-Actionable failure conditions, covered in detail in their relevant sections, are reported as part of 4xx responses, in a json response body.
-One or more errors will be returned in the following format:
-
-```json
-    {
-        "errors": [
-            {
-                "code": "<error identifier>",
-                "message": "<message describing condition>",
-                "detail": "<unstructured>"
-            },
-            ...
-        ]
-    }
-```
-
-The `code` field will be a unique identifier, all caps with underscores by convention.
-The `message` field will be a human readable string.
-The OPTIONAL `detail` field MAY contain arbitrary json data providing information the client can use to resolve the issue.
-
-While the client can take action on certain error codes, the registry MAY add new error codes over time.
-All client implementations SHOULD treat unknown error codes as `UNKNOWN`, allowing future error codes to be added without breaking API compatibility.
-For the purposes of the specification error codes will only be added and never removed.
-
-For a complete account of all error codes, please see the [_Errors_](#errors-2) section.
-
-### API Version Check
-
-A minimal endpoint, mounted at `/v2/` will provide version support information based on its response statuses.
-The request format is as follows:
-
-```HTTP
-GET /v2/
-```
-
-If a `200 OK` response is returned, the registry implements the V2(.1) registry API and the client MAY proceed safely with other V2 operations.
-Optionally, the response MAY contain information about the supported paths in the response body.
-The client SHOULD be prepared to ignore this data.
-
-If a `401 Unauthorized` response is returned, the client SHOULD take action based on the contents of the "WWW-Authenticate" header and try the endpoint again.
-Depending on access control setup, the client MAY still have to authenticate against different resources, even if this check succeeds.
-
-If `404 Not Found` response status, or other unexpected status, is returned, the client SHOULD proceed with the assumption that the registry does not implement V2 of the API.
-
-When a `200 OK` or `401 Unauthorized` response is returned, the "Docker-Distribution-API-Version" header SHOULD be set to "registry/2.0".
-Clients MAY require this header value to determine if the endpoint serves this API.
-When this header is omitted, clients MAY fallback to an older API version.
 
 ### Content Digests
 
@@ -286,308 +208,6 @@ To maintain security, the client MUST always verify the content against the _dig
 
 > __IMPORTANT:__ If a _digest_ is used to fetch content, the client SHOULD use the same digest used to fetch the content to verify it.
 > The header `Docker-Content-Digest` SHOULD NOT be trusted over the "local" digest.
-
-### Pulling An Image
-
-An "image" is a combination of a JSON manifest and individual layer files.
-The process of pulling an image centers around retrieving these two components.
-
-The first step in pulling an image is to retrieve the manifest.
-For details on manifest formats and their content types, refer to the OCI Image Specification's [manifest property description](https://github.com/opencontainers/image-spec/blob/master/manifest.md#image-manifest-property-descriptions).
-
-When the manifest is in hand, the client MUST verify the signature to ensure the names and layers are valid.
-Once confirmed, the client will then use the digests to download the individual layers.
-Layers are stored in as blobs in the V2 registry API, keyed by their digest.
-
-#### Pulling an Image Manifest
-
-The image manifest can be fetched with the following url:
-
-```HTTP
-GET /v2/<name>/manifests/<reference>
-```
-
-The `name` and `reference` parameter identify the image and are REQUIRED.
-The reference MAY include a tag or digest.
-
-The client SHOULD include an Accept header indicating which manifest content types it supports.
-In a successful response, the Content-Type header will indicate which manifest type is being returned.
-
-A `404 Not Found` response will be returned if the image is unknown to the registry.
-If the image exists and the response is successful, the image manifest will be returned:
-
-```json
-{
-   "annotations": {
-      "com.example.key1": "value1",
-      "com.example.key2": "value2"
-   },
-   "config": {
-      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
-      "mediaType": "application/vnd.oci.image.config.v1+json",
-      "size": 452
-   },
-   "layers": [
-      {
-         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
-         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
-         "size": 78343
-      }
-   ],
-   "schemaVersion": 2
-}
-```
-
-The client SHOULD verify the returned manifest signature for authenticity before fetching layers.
-
-##### Existing Manifests
-
-The image manifest can be checked for existence with the following url:
-
-```HTTP
-HEAD /v2/<name>/manifests/<reference>
-```
-
-The `name` and `reference` parameter identify the image and are REQUIRED.
-The reference MAY include a tag or digest.
-
-A `404 Not Found` response will be returned if the image is unknown to the registry.
-If the image exists and the response is successful the response will be as follows:
-
-```HTTP
-200 OK
-Content-Length: <length of manifest>
-Docker-Content-Digest: <digest>
-```
-
-#### Pulling a Layer
-
-Layers are stored in the blob portion of the registry, keyed by digest.
-Pulling a layer is carried out by a standard http request.
-The URL is as follows:
-
-```HTTP
-GET /v2/<name>/blobs/<digest>
-```
-
-Access to a layer will be gated by the `name` of the repository but is identified uniquely in the registry by `digest`.
-
-This endpoint MAY issue a 307 (302 for < HTTP 1.1) redirect to another service for downloading the layer and clients SHOULD be prepared to handle redirects.
-
-This endpoint SHOULD support aggressive HTTP caching for image layers.
-Support for Etags, modification dates and other cache control headers SHOULD be included.
-To allow for incremental downloads, `Range` requests SHOULD be supported, as well.
-
-### Pushing An Image
-
-Pushing an image works in the opposite order as a pull.
-After assembling the image manifest, the client MUST first push the individual layers.
-When the layers are fully pushed into the registry, the client SHOULD upload the signed manifest.
-
-The details of each step of the process are covered in the following sections.
-
-#### Pushing a Layer
-
-All layer uploads use two steps to manage the upload process.
-The first step starts the upload in the registry service, returning a url to carry out the second step.
-The second step uses the upload url to transfer the actual data.
-Uploads are started with a POST request which returns a url that can be used to push data and check upload status.
-
-The `Location` header will be used to communicate the upload location after each request.
-While it won't change in the this specification, clients SHOULD use the most recent value returned by the API.
-`Location` header value returned MUST either be absolute or relative as described in
-[RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
-
-##### Starting An Upload
-
-To begin the process, a POST request SHOULD be issued in the following format:
-
-```HTTP
-POST /v2/<name>/blobs/uploads/
-```
-
-The parameters of this request are the image namespace under which the layer will be linked.
-Responses to this request are covered below.
-
-##### Existing Layers
-
-The existence of a layer can be checked via a `HEAD` request to the blob store API.
-The request SHOULD be formatted as follows:
-
-```HTTP
-HEAD /v2/<name>/blobs/<digest>
-```
-
-If the layer with the digest specified in `digest` is available, a 200 OK response will be received, with no actual body content (this is according to http specification).
-The response will look as follows:
-
-```HTTP
-200 OK
-Content-Length: <length of blob>
-Docker-Content-Digest: <digest>
-```
-
-When this response is received, the client can assume that the layer is already available in the registry under the given name and SHOULD take no further action to upload the layer.
-Note that the binary digests MAY differ for the existing registry layer, but the digests will be guaranteed to match.
-
-##### Uploading the Layer
-
-If the POST request is successful, a `202 Accepted` response will be returned with the upload URL in the `Location` header:
-
-```HTTP
-202 Accepted
-Location: /v2/<name>/blobs/uploads/<session_id>
-Range: bytes=0-<offset>
-Content-Length: 0
-```
-
-The rest of the upload process can be carried out with the returned url, called the "Upload URL" from the `Location` header.
-All responses to the upload url, whether sending data or getting status, will be in this format.
-
-Though the URI format (`/v2/<name>/blobs/uploads/<session_id>`) for the `Location` header is specified, clients SHOULD treat it as an opaque url and SHOULD never try to assemble it.
-While the `session_id` parameter MAY be an actual UUID, this proposal imposes no constraints on the format and clients SHOULD never impose any.
-
-Header `Blob-Upload-Session-ID` OPTIONAL: If clients need to correlate local upload state with remote upload state, largely for resumable uploads.
-Header `Docker-Upload-UUID` OPTIONAL: legacy compatibility. Not contstrained to being an official UUID.
-
-##### Upload Progress
-
-The progress and chunk coordination of the upload process will be coordinated through the `Range` header.
-While this is a non-standard use of the `Range` header, there are examples of [similar approaches](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol) in APIs with heavy use.
-For an upload that just started, for an example with a 1000 byte layer file, the `Range` header would be as follows:
-
-```HTTP
-Range: bytes=0-0
-```
-
-To get the status of an upload, issue a GET request to the upload URL:
-
-```HTTP
-GET /v2/<name>/blobs/uploads/<session_id>
-Host: <registry host>
-```
-
-The response will be similar to the above, except will return 204 status:
-
-```HTTP
-204 No Content
-Location: /v2/<name>/blobs/uploads/<session_id>
-Range: bytes=0-<offset>
-```
-
-Note that the HTTP `Range` header byte ranges are inclusive and that will be honored, even in non-standard use cases.
-
-##### Monolithic Upload
-
-A monolithic upload is simply a chunked upload with a single chunk and MAY be favored by clients that would like to avoided the complexity of chunking.
-To carry out a "monolithic" upload, one can simply put the entire content blob to the provided URL:
-
-```HTTP
-PUT /v2/<name>/blobs/uploads/<session_id>?digest=<digest>
-Content-Length: <size of layer>
-Content-Type: application/octet-stream
-
-<Layer Binary Data>
-```
-
-The "digest" parameter MUST be included with the PUT request.
-Please see the [_Completed Upload_](#completed-upload) section for details on the parameters and expected responses.
-
-##### Chunked Upload
-
-To carry out an upload of a chunk, the client can specify a range header and only include that part of the layer file:
-
-```HTTP
-PATCH /v2/<name>/blobs/uploads/<session_id>
-Content-Length: <size of chunk>
-Content-Range: <start of range>-<end of range>
-Content-Type: application/octet-stream
-
-<Layer Chunk Binary Data>
-```
-
-There is no enforcement on layer chunk splits other than that the server MUST receive them in order.
-The server MAY enforce a minimum chunk size.
-If the server cannot accept the chunk, a `416 Requested Range Not Satisfiable` response will be returned and will include a `Range` header indicating the current status:
-
-```HTTP
-416 Requested Range Not Satisfiable
-Location: /v2/<name>/blobs/uploads/<session_id>
-Range: 0-<last valid range>
-Content-Length: 0
-Blob-Upload-Session-ID: <session_id>
-```
-
-If this response is received, the client SHOULD resume from the "last valid range" and upload the subsequent chunk.
-A 416 will be returned under the following conditions:
-
-- Invalid Content-Range header format
-- Out of order chunk: the range of the next chunk MUST start immediately after the "last valid range" from the previous response.
-
-When a chunk is accepted as part of the upload, a `202 Accepted` response will be returned, including a `Range` header with the current upload status:
-
-```HTTP
-202 Accepted
-Location: /v2/<name>/blobs/uploads/<session_id>
-Range: bytes=0-<offset>
-Content-Length: 0
-Blob-Upload-Session-ID: <session_id>
-```
-
-##### Completed Upload
-
-For an upload to be considered complete, the client MUST submit a `PUT` request on the upload endpoint with a digest parameter.
-If it is not provided, the upload will not be considered complete.
-The format for the final chunk will be as follows:
-
-```HTTP
-PUT /v2/<name>/blobs/uploads/<session_id>?digest=<digest>
-Content-Length: <size of chunk>
-Content-Range: <start of range>-<end of range>
-Content-Type: application/octet-stream
-
-<Last Layer Chunk Binary Data>
-```
-
-Optionally, if all chunks have already been uploaded, a `PUT` request with a `digest` parameter and zero-length body MAY be sent to complete and validate the upload.
-Multiple "digest" parameters MAY be provided with different digests.
-The server MAY verify none or all of them but MUST notify the client if the content is rejected.
-
-When the last chunk is received and the layer has been validated, the client will receive a `201 Created` response:
-
-```HTTP
-201 Created
-Location: /v2/<name>/blobs/<digest>
-Content-Length: 0
-Docker-Content-Digest: <digest>
-```
-
-The `Location` header will contain the registry URL to access the accepted layer file.
-The `Docker-Content-Digest` header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
-Most clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
-
-###### Digest Parameter
-
-The "digest" parameter is designed as an opaque parameter to support verification of a successful transfer.
-For example, an HTTP URI parameter might be as follows:
-
-```
-sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
-```
-
-Given this parameter, the registry will verify that the provided content does match this digest.
-
-##### Canceling an Upload
-
-An upload can be cancelled by issuing a DELETE request to the upload endpoint.
-The format will be as follows:
-
-```HTTP
-DELETE /v2/<name>/blobs/uploads/<session_id>
-```
-
-After this request is issued, the upload `session_id` will no longer be valid and the registry server will dump all intermediate data.
-While uploads will time out if not completed, clients SHOULD issue this request if they encounter a fatal error but still have the ability to issue an http request.
 
 ##### Cross Repository Blob Mount
 
@@ -714,183 +334,7 @@ The response format is as follows:
     }
 ```
 
-### Listing Repositories
-
-Repository listing is reserved for a future version of the distribution spec.
-
-The `_catalog` api is reserved for historical usage. Registries MAY implement `_catalog`, but are NOT required.
-
-### Listing Image Tags
-
-It MAY be necessary to list all of the tags under a given repository.
-The tags for an image repository can be retrieved with the following request:
-
-```HTTP
-GET /v2/<name>/tags/list
-```
-
-The response will be in the following format:
-
-```HTTP
-200 OK
-Content-Type: application/json
-
-{
-  "name": "<name>",
-  "tags": [
-    "<tag>",
-    ...
-  ]
-}
-```
-
-For repositories with a large number of tags, this response MAY be quite large.
-If such a response is expected, one SHOULD use the pagination.
-
-#### Pagination
-
-Paginated tag results can be retrieved by adding an `n` parameter to the request URL, declaring that the response SHOULD be limited to `n` results. Starting a paginated flow MAY begin as follows:
-
-```HTTP
-GET /v2/<name>/tags/list?n=<integer>
-```
-
-The above specifies that a tags response SHOULD be returned, from the start of the result set, ordered lexically, limiting the number of results to `n`. The response to such a request would look as follows:
-
-```HTTP
-200 OK
-Content-Type: application/json
-Link: <<url>?n=<n from the request>&last=<last tag value from previous response>>; rel="next"
-
-{
-    "name": "<name>",
-    "tags": [
-      "<tag>",
-      ...
-    ]
-}
-```
-
-To get the _next_ `n` entries, one can create a URL where the argument `last` has the value from `tags[len(tags)-1]`.
-If there are indeed more results, the URL for the next block is encoded in an [RFC5988](https://tools.ietf.org/html/rfc5988) `Link` header, as a "next" relation.
-
-The presence of the `Link` header communicates to the client that the entire result set has not been returned and another request MAY be issued.
-If the header is not present, the client can assume that all results have been received.
-
-> __NOTE:__ In the request template above, note that the brackets are required. For example, if the url is `http://example.com/v2/hello-world/tags/list?n=20&last=b`, the value of the header would be `<http://example.com/v2/hello-world/tags/list?n=20&last=b>; rel="next"`.
-> Please see [RFC5988](https://tools.ietf.org/html/rfc5988) for details.
-
-Compliant client implementations SHOULD always use the `Link` header value when proceeding through results linearly. The client MAY construct URLs to skip forward in the list of tags.
-
-To get the next result set, a client would issue the request as follows, using the URL encoded in the described `Link` header:
-
-```
-GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
-```
-
-The above process should then be repeated until the `Link` header is no longer set in the response.
-
-The tag list result set is represented abstractly as a lexically sorted list, where the position in that list can be specified by the query term `last`. The entries in the response start _after_ the term specified by `last`, up to `n`
-entries.
-
-The behavior of `last` is quite simple when demonstrated with an example. Let us say a repository has the following tags:
-
-```
-v1
-v2
-v3
-v4
-```
-
-If the value of `n` is 2, _v1_ and _v2_ will be returned on the first response.
-The `Link` header returned on the response will have `n` set to 2 and last set
-to _v2_:
-
-```
-Link: <<url>?n=2&last=v2>; rel="next"
-```
-
-The client can then issue the request with the above value from the `Link`
-header, receiving the values _v3_ and _v4_. Note that `n` may change on the second
-to last response or be fully omitted, depending on the server implementation.
-
-
-### Deleting an Image
-
-An image MAY be deleted from the registry via its `name` and `reference`.
-A delete MAY be issued with the following request format:
-
-```HTTP
-    DELETE /v2/<name>/manifests/<reference>
-```
-
-For deletes, `reference` MUST be a digest or the delete will fail.
-If the image exists and has been successfully deleted, the following response will be issued:
-
-```HTTP
-    202 Accepted
-    Content-Length: None
-```
-
-If the image had already been deleted or did not exist, a `404 Not Found` response will be issued instead.
-
-> **Note**: When deleting a manifest from a registry version 2.3 or later, the following header MUST be used when `HEAD` or `GET`-ing the manifest to obtain the correct digest to delete:
-
-    Accept: application/vnd.docker.distribution.manifest.v2+json
-
-> for more details, see: [compatibility.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md#backward-compatibility)
-
 ## Detail
-
-> **Note**: This section is still under construction.
-> For the purposes of implementation, if any details below differ from the described request flows above, the section below SHOULD be corrected.
-> When they match, this note SHOULD be removed.
-
-The behavior of the endpoints are covered in detail in this section, organized by route and entity.
-All aspects of the request and responses are covered, including headers, parameters and body formats.
-Examples of requests and their corresponding responses, with success and failure, are enumerated.
-
-> **Note**: The sections on endpoint detail are arranged with an example request, a description of the request, followed by information about that request.
-
-A list of methods and URIs are covered in the table below:
-
-| Method | Path                               | Entity               | Description                                                                                                                                                                                                                              |
-|--------|------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| GET    | `/v2/`                             | Base                 | Check that the endpoint implements distribution API.                                                                                                                                                                               |
-| GET    | `/v2/<name>/tags/list`             | Tags                 | Fetch the tags under the repository identified by `name`.                                                                                                                                                                                |
-| GET    | `/v2/<name>/manifests/<reference>` | Manifest             | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.                        |
-| PUT    | `/v2/<name>/manifests/<reference>` | Manifest             | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.                                                                                                                                          |
-| DELETE | `/v2/<name>/manifests/<reference>` | Manifest             | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.                                                                                                                        |
-| GET    | `/v2/<name>/blobs/<digest>`        | Blob                 | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.                                                              |
-| DELETE | `/v2/<name>/blobs/<digest>`        | Blob                 | Delete the blob identified by `name` and `digest`                                                                                                                                                                                        |
-| POST   | `/v2/<name>/blobs/uploads/`        | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
-| GET    | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Retrieve status of upload identified by `session_id`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.                                                                                             |
-| PATCH  | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Upload a chunk of data for the specified upload.                                                                                                                                                                                         |
-| PUT    | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Complete the upload specified by `session_id`, optionally appending the body as the final chunk.                                                                                                                                               |
-| DELETE | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
-The detail for each endpoint is covered in the following sections.
-
-### Errors
-
-The error codes encountered via the API are enumerated in the following table:
-
-| Code                    | Message                                        | Description                                                                                                                                                                                                                                                                                         |
-|-------------------------|------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `BLOB_UNKNOWN`          | blob unknown to registry                       | This error MAY be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload.                                                                                                   |
-| `BLOB_UPLOAD_INVALID`   | blob upload invalid                            | The blob upload encountered an error and can no longer proceed.                                                                                                                                                                                                                                     |
-| `BLOB_UPLOAD_UNKNOWN`   | blob upload unknown to registry                | If a blob upload has been cancelled or was never started, this error code MAY be returned.                                                                                                                                                                                                          |
-| `DIGEST_INVALID`        | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error MAY include a detail structure with the key "digest", including the invalid digest string. This error MAY also be returned when a manifest includes an invalid layer digest. |
-| `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       | This error MAY be returned when a manifest blob is  unknown to the registry.                                                                                                                                                                                                                        |
-| `MANIFEST_INVALID`      | manifest invalid                               | During upload, manifests undergo several checks ensuring validity. If those checks fail, this error MAY be returned, unless a more specific error is included. The detail will contain information the failed validation.                                                                           |
-| `MANIFEST_UNKNOWN`      | manifest unknown                               | This error is returned when the manifest, identified by name and tag is unknown to the repository.                                                                                                                                                                                                  |
-| `MANIFEST_UNVERIFIED`   | manifest failed signature verification         | During manifest upload, if the manifest fails signature verification, this error will be returned.                                                                                                                                                                                                  |
-| `NAME_INVALID`          | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                         |
-| `NAME_UNKNOWN`          | repository name not known to registry          | This is returned if the name used during an operation is unknown to the registry.                                                                                                                                                                                                                   |
-| `SIZE_INVALID`          | provided length did not match content length   | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.                                                                                                                                                        |
-| `TAG_INVALID`           | manifest tag did not match URI                 | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned.                                                                                                                                                                                       |
-| `UNAUTHORIZED`          | authentication required                        | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate.                                                                                                                              |
-| `DENIED`                | requested access to the resource is denied     | The access controller denied access for the operation on a resource.                                                                                                                                                                                                                                |
-| `UNSUPPORTED`           | The operation is unsupported.                  | The operation was unsupported due to a missing implementation or invalid set of parameters.                                                                                                                                                                                                         |
 
 ### Base
 
@@ -4674,6 +4118,11 @@ Several terms are used frequently in this document and warrant basic definitions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
 
+The key words "unspecified", "undefined", and "implementation-defined" are to be interpreted as described in the [rationale for the C99 standard][c99-unspecified].
+
+An implementation is not compliant if it fails to satisfy one or more of the MUST, MUST NOT, REQUIRED, SHALL, or SHALL NOT requirements for the protocols it implements.
+An implementation is compliant if it satisfies all the MUST, MUST NOT, REQUIRED, SHALL, and SHALL NOT requirements for the protocols it implements.
+
 ## Conformance
 
 ### Minimum Requirements
@@ -4699,26 +4148,539 @@ Registry providers can self-cetify by submitting conformance results to [opencon
 
 TODO: describe the Pull category and the high-level details
 
+##### API Version Check
+
+A minimal endpoint, mounted at `/v2/` will provide version support information based on its response statuses.
+The request format is as follows:
+
+```HTTP
+GET /v2/
+```
+
+If a `200 OK` response is returned, the registry implements the V2(.1) registry API and the client MAY proceed safely with other V2 operations.
+Optionally, the response MAY contain information about the supported paths in the response body.
+The client SHOULD be prepared to ignore this data.
+
+If a `401 Unauthorized` response is returned, the client SHOULD take action based on the contents of the "WWW-Authenticate" header and try the endpoint again.
+Depending on access control setup, the client MAY still have to authenticate against different resources, even if this check succeeds.
+
+If `404 Not Found` response status, or other unexpected status, is returned, the client SHOULD proceed with the assumption that the registry does not implement V2 of the API.
+
+When a `200 OK` or `401 Unauthorized` response is returned, the "Docker-Distribution-API-Version" header SHOULD be set to "registry/2.0".
+Clients MAY require this header value to determine if the endpoint serves this API.
+When this header is omitted, clients MAY fallback to an older API version.
+
+##### Pulling An Image
+
+An "image" is a combination of a JSON manifest and individual layer files.
+The process of pulling an image centers around retrieving these two components.
+
+The first step in pulling an image is to retrieve the manifest.
+For details on manifest formats and their content types, refer to the OCI Image Specification's [manifest property description](https://github.com/opencontainers/image-spec/blob/master/manifest.md#image-manifest-property-descriptions).
+
+When the manifest is in hand, the client MUST verify the signature to ensure the names and layers are valid.
+Once confirmed, the client will then use the digests to download the individual layers.
+Layers are stored in as blobs in the V2 registry API, keyed by their digest.
+
+#### Pulling an Image Manifest
+
+The image manifest can be fetched with the following url:
+
+```HTTP
+GET /v2/<name>/manifests/<reference>
+```
+
+The `name` and `reference` parameter identify the image and are REQUIRED.
+The reference MAY include a tag or digest.
+
+The client SHOULD include an Accept header indicating which manifest content types it supports.
+In a successful response, the Content-Type header will indicate which manifest type is being returned.
+
+A `404 Not Found` response will be returned if the image is unknown to the registry.
+If the image exists and the response is successful, the image manifest will be returned:
+
+```json
+{
+   "annotations": {
+      "com.example.key1": "value1",
+      "com.example.key2": "value2"
+   },
+   "config": {
+      "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+      "mediaType": "application/vnd.oci.image.config.v1+json",
+      "size": 452
+   },
+   "layers": [
+      {
+         "digest": "sha256:6f4e69a5ff18d92e7315e3ee31c62165ebf25bfa05cad05c0d09d8f412dae401",
+         "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+         "size": 78343
+      }
+   ],
+   "schemaVersion": 2
+}
+```
+
+The client SHOULD verify the returned manifest signature for authenticity before fetching layers.
+
+###### Existing Manifests
+
+The image manifest can be checked for existence with the following url:
+
+```HTTP
+HEAD /v2/<name>/manifests/<reference>
+```
+
+The `name` and `reference` parameter identify the image and are REQUIRED.
+The reference MAY include a tag or digest.
+
+A `404 Not Found` response will be returned if the image is unknown to the registry.
+If the image exists and the response is successful the response will be as follows:
+
+```HTTP
+200 OK
+Content-Length: <length of manifest>
+Docker-Content-Digest: <digest>
+```
+
+##### Pulling a Layer
+
+Layers are stored in the blob portion of the registry, keyed by digest.
+Pulling a layer is carried out by a standard http request.
+The URL is as follows:
+
+```HTTP
+GET /v2/<name>/blobs/<digest>
+```
+
+Access to a layer will be gated by the `name` of the repository but is identified uniquely in the registry by `digest`.
+
+This endpoint MAY issue a 307 (302 for < HTTP 1.1) redirect to another service for downloading the layer and clients SHOULD be prepared to handle redirects.
+
+This endpoint SHOULD support aggressive HTTP caching for image layers.
+Support for Etags, modification dates and other cache control headers SHOULD be included.
+To allow for incremental downloads, `Range` requests SHOULD be supported, as well.
+
 #### Push
 
-TODO: describe the Push category and the high-level details
+TODO: describe the Pull category and the high-level details
+
+##### Pushing An Image
+
+Pushing an image works in the opposite order as a pull.
+After assembling the image manifest, the client MUST first push the individual layers.
+When the layers are fully pushed into the registry, the client SHOULD upload the signed manifest.
+
+The details of each step of the process are covered in the following sections.
+
+###### Pushing a Layer
+
+All layer uploads use two steps to manage the upload process.
+The first step starts the upload in the registry service, returning a url to carry out the second step.
+The second step uses the upload url to transfer the actual data.
+Uploads are started with a POST request which returns a url that can be used to push data and check upload status.
+
+The `Location` header will be used to communicate the upload location after each request.
+While it won't change in the this specification, clients SHOULD use the most recent value returned by the API.
+`Location` header value returned MUST either be absolute or relative as described in
+[RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
+
+####### Starting An Upload
+
+To begin the process, a POST request SHOULD be issued in the following format:
+
+```HTTP
+POST /v2/<name>/blobs/uploads/
+```
+
+The parameters of this request are the image namespace under which the layer will be linked.
+Responses to this request are covered below.
+
+####### Existing Layers
+
+The existence of a layer can be checked via a `HEAD` request to the blob store API.
+The request SHOULD be formatted as follows:
+
+```HTTP
+HEAD /v2/<name>/blobs/<digest>
+```
+
+If the layer with the digest specified in `digest` is available, a 200 OK response will be received, with no actual body content (this is according to http specification).
+The response will look as follows:
+
+```HTTP
+200 OK
+Content-Length: <length of blob>
+Docker-Content-Digest: <digest>
+```
+
+When this response is received, the client can assume that the layer is already available in the registry under the given name and SHOULD take no further action to upload the layer.
+Note that the binary digests MAY differ for the existing registry layer, but the digests will be guaranteed to match.
+
+####### Uploading the Layer
+
+If the POST request is successful, a `202 Accepted` response will be returned with the upload URL in the `Location` header:
+
+```HTTP
+202 Accepted
+Location: /v2/<name>/blobs/uploads/<session_id>
+Range: bytes=0-<offset>
+Content-Length: 0
+```
+
+The rest of the upload process can be carried out with the returned url, called the "Upload URL" from the `Location` header.
+All responses to the upload url, whether sending data or getting status, will be in this format.
+
+Though the URI format (`/v2/<name>/blobs/uploads/<session_id>`) for the `Location` header is specified, clients SHOULD treat it as an opaque url and SHOULD never try to assemble it.
+While the `session_id` parameter MAY be an actual UUID, this proposal imposes no constraints on the format and clients SHOULD never impose any.
+
+Header `Blob-Upload-Session-ID` OPTIONAL: If clients need to correlate local upload state with remote upload state, largely for resumable uploads.
+Header `Docker-Upload-UUID` OPTIONAL: legacy compatibility. Not contstrained to being an official UUID.
+
+####### Upload Progress
+
+The progress and chunk coordination of the upload process will be coordinated through the `Range` header.
+While this is a non-standard use of the `Range` header, there are examples of [similar approaches](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol) in APIs with heavy use.
+For an upload that just started, for an example with a 1000 byte layer file, the `Range` header would be as follows:
+
+```HTTP
+Range: bytes=0-0
+```
+
+To get the status of an upload, issue a GET request to the upload URL:
+
+```HTTP
+GET /v2/<name>/blobs/uploads/<session_id>
+Host: <registry host>
+```
+
+The response will be similar to the above, except will return 204 status:
+
+```HTTP
+204 No Content
+Location: /v2/<name>/blobs/uploads/<session_id>
+Range: bytes=0-<offset>
+```
+
+Note that the HTTP `Range` header byte ranges are inclusive and that will be honored, even in non-standard use cases.
+
+####### Monolithic Upload
+
+A monolithic upload is simply a chunked upload with a single chunk and MAY be favored by clients that would like to avoided the complexity of chunking.
+To carry out a "monolithic" upload, one can simply put the entire content blob to the provided URL:
+
+```HTTP
+PUT /v2/<name>/blobs/uploads/<session_id>?digest=<digest>
+Content-Length: <size of layer>
+Content-Type: application/octet-stream
+
+<Layer Binary Data>
+```
+
+The "digest" parameter MUST be included with the PUT request.
+Please see the [_Completed Upload_](#completed-upload) section for details on the parameters and expected responses.
+
+####### Chunked Upload
+
+To carry out an upload of a chunk, the client can specify a range header and only include that part of the layer file:
+
+```HTTP
+PATCH /v2/<name>/blobs/uploads/<session_id>
+Content-Length: <size of chunk>
+Content-Range: <start of range>-<end of range>
+Content-Type: application/octet-stream
+
+<Layer Chunk Binary Data>
+```
+
+There is no enforcement on layer chunk splits other than that the server MUST receive them in order.
+The server MAY enforce a minimum chunk size.
+If the server cannot accept the chunk, a `416 Requested Range Not Satisfiable` response will be returned and will include a `Range` header indicating the current status:
+
+```HTTP
+416 Requested Range Not Satisfiable
+Location: /v2/<name>/blobs/uploads/<session_id>
+Range: 0-<last valid range>
+Content-Length: 0
+Blob-Upload-Session-ID: <session_id>
+```
+
+If this response is received, the client SHOULD resume from the "last valid range" and upload the subsequent chunk.
+A 416 will be returned under the following conditions:
+
+- Invalid Content-Range header format
+- Out of order chunk: the range of the next chunk MUST start immediately after the "last valid range" from the previous response.
+
+When a chunk is accepted as part of the upload, a `202 Accepted` response will be returned, including a `Range` header with the current upload status:
+
+```HTTP
+202 Accepted
+Location: /v2/<name>/blobs/uploads/<session_id>
+Range: bytes=0-<offset>
+Content-Length: 0
+Blob-Upload-Session-ID: <session_id>
+```
+
+####### Completed Upload
+
+For an upload to be considered complete, the client MUST submit a `PUT` request on the upload endpoint with a digest parameter.
+If it is not provided, the upload will not be considered complete.
+The format for the final chunk will be as follows:
+
+```HTTP
+PUT /v2/<name>/blobs/uploads/<session_id>?digest=<digest>
+Content-Length: <size of chunk>
+Content-Range: <start of range>-<end of range>
+Content-Type: application/octet-stream
+
+<Last Layer Chunk Binary Data>
+```
+
+Optionally, if all chunks have already been uploaded, a `PUT` request with a `digest` parameter and zero-length body MAY be sent to complete and validate the upload.
+Multiple "digest" parameters MAY be provided with different digests.
+The server MAY verify none or all of them but MUST notify the client if the content is rejected.
+
+When the last chunk is received and the layer has been validated, the client will receive a `201 Created` response:
+
+```HTTP
+201 Created
+Location: /v2/<name>/blobs/<digest>
+Content-Length: 0
+Docker-Content-Digest: <digest>
+```
+
+The `Location` header will contain the registry URL to access the accepted layer file.
+The `Docker-Content-Digest` header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
+Most clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
+
+######## Digest Parameter
+
+The "digest" parameter is designed as an opaque parameter to support verification of a successful transfer.
+For example, an HTTP URI parameter might be as follows:
+
+```
+sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
+```
+
+Given this parameter, the registry will verify that the provided content does match this digest.
+
+####### Canceling an Upload
+
+An upload can be cancelled by issuing a DELETE request to the upload endpoint.
+The format will be as follows:
+
+```HTTP
+DELETE /v2/<name>/blobs/uploads/<session_id>
+```
+
+After this request is issued, the upload `session_id` will no longer be valid and the registry server will dump all intermediate data.
+While uploads will time out if not completed, clients SHOULD issue this request if they encounter a fatal error but still have the ability to issue an http request.
 
 #### Content Discovery
 
 TODO: describe the Content Discovery category and the high-level details
 
+##### Listing Image Tags
+
+It MAY be necessary to list all of the tags under a given repository.
+The tags for an image repository can be retrieved with the following request:
+
+```HTTP
+GET /v2/<name>/tags/list
+```
+
+The response will be in the following format:
+
+```HTTP
+200 OK
+Content-Type: application/json
+
+{
+  "name": "<name>",
+  "tags": [
+    "<tag>",
+    ...
+  ]
+}
+```
+
+For repositories with a large number of tags, this response MAY be quite large.
+If such a response is expected, one SHOULD use the pagination.
+
+###### Pagination
+
+Paginated tag results can be retrieved by adding an `n` parameter to the request URL, declaring that the response SHOULD be limited to `n` results. Starting a paginated flow MAY begin as follows:
+
+```HTTP
+GET /v2/<name>/tags/list?n=<integer>
+```
+
+The above specifies that a tags response SHOULD be returned, from the start of the result set, ordered lexically, limiting the number of results to `n`. The response to such a request would look as follows:
+
+```HTTP
+200 OK
+Content-Type: application/json
+Link: <<url>?n=<n from the request>&last=<last tag value from previous response>>; rel="next"
+
+{
+    "name": "<name>",
+    "tags": [
+      "<tag>",
+      ...
+    ]
+}
+```
+
+To get the _next_ `n` entries, one can create a URL where the argument `last` has the value from `tags[len(tags)-1]`.
+If there are indeed more results, the URL for the next block is encoded in an [RFC5988](https://tools.ietf.org/html/rfc5988) `Link` header, as a "next" relation.
+
+The presence of the `Link` header communicates to the client that the entire result set has not been returned and another request MAY be issued.
+If the header is not present, the client can assume that all results have been received.
+
+> __NOTE:__ In the request template above, note that the brackets are required. For example, if the url is `http://example.com/v2/hello-world/tags/list?n=20&last=b`, the value of the header would be `<http://example.com/v2/hello-world/tags/list?n=20&last=b>; rel="next"`.
+> Please see [RFC5988](https://tools.ietf.org/html/rfc5988) for details.
+
+Compliant client implementations SHOULD always use the `Link` header value when proceeding through results linearly. The client MAY construct URLs to skip forward in the list of tags.
+
+To get the next result set, a client would issue the request as follows, using the URL encoded in the described `Link` header:
+
+```
+GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
+```
+
+The above process should then be repeated until the `Link` header is no longer set in the response.
+
+The tag list result set is represented abstractly as a lexically sorted list, where the position in that list can be specified by the query term `last`. The entries in the response start _after_ the term specified by `last`, up to `n`
+entries.
+
+The behavior of `last` is quite simple when demonstrated with an example. Let us say a repository has the following tags:
+
+```
+v1
+v2
+v3
+v4
+```
+
+If the value of `n` is 2, _v1_ and _v2_ will be returned on the first response.
+The `Link` header returned on the response will have `n` set to 2 and last set
+to _v2_:
+
+```
+Link: <<url>?n=2&last=v2>; rel="next"
+```
+
+The client can then issue the request with the above value from the `Link`
+header, receiving the values _v3_ and _v4_. Note that `n` may change on the second
+to last response or be fully omitted, depending on the server implementation.
+
 #### Content Management
 
 TODO: describe the Content Management category and the high-level details
+
+##### Deleting an Image
+
+An image MAY be deleted from the registry via its `name` and `reference`.
+A delete MAY be issued with the following request format:
+
+```HTTP
+    DELETE /v2/<name>/manifests/<reference>
+```
+
+For deletes, `reference` MUST be a digest or the delete will fail.
+If the image exists and has been successfully deleted, the following response will be issued:
+
+```HTTP
+    202 Accepted
+    Content-Length: None
+```
+
+If the image had already been deleted or did not exist, a `404 Not Found` response will be issued instead.
+
+> **Note**: When deleting a manifest from a registry version 2.3 or later, the following header MUST be used when `HEAD` or `GET`-ing the manifest to obtain the correct digest to delete:
+
+    Accept: application/vnd.docker.distribution.manifest.v2+json
+
+> for more details, see: [compatibility.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md#backward-compatibility)
 
 ## HTTP API
 
 ### Endpoints
 
-TODO: table of API endpoints
+> **Note**: This section is still under construction.
+> For the purposes of implementation, if any details below differ from the described request flows above, the section below SHOULD be corrected.
+> When they match, this note SHOULD be removed.
+
+The behavior of the endpoints are covered in detail in this section, organized by route and entity.
+All aspects of the request and responses are covered, including headers, parameters and body formats.
+Examples of requests and their corresponding responses, with success and failure, are enumerated.
+
+> **Note**: The sections on endpoint detail are arranged with an example request, a description of the request, followed by information about that request.
+
+A list of methods and URIs are covered in the table below:
+
+| Method | Path                               | Entity               | Description                                                                                                                                                                                                                              |
+|--------|------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| GET    | `/v2/`                             | Base                 | Check that the endpoint implements distribution API.                                                                                                                                                                               |
+| GET    | `/v2/<name>/tags/list`             | Tags                 | Fetch the tags under the repository identified by `name`.                                                                                                                                                                                |
+| GET    | `/v2/<name>/manifests/<reference>` | Manifest             | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.                        |
+| PUT    | `/v2/<name>/manifests/<reference>` | Manifest             | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.                                                                                                                                          |
+| DELETE | `/v2/<name>/manifests/<reference>` | Manifest             | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.                                                                                                                        |
+| GET    | `/v2/<name>/blobs/<digest>`        | Blob                 | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.                                                              |
+| DELETE | `/v2/<name>/blobs/<digest>`        | Blob                 | Delete the blob identified by `name` and `digest`                                                                                                                                                                                        |
+| POST   | `/v2/<name>/blobs/uploads/`        | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
+| GET    | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Retrieve status of upload identified by `session_id`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.                                                                                             |
+| PATCH  | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Upload a chunk of data for the specified upload.                                                                                                                                                                                         |
+| PUT    | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Complete the upload specified by `session_id`, optionally appending the body as the final chunk.                                                                                                                                               |
+| DELETE | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
+
+The detail for each endpoint is covered in the following sections.
 
 ### Error Codes
 
-TODO: table of error codes
+Actionable failure conditions, covered in detail in their relevant sections, are reported as part of 4xx responses, in a json response body.
+One or more errors will be returned in the following format:
+
+```json
+    {
+        "errors": [
+            {
+                "code": "<error identifier>",
+                "message": "<message describing condition>",
+                "detail": "<unstructured>"
+            },
+            ...
+        ]
+    }
+```
+
+The `code` field will be a unique identifier, all caps with underscores by convention.
+The `message` field will be a human readable string.
+The OPTIONAL `detail` field MAY contain arbitrary json data providing information the client can use to resolve the issue.
+
+While the client can take action on certain error codes, the registry MAY add new error codes over time.
+All client implementations SHOULD treat unknown error codes as `UNKNOWN`, allowing future error codes to be added without breaking API compatibility.
+For the purposes of the specification error codes will only be added and never removed.
+
+The error codes encountered via the API are enumerated in the following table:
+
+| Code                    | Message                                        | Description                                                                                                                                                                                                                                                                                         |
+|-------------------------|------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `BLOB_UNKNOWN`          | blob unknown to registry                       | This error MAY be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload.                                                                                                   |
+| `BLOB_UPLOAD_INVALID`   | blob upload invalid                            | The blob upload encountered an error and can no longer proceed.                                                                                                                                                                                                                                     |
+| `BLOB_UPLOAD_UNKNOWN`   | blob upload unknown to registry                | If a blob upload has been cancelled or was never started, this error code MAY be returned.                                                                                                                                                                                                          |
+| `DIGEST_INVALID`        | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error MAY include a detail structure with the key "digest", including the invalid digest string. This error MAY also be returned when a manifest includes an invalid layer digest. |
+| `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       | This error MAY be returned when a manifest blob is  unknown to the registry.                                                                                                                                                                                                                        |
+| `MANIFEST_INVALID`      | manifest invalid                               | During upload, manifests undergo several checks ensuring validity. If those checks fail, this error MAY be returned, unless a more specific error is included. The detail will contain information the failed validation.                                                                           |
+| `MANIFEST_UNKNOWN`      | manifest unknown                               | This error is returned when the manifest, identified by name and tag is unknown to the repository.                                                                                                                                                                                                  |
+| `MANIFEST_UNVERIFIED`   | manifest failed signature verification         | During manifest upload, if the manifest fails signature verification, this error will be returned.                                                                                                                                                                                                  |
+| `NAME_INVALID`          | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                         |
+| `NAME_UNKNOWN`          | repository name not known to registry          | This is returned if the name used during an operation is unknown to the registry.                                                                                                                                                                                                                   |
+| `SIZE_INVALID`          | provided length did not match content length   | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.                                                                                                                                                        |
+| `TAG_INVALID`           | manifest tag did not match URI                 | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned.                                                                                                                                                                                       |
+| `UNAUTHORIZED`          | authentication required                        | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate.                                                                                                                              |
+| `DENIED`                | requested access to the resource is denied     | The access controller denied access for the operation on a resource.                                                                                                                                                                                                                                |
+| `UNSUPPORTED`           | The operation is unsupported.                  | The operation was unsupported due to a missing implementation or invalid set of parameters.                                                                                                                                                                                                         |
+
 
 -->
