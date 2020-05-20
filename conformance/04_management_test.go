@@ -84,7 +84,7 @@ var test04ContentManagement = func() {
 		})
 
 		g.Context("Manifest delete", func() {
-			g.Specify("DELETE request to manifest tag should return 202, unless tag deletion is disallowed (400)", func() {
+			g.Specify("DELETE request to manifest tag should return 202, unless tag deletion is disallowed (400/405)", func() {
 				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete))
@@ -92,7 +92,8 @@ var test04ContentManagement = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAny(
 					Equal(http.StatusBadRequest),
-					Equal(http.StatusAccepted)))
+					Equal(http.StatusAccepted),
+					Equal(http.StatusMethodNotAllowed)))
 				if resp.StatusCode() == http.StatusBadRequest {
 					errorResponses, err := resp.Errors()
 					Expect(err).To(BeNil())
