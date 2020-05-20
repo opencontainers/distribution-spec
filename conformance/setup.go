@@ -39,8 +39,6 @@ const (
 	DENIED
 	UNSUPPORTED
 
-	envTrue = "1"
-
 	envVarRootURL                  = "OCI_ROOT_URL"
 	envVarNamespace                = "OCI_NAMESPACE"
 	envVarUsername                 = "OCI_USERNAME"
@@ -136,10 +134,11 @@ func init() {
 	username := os.Getenv(envVarUsername)
 	password := os.Getenv(envVarPassword)
 	authScope := os.Getenv(envVarAuthScope)
-	debug := os.Getenv(envVarDebug) == envTrue
+
+	debug, _ := strconv.ParseBool(os.Getenv(envVarDebug))
 
 	for envVar, enableTest := range testMap {
-		if os.Getenv(envVar) == envTrue {
+		if varIsTrue, _ := strconv.ParseBool(os.Getenv(envVar)); varIsTrue {
 			testsToRun |= enableTest
 		}
 	}
@@ -286,9 +285,7 @@ func init() {
 		runContentDiscoverySetup = false
 	}
 
-	if os.Getenv(envVarPushEmptyLayer) == envTrue {
-		skipEmptyLayerTest = true
-	}
+	skipEmptyLayerTest, _ = strconv.ParseBool(os.Getenv(envVarPushEmptyLayer))
 
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"
