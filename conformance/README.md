@@ -170,7 +170,7 @@ docker run --rm \
   -e OCI_TEST_PUSH=1 \
   -e OCI_TEST_CONTENT_DISCOVERY=1 \
   -e OCI_TEST_CONTENT_MANAGEMENT=1 \
-  -e OCI_HIDE_SKIPPED_WORKFLOWS=0
+  -e OCI_HIDE_SKIPPED_WORKFLOWS=0 \
   -e OCI_DEBUG=0 \
   conformance:latest
 ```
