@@ -128,6 +128,21 @@ var test03ContentDiscovery = func() {
 		})
 
 		g.Context("Teardown", func() {
+			deleteManifestFirst, _ := strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
+
+			if deleteManifestFirst {
+				g.Specify("Delete created manifest & associated tags", func() {
+					SkipIfDisabled(contentDiscovery)
+					RunOnlyIf(runContentDiscoverySetup)
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300)))
+				})
+			}
+
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(contentDiscovery)
 				RunOnlyIf(runContentDiscoverySetup)
@@ -150,16 +165,18 @@ var test03ContentDiscovery = func() {
 					BeNumerically("<", 300)))
 			})
 
-			g.Specify("Delete created manifest & associated tags", func() {
-				SkipIfDisabled(contentDiscovery)
-				RunOnlyIf(runContentDiscoverySetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-			})
+			if !deleteManifestFirst {
+				g.Specify("Delete created manifest & associated tags", func() {
+					SkipIfDisabled(contentDiscovery)
+					RunOnlyIf(runContentDiscoverySetup)
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300)))
+				})
+			}
 		})
 	})
 }
