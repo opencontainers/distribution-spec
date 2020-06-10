@@ -56,6 +56,43 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Digest**: a unique blob identifier, calculated from the blob's content
 - **Content**: a general term for content that can be downloaded from a registry (manifest or blob), and are addressable by a digest
 
+## Conformance
+
+### Minimum Requirements
+
+For a registry to be considered fully conformant against this specification, it must implement the HTTP endpoints required by each of the four (4) major workflow categories:
+
+1. **Pull** (REQUIRED) - Ability to fetch content from a registry
+2. **Push** - Ability to publish content to a registry
+3. **Content Discovery** - Ability to list or otherwise query the content stored in a registry
+4. **Content Management** - Ability to delete (or otherwise manipulate) content stored in a registry
+
+At a bare minimum, registries claiming to be "OCI-Compliant" MUST support all facets of the pull workflow.
+
+In order to test a registry's conformance against these workflows, please use the [conformance testing tool](./conformance/).
+
+### Official Certification
+
+Registry providers can self-cetify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
+
+### Workflow Categories
+
+#### Pull
+
+TODO: describe the Pull category and the high-level details
+
+#### Push
+
+TODO: describe the Push category and the high-level details
+
+#### Content Discovery
+
+TODO: describe the Content Discovery category and the high-level details
+
+#### Content Management
+
+TODO: describe the Content Management category and the high-level details
+
 ## Scope
 
 This specification covers URL layout and protocols for interaction between a registry and registry client.
