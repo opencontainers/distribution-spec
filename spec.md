@@ -5,13 +5,7 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 ---
 # Open Container Initiative
 
-## Distribution Specification
-
-This specification defines an API protocol to facilitate distribution of images.
-
-The goal of this specification is to standardize container image distribution based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md).
-
-### Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 	- [Introduction](#introduction)
@@ -31,6 +25,22 @@ The goal of this specification is to standardize container image distribution ba
 	- [Endpoints](#endpoints)
 	- [Error Codes](#error-codes)
 
+## Overview
+
+### Introduction
+
+The Open Container Initiative Distribution Specification defines an API protocol to facilitate and standardize the distribution of content, especially related to container images and associated artifacts.
+
+### Historical Context
+
+The spec is based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md).
+
+For relevant details and a history leading up to this specification, please see the following issues:
+
+- [moby/moby#8093](https://github.com/moby/moby/issues/8093)
+- [moby/moby#9015](https://github.com/moby/moby/issues/9015)
+- [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
+
 ## Notational Conventions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
@@ -39,16 +49,6 @@ The key words "unspecified", "undefined", and "implementation-defined" are to be
 
 An implementation is not compliant if it fails to satisfy one or more of the MUST, MUST NOT, REQUIRED, SHALL, or SHALL NOT requirements for the protocols it implements.
 An implementation is compliant if it satisfies all the MUST, MUST NOT, REQUIRED, SHALL, and SHALL NOT requirements for the protocols it implements.
-
-## Historical Context
-
-For relevant details and a history leading up to this specification, please see the following issues:
-
-- [moby/moby#8093](https://github.com/moby/moby/issues/8093)
-- [moby/moby#9015](https://github.com/moby/moby/issues/9015)
-- [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
-
-<!--- TODO: add relevant background information here --->
 
 ## Scope
 
