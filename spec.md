@@ -63,6 +63,43 @@ Several terms are used frequently in this document and warrant basic definitions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
 
+## Conformance
+
+### Minimum Requirements
+
+For a registry to be considered fully conformant against this specification, it must implement the HTTP endpoints required by each of the four (4) major workflow categories:
+
+1. **Pull** (REQUIRED) - Ability to fetch content from a registry
+2. **Push** - Ability to publish content to a registry
+3. **Content Discovery** - Ability to list or otherwise query the content stored in a registry
+4. **Content Management** - Ability to delete (or otherwise manipulate) content stored in a registry
+
+At a bare minimum, registries claiming to be "OCI-Compliant" MUST support all facets of the pull workflow.
+
+In order to test a registry's conformance against these workflows, please use the [conformance testing tool](./conformance/).
+
+### Official Certification
+
+Registry providers can self-cetify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
+
+### Workflow Categories
+
+#### Pull
+
+TODO: describe the Pull category and the high-level details
+
+#### Push
+
+TODO: describe the Push category and the high-level details
+
+#### Content Discovery
+
+TODO: describe the Content Discovery category and the high-level details
+
+#### Content Management
+
+TODO: describe the Content Management category and the high-level details
+
 ## Scope
 
 This specification covers URL layout and protocols for interaction between a registry and registry client.
