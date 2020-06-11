@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
@@ -153,9 +152,7 @@ var test01Pull = func() {
 		})
 
 		g.Context("Teardown", func() {
-			deleteManifestFirst, _ := strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
-
-			if deleteManifestFirst {
+			if deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
@@ -190,7 +187,7 @@ var test01Pull = func() {
 					BeNumerically("<", 300)))
 			})
 
-			if !deleteManifestFirst {
+			if !deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)

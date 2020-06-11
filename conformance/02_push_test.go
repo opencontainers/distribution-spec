@@ -3,8 +3,6 @@ package conformance
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"strconv"
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
@@ -248,9 +246,7 @@ var test02Push = func() {
 		})
 
 		g.Context("Teardown", func() {
-			deleteManifestFirst, _ := strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
-
-			if deleteManifestFirst {
+			if deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
@@ -297,7 +293,7 @@ var test02Push = func() {
 				))
 			})
 
-			if !deleteManifestFirst {
+			if !deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)

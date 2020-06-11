@@ -124,6 +124,7 @@ var (
 	runContentDiscoverySetup  bool
 	runContentManagementSetup bool
 	skipEmptyLayerTest        bool
+	deleteManifestBeforeBlobs bool
 	Version                   = "unknown"
 )
 
@@ -275,6 +276,7 @@ func init() {
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
 	skipEmptyLayerTest = false
+	deleteManifestBeforeBlobs = false
 
 	if os.Getenv(envVarTagName) != "" &&
 		os.Getenv(envVarManifestDigest) != "" &&
@@ -287,6 +289,7 @@ func init() {
 	}
 
 	skipEmptyLayerTest, _ = strconv.ParseBool(os.Getenv(envVarPushEmptyLayer))
+	deleteManifestBeforeBlobs, _ = strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
 
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"

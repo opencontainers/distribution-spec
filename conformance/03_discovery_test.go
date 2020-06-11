@@ -128,9 +128,7 @@ var test03ContentDiscovery = func() {
 		})
 
 		g.Context("Teardown", func() {
-			deleteManifestFirst, _ := strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
-
-			if deleteManifestFirst {
+			if deleteManifestBeforeBlobs {
 				g.Specify("Delete created manifest & associated tags", func() {
 					SkipIfDisabled(contentDiscovery)
 					RunOnlyIf(runContentDiscoverySetup)
@@ -165,7 +163,7 @@ var test03ContentDiscovery = func() {
 					BeNumerically("<", 300)))
 			})
 
-			if !deleteManifestFirst {
+			if !deleteManifestBeforeBlobs {
 				g.Specify("Delete created manifest & associated tags", func() {
 					SkipIfDisabled(contentDiscovery)
 					RunOnlyIf(runContentDiscoverySetup)
