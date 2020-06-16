@@ -86,7 +86,29 @@ Registry providers can self-cetify by submitting conformance results to [opencon
 
 #### Pull
 
-TODO: describe the Pull category and the high-level details
+##### Pulling Blobs
+
+To pull a blob, perform a `GET` request to a url in the following form:
+`/v2/<name>/blobs/<digest>`
+
+`<name>` is the namespace of the repository, and `<digest>` being the blob's digest.
+
+A GET request to an existing blob URL MUST provide the expected blob, with a reponse code that MUST be `200 OK`.
+
+If the blob is not found in the registry, the response code MUST be `404 Not Found`.
+
+##### Pulling manifests
+
+To pull a manifest, perform a `GET` request to a url in the following form:
+`/v2/<name>/manifests/<reference>`
+
+`<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
+
+The `<reference>` MUST NOT be in any other format.
+
+A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
+
+If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
 #### Push
 
