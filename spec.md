@@ -69,7 +69,7 @@ For a registry to be considered fully conformant against this specification, it 
 1. **Pull** (REQUIRED) - Ability to fetch content from a registry
 2. **Push** - Ability to publish content to a registry
 3. **Content Discovery** - Ability to list or otherwise query the content stored in a registry
-4. **Content Management** - Ability to delete (or otherwise manipulate) content stored in a registry
+4. **Content Management** - Ability to control the full life-cycle of the content stored in a registry
 
 At a bare minimum, registries claiming to be "OCI-Compliant" MUST support all facets of the pull workflow.
 
