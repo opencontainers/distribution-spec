@@ -40,9 +40,7 @@ For relevant details and a history leading up to this specification, please see 
 - [moby/moby#9015](https://github.com/moby/moby/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
-## Definitions
-
-### Common Terms
+### Definitions
 
 Several terms are used frequently in this document and warrant basic definitions:
 
@@ -55,12 +53,8 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Layer**: a single part of all the parts which comprise an artifact
 - **Config**: a special layer defined at the top of a manifest containing artifact metadata
 - **Blob**: a single binary content stored in a registry
-- **Digest**: a unique blob identifier
-- **Content**: a general term for content that can be downloaded from a registry (manifest or blob)
-
-### Document Language
-
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
+- **Digest**: a unique blob identifier, calculated from the blob's content
+- **Content**: a general term for content that can be downloaded from a registry (manifest or blob), and are addressable by a digest
 
 ## Scope
 
