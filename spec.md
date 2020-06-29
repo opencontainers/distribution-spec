@@ -285,7 +285,47 @@ An attempt to pull a nonexistent repository MUST return response code `404 Not F
 
 #### Content Discovery
 
-TODO: describe the Content Discovery category and the high-level details
+Content Discovery provides a way of discovering which tags are available for a given repository.
+
+To fetch the list of tags, perform a `GET` request to a path in the following format:
+`/v2/<name>/tags/list`
+
+`<name>` is the namespace of the repository. Assuming a repository is found, Content Discovery endpoints MUST return a
+`200 OK` response code. The list of tags MAY be empty, if there are no tags on the repository. If the list is not empty,
+the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
+
+Upon success, the response MUST be a json body in the following format:
+```json
+{
+  "name": "<name>",
+  "tags": [
+    "<tag1>",
+    "<tag2>",
+    "<tag3>"
+  ]
+}
+```
+
+`<name>` is the namespace of the repository, and `<tag1>`, `<tag2>`, and `<tag3>` are each tags on the repository.
+
+In addition to fetching the whole list of tags, a subset of the tags can be fetched by providing the `n` query parameter.
+In this case, the path will look like the following:
+`/v2/<name>/tags/list?n=<int>`
+
+`<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested. The response
+to such a request MAY return fewer than `<int>` results, but ONLY when the total number of tags attached to the repository
+is less than `<int>`. Otherwise, the response MUST include `<int>` results. Without the `last` query parameter (described
+next), the list returned will start at the beginning of the list and include `<int>` results. As above, the tags MUST be
+in lexical order.
+
+The `last` query parameter provides further means for limiting the number of tags. It is used exclusively in combination with the
+`n` parameter:
+`/v2/<name>/tags/list?n=<int>&last=<tagname>`
+
+`<name>` is the namespace of the repository, `<int>` is the number of tags requested, and `<tagname>` is the *value* of
+the last tag. `<tagname>` MUST NOT be an index, but rather it MUST be a proper tag. A request of this sort will return
+up to `<int>` tags, beginning non-inclusively with `<tagname>`. That is to say, `<tagname>` will not be included in the
+results, but up to `<int>` tags *after* `<tagname>` will be returned. The tags MUST be in lexical order.
 
 #### Content Management
 
