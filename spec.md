@@ -331,7 +331,30 @@ results, but up to `<int>` tags *after* `<tagname>` will be returned. The tags M
 
 #### Content Management
 
-TODO: describe the Content Management category and the high-level details
+##### Deleting tags
+Content management refers to the deletion of blobs, tags and manifests. Registries MAY implement deletion or they MAY dis-
+able it. Similarly, a registry MAY implement tag deletion, while others MAY allow deletion only by manifest.
+
+`<name>` is the namespace of the repository, and `<tag>` is the name of the tag to be deleted. Upon success, the registry
+MUST respond with a `202 Accepted` code. If tag deletion is disabled, the registry MUST respond with a `400 Bad Request`
+code.
+
+To delete a tag, perform a `DELETE` request to a path in the following format:
+`/v2/<name>/manifests/<tag>`
+
+##### Deleting Manifests
+To delete a manifest, perform a `DELETE` request to a path in the following format:
+`/v2/<name>/manifests/<digest>`
+
+`<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest to be deleted. Upon success, the registry
+MUST respond with a `202 Accepted` code. If the repository does not exist, the response MUST bear the code `404 Not Found`.
+
+##### Deleting Blobs
+To delete a blob, perform a `DELETE` request to a path in the following format:
+`/v2/<name>/blobs/<digest>`
+
+`<name>` is the namespace of the repository, and `<digest>` is the digest of the blob to be deleted. Upon success, the
+registry MUST respond with code `202 Accepted`. If the blob is not found, a `404 Not Found` code MUST be returned.
 
 ## Scope
 
