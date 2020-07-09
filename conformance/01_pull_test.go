@@ -152,6 +152,19 @@ var test01Pull = func() {
 		})
 
 		g.Context("Teardown", func() {
+			if deleteManifestBeforeBlobs {
+				g.Specify("Delete manifest created in setup", func() {
+					SkipIfDisabled(pull)
+					RunOnlyIf(runPullSetup)
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300)))
+				})
+			}
+
 			g.Specify("Delete config blob created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
@@ -174,16 +187,18 @@ var test01Pull = func() {
 					BeNumerically("<", 300)))
 			})
 
-			g.Specify("Delete manifest created in setup", func() {
-				SkipIfDisabled(pull)
-				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
-			})
+			if !deleteManifestBeforeBlobs {
+				g.Specify("Delete manifest created in setup", func() {
+					SkipIfDisabled(pull)
+					RunOnlyIf(runPullSetup)
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300)))
+				})
+			}
 		})
 	})
 }

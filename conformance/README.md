@@ -30,6 +30,7 @@ export OCI_TEST_CONTENT_MANAGEMENT=1
 # Extra settings
 export OCI_HIDE_SKIPPED_WORKFLOWS=0
 export OCI_DEBUG=0
+export OCI_DELETE_MANIFEST_BEFORE_BLOBS=0
 ```
 
 Lastly, run the tests:
@@ -147,6 +148,15 @@ the report, you must set the following in the environment:
 OCI_HIDE_SKIPPED_WORKFLOWS=1
 ```
 
+#### Teardown Order
+
+By default, the teardown phase of each test deletes blobs before manifests. Some registries require the opposite order, deleting manifests before blobs. In this case, you must set the following in the environment:
+
+```
+# Required to delete manifests before blobs
+OCI_DELETE_MANIFEST_BEFORE_BLOBS=1
+```
+
 #### Container Image
 
 You may use the [Dockerfile](./Dockerfile) located in this directory
@@ -172,6 +182,7 @@ docker run --rm \
   -e OCI_TEST_CONTENT_MANAGEMENT=1 \
   -e OCI_HIDE_SKIPPED_WORKFLOWS=0 \
   -e OCI_DEBUG=0 \
+  -e OCI_DELETE_MANIFEST_BEFORE_BLOBS=0 \
   conformance:latest
 ```
 
@@ -206,6 +217,7 @@ jobs:
           OCI_TEST_CONTENT_MANAGEMENT: 1
           OCI_HIDE_SKIPPED_WORKFLOWS: 0
           OCI_DEBUG: 0
+          OCI_DELETE_MANIFEST_BEFORE_BLOBS: 0
       - run: mkdir -p .out/ && mv {report.html,junit.xml} .out/
         if: always()
       - name: Upload test results zip as build artifact
