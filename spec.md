@@ -50,7 +50,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Pull**: the act of downloading blobs and manifests from a registry
 - **Blob**: the binary form of content that is stored by a registry, addressable by a digest
 - **Manifest**: a JSON document which defines an artifact
-- **Config**: a section in the manifest which contains artifact metadata
+- **Config**: a section in the manifest (and associated blob) which contains artifact metadata
 - **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
 - **Digest**: a unique blob identifier, calculated from the blob's content
 
