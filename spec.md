@@ -48,7 +48,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Client**: a tool that communicates with registries
 - **Push**: the act of uploading blobs and manifests to a registry
 - **Pull**: the act of downloading blobs and manifests from a registry
-- **Blob**: the binary form of content that is stored by the registry
+- **Blob**: the binary form of content that is stored by the registry, addressable by a digest
 - **Manifest**: a JSON document which defines an artifact
 - **Config**: a section in the manifest which contains artifact metadata
 - **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing metadata
