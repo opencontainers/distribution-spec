@@ -71,7 +71,10 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusCreated),
+					Equal(http.StatusAccepted),
+				))
 			})
 
 			g.Specify("GET request to blob URL from prior request should yield 200", func() {

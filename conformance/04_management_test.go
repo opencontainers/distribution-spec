@@ -15,6 +15,7 @@ var test04ContentManagement = func() {
 		const defaultTagName = "tagtest0"
 		var tagToDelete string
 		var numTags int
+		var lastResponseCode int
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test config blob", func() {
@@ -111,7 +112,9 @@ var test04ContentManagement = func() {
 				Expect(resp.StatusCode()).To(SatisfyAny(
 					Equal(http.StatusAccepted),
 					Equal(http.StatusNotFound),
+					Equal(http.StatusMethodNotAllowed),
 				))
+				lastResponseCode = resp.StatusCode()
 			})
 
 			g.Specify("GET request to deleted manifest URL should yield 404 response, unless delete is disallowed", func() {
@@ -125,7 +128,7 @@ var test04ContentManagement = func() {
 				))
 			})
 
-			g.Specify("GET request to tags list should reflect manifest deletion", func() {
+			g.Specify("GET request to tags list should reflect manifest deletion, unless delete is disallowed", func() {
 				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
@@ -135,7 +138,11 @@ var test04ContentManagement = func() {
 				jsonData := []byte(resp.String())
 				err = json.Unmarshal(jsonData, tagList)
 				Expect(err).To(BeNil())
-				Expect(len(tagList.Tags)).To(BeNumerically("<", numTags))
+				if lastResponseCode == http.StatusMethodNotAllowed {
+					Expect(len(tagList.Tags)).To(Equal(numTags))
+				} else {
+					Expect(len(tagList.Tags)).To(BeNumerically("<", numTags))
+				}
 			})
 		})
 
@@ -153,16 +160,22 @@ var test04ContentManagement = func() {
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusAccepted),
+					Equal(http.StatusMethodNotAllowed),
+				))
 			})
 
-			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
+			g.Specify("GET request to deleted blob URL should yield 404 response, unless delete is disallowed", func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusNotFound),
+					Equal(http.StatusOK),
+				))
 			})
 		})
 
