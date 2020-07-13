@@ -52,7 +52,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Manifest**: a JSON document which defines an artifact
 - **Config**: a section in the manifest (and associated blob) which contains artifact metadata
 - **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
-- **Digest**: a unique identifier created from the cryptographic hash of a blob's content
+- **Digest**: a unique identifier created from a cryptographic hash of a blob's content
 
 ## Scope
 
