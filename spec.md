@@ -33,6 +33,7 @@ The goal of this specification is to standardize container image distribution ba
   - [Listing Repositories](#listing-repositories)
   - [Listing Image Tags](#listing-image-tags)
   - [Deleting an Image](#deleting-an-image)
+  - [Extensions](#extensions)
 - [Detail](#detail)
   - [Errors](#errors-2)
   - [Base](#base)
@@ -839,6 +840,25 @@ If the image had already been deleted or did not exist, a `404 Not Found` respon
     Accept: application/vnd.docker.distribution.manifest.v2+json
 
 > for more details, see: [compatibility.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md#backward-compatibility)
+
+### Extensions
+
+Extensions to the distribution-spec's registry API are for the purpose of defining OPTIONAL endpoint behaviour.
+Extensions are only complementary to the distribution-spec only having additive features.
+Client can discover the extensions available, if any.
+
+These extensions are similar concept to the use of "feature flags".
+
+See the [`./ext/` directory](./ext/) for extensions available and their definitions.
+
+Extensions MUST NOT affect the behavior or endpoints of the core distribution specification.
+
+All extension endpoints are nested under `ext/`.
+
+```HTTP
+    GET /v2/ext/0/
+```
+
 
 ## Detail
 
