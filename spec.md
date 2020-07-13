@@ -33,6 +33,7 @@ The goal of this specification is to standardize container image distribution ba
   - [Listing Repositories](#listing-repositories)
   - [Listing Image Tags](#listing-image-tags)
   - [Deleting an Image](#deleting-an-image)
+  - [Proxying](#registry-Proxying)
 - [Detail](#detail)
   - [Errors](#errors-2)
   - [Base](#base)
@@ -840,6 +841,23 @@ If the image had already been deleted or did not exist, a `404 Not Found` respon
 
 > for more details, see: [compatibility.md](https://github.com/docker/distribution/blob/master/docs/spec/manifest-v2-2.md#backward-compatibility)
 
+### Registry Proxying
+
+A registry MAY operate as a proxy to another registry to delegate functionality or implement additional functionality.
+An example of delegating functionality is proxying pull operations to another registry.
+An example of adding functionality is implementing a pull-through cache of pulls to another registry.
+When operating as a proxy, the `Host` header passed to the registry will be the host of the PROXY and NOT the host in the repository name used by the client.
+A `ns` query parameter on pull operations is OPTIONAL, but when used specifies the host in a repository name used by a client.
+The host in the repository name SHOULD be the first component of the full repository name used by a client.
+This host component in a repository name SHOULD be the registry host a client considers the primary source for a repository, however, a client MAY be configured to use a different host.
+This original host component used by the client is referred to as the source host in the API documentation.
+A proxy registry MAY use the `ns` query parameter to resolve an upstream registry host.
+A registry MAY choose to ignore the `ns` query parameter.
+
+A client SHOULD be aware of whether a registry host is being used is a proxy, such as when the `ns` query parameter differs from the `Host` header.
+A client SHOULD avoid sending `ns` query parameters to non-proxy registries.
+A client SHOULD NOT unintentionally send authorization credentials for an upstream registry to a proxy registry.
+
 ## Detail
 
 > **Note**: This section is still under construction.
@@ -1019,11 +1037,12 @@ The implementation MAY impose a maximum limit and return a partial set with pagi
 
 The following parameters SHOULD be specified on the request:
 
-| Name            | Kind   | Description                                                    |
-|-----------------|--------|----------------------------------------------------------------|
-| `Host`          | header | Standard HTTP Host Header. SHOULD be set to the registry host. |
-| `Authorization` | header | An RFC7235 compliant authorization header.                     |
-| `name`          | path   | Name of the target repository.                                 |
+| Name            | Kind   | Description                                                       |
+|-----------------|--------|-------------------------------------------------------------------|
+| `Host`          | header | Standard HTTP Host Header. SHOULD be set to the registry host.    |
+| `Authorization` | header | An RFC7235 compliant authorization header.                        |
+| `name`          | path   | Name of the target repository.                                    |
+| `ns`            | query  | (OPTIONAL) Namespace of repository. SHOULD be set to source host. |
 
 ###### On Success: OK
 
@@ -1199,6 +1218,7 @@ The following parameters SHOULD be specified on the request:
 | `name` | path  | Name of the target repository.                                                              |
 | `n`    | query | Limit the number of entries in each response. If not present, all entries will be returned. |
 | `last` | query | Result set will include values lexically after last.                                        |
+| `ns`   | query | (OPTIONAL) Namespace of repository. SHOULD be set to source host.                           |
 
 ###### On Success: OK
 
@@ -1377,12 +1397,13 @@ Authorization: <scheme> <token>
 
 The following parameters SHOULD be specified on the request:
 
-| Name            | Kind   | Description                                                    |
-|-----------------|--------|----------------------------------------------------------------|
-| `Host`          | header | Standard HTTP Host Header. SHOULD be set to the registry host. |
-| `Authorization` | header | An RFC7235 compliant authorization header.                     |
-| `name`          | path   | Name of the target repository.                                 |
-| `reference`     | path   | Tag or digest of the target manifest.                          |
+| Name            | Kind   | Description                                                       |
+|-----------------|--------|-------------------------------------------------------------------|
+| `Host`          | header | Standard HTTP Host Header. SHOULD be set to the registry host.    |
+| `Authorization` | header | An RFC7235 compliant authorization header.                        |
+| `name`          | path   | Name of the target repository.                                    |
+| `reference`     | path   | Tag or digest of the target manifest.                             |
+| `ns`            | query  | (OPTIONAL) Namespace of repository. SHOULD be set to source host. |
 
 ###### On Success: OK
 
@@ -2098,12 +2119,13 @@ Authorization: <scheme> <token>
 
 The following parameters SHOULD be specified on the request:
 
-| Name            | Kind   | Description                                                   |
-|-----------------|--------|---------------------------------------------------------------|
-| `Host`          | header | Standard HTTP Host Header.SHOULD be set to the registry host. |
-| `Authorization` | header | An RFC7235 compliant authorization header.                    |
-| `name`          | path   | Name of the target repository.                                |
-| `digest`        | path   | Digest of desired blob.                                       |
+| Name            | Kind   | Description                                                       |
+|-----------------|--------|-------------------------------------------------------------------|
+| `Host`          | header | Standard HTTP Host Header.SHOULD be set to the registry host.     |
+| `Authorization` | header | An RFC7235 compliant authorization header.                        |
+| `name`          | path   | Name of the target repository.                                    |
+| `digest`        | path   | Digest of desired blob.                                           |
+| `ns`            | query  | (OPTIONAL) Namespace of repository. SHOULD be set to source host. |
 
 ###### On Success: OK
 
@@ -2348,13 +2370,14 @@ If the header `Accept-Range: bytes` is returned, range requests can be used to f
 
 The following parameters SHOULD be specified on the request:
 
-| Name            | Kind   | Description                                                   |
-|-----------------|--------|---------------------------------------------------------------|
-| `Host`          | header | Standard HTTP Host Header.SHOULD be set to the registry host. |
-| `Authorization` | header | An RFC7235 compliant authorization header.                    |
-| `Range`         | header | HTTP Range header specifying blob chunk.                      |
-| `name`          | path   | Name of the target repository.                                |
-| `digest`        | path   | Digest of desired blob.                                       |
+| Name            | Kind   | Description                                                       |
+|-----------------|--------|-------------------------------------------------------------------|
+| `Host`          | header | Standard HTTP Host Header.SHOULD be set to the registry host.     |
+| `Authorization` | header | An RFC7235 compliant authorization header.                        |
+| `Range`         | header | HTTP Range header specifying blob chunk.                          |
+| `name`          | path   | Name of the target repository.                                    |
+| `digest`        | path   | Digest of desired blob.                                           |
+| `ns`            | query  | (OPTIONAL) Namespace of repository. SHOULD be set to source host. |
 
 ###### On Success: Partial Content
 
