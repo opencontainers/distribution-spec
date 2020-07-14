@@ -4552,11 +4552,6 @@ Paginated tag results can be retrieved by adding an `n` parameter to the request
 GET /v2/<name>/tags/list?n=<integer>
 ```
 
-<<<<<<< HEAD
-| Code              | Message           | Description                                                         |
-|-------------------|-------------------|---------------------------------------------------------------------|
-| `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
-=======
 The above specifies that a tags response SHOULD be returned, from the start of the result set, ordered lexically, limiting the number of results to `n`. The response to such a request would look as follows:
 
 ```HTTP
@@ -4726,4 +4721,3 @@ The error codes encountered via the API are enumerated in the following table:
 
 
 -->
->>>>>>> e6a43cca2dec5ec086d7ef9fec5679ee3576522e
