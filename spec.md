@@ -62,14 +62,14 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### Requirements
 
-Registries conforming to this specification must handle all APIs required by the following workflow categories:
+Registries conforming to this specification MUST handle all APIs required by the following workflow categories:
 
 1. **Pull** - Clients are able to pull from the registry
 2. **Push** (OPTIONAL) - Clients are able to push to the registry
 3. **Content Discovery** (OPTIONAL) - Clients are able to list or otherwise query the content stored in the registry
 4. **Content Management** (OPTIONAL) - Clients are able to control the full life-cycle of the content stored in the registry
 
-In order to test a registry's conformance against these workflow categoriesq, please use the [conformance testing tool](./conformance/).
+In order to test a registry's conformance against these workflow categories, please use the [conformance testing tool](./conformance/).
 
 ### Official Certification
 
