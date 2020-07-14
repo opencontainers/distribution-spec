@@ -44,17 +44,15 @@ For relevant details and a history leading up to this specification, please see 
 
 Several terms are used frequently in this document and warrant basic definitions:
 
-- **Registry**: a HTTP service which implements this spec
-- **Client**: a tool that communicates with registries over HTTP
-- **Push**: the act of uploading content to a registry
-- **Pull**: the act of downloading content from a registry
-- **Artifact**: a single piece of content, made up of a manifest and one or more layers
+- **Registry**: a service that handles the required APIs defined in this specification
+- **Client**: a tool that communicates with registries
+- **Push**: the act of uploading blobs and manifests to a registry
+- **Pull**: the act of downloading blobs and manifests from a registry
+- **Blob**: the binary form of content that is stored by a registry, addressable by a digest
 - **Manifest**: a JSON document which defines an artifact
-- **Layer**: a single part of all the parts which comprise an artifact
-- **Config**: a special layer defined at the top of a manifest containing artifact metadata
-- **Blob**: a single binary content stored in a registry
-- **Digest**: a unique blob identifier, calculated from the blob's content
-- **Content**: a general term for content that can be downloaded from a registry (manifest or blob), and are addressable by a digest
+- **Config**: a section in the manifest (and associated blob) which contains artifact metadata
+- **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
+- **Digest**: a unique identifier created from a cryptographic hash of a blob's content
 
 ## Conformance
 
