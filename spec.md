@@ -40,14 +40,19 @@ For relevant details and a history leading up to this specification, please see 
 - [moby/moby#9015](https://github.com/moby/moby/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
-## Notational Conventions
+### Definitions
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
+Several terms are used frequently in this document and warrant basic definitions:
 
-The key words "unspecified", "undefined", and "implementation-defined" are to be interpreted as described in the [rationale for the C99 standard][c99-unspecified].
-
-An implementation is not compliant if it fails to satisfy one or more of the MUST, MUST NOT, REQUIRED, SHALL, or SHALL NOT requirements for the protocols it implements.
-An implementation is compliant if it satisfies all the MUST, MUST NOT, REQUIRED, SHALL, and SHALL NOT requirements for the protocols it implements.
+- **Registry**: a service that handles the required APIs defined in this specification
+- **Client**: a tool that communicates with registries
+- **Push**: the act of uploading blobs and manifests to a registry
+- **Pull**: the act of downloading blobs and manifests from a registry
+- **Blob**: the binary form of content that is stored by a registry, addressable by a digest
+- **Manifest**: a JSON document which defines an artifact
+- **Config**: a section in the manifest (and associated blob) which contains artifact metadata
+- **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
+- **Digest**: a unique identifier created from a cryptographic hash of a blob's content
 
 ## Scope
 
