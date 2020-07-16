@@ -44,17 +44,15 @@ For relevant details and a history leading up to this specification, please see 
 
 Several terms are used frequently in this document and warrant basic definitions:
 
-- **Registry**: a HTTP service which implements this spec
-- **Client**: a tool that communicates with registries over HTTP
-- **Push**: the act of uploading content to a registry
-- **Pull**: the act of downloading content from a registry
-- **Artifact**: a single piece of content, made up of a manifest and one or more layers
+- **Registry**: a service that handles the required APIs defined in this specification
+- **Client**: a tool that communicates with registries
+- **Push**: the act of uploading blobs and manifests to a registry
+- **Pull**: the act of downloading blobs and manifests from a registry
+- **Blob**: the binary form of content that is stored by a registry, addressable by a digest
 - **Manifest**: a JSON document which defines an artifact
-- **Layer**: a single part of all the parts which comprise an artifact
-- **Config**: a special layer defined at the top of a manifest containing artifact metadata
-- **Blob**: a single binary content stored in a registry
-- **Digest**: a unique blob identifier, calculated from the blob's content
-- **Content**: a general term for content that can be downloaded from a registry (manifest or blob), and are addressable by a digest
+- **Config**: a section in the manifest (and associated blob) which contains artifact metadata
+- **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
+- **Digest**: a unique identifier created from a cryptographic hash of a blob's content
 
 ## Conformance
 
@@ -62,22 +60,20 @@ Several terms are used frequently in this document and warrant basic definitions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
 
-### Minimum Requirements
+### Requirements
 
-For a registry to be considered fully conformant against this specification, it must implement the HTTP endpoints required by each of the four (4) major workflow categories:
+Registries conforming to this specification MUST handle all APIs required by the following workflow categories:
 
-1. **Pull** (REQUIRED) - Ability to fetch content from a registry
-2. **Push** - Ability to publish content to a registry
-3. **Content Discovery** - Ability to list or otherwise query the content stored in a registry
-4. **Content Management** - Ability to control the full life-cycle of the content stored in a registry
+1. **Pull** - Clients are able to pull from the registry
+2. **Push** (OPTIONAL) - Clients are able to push to the registry
+3. **Content Discovery** (OPTIONAL) - Clients are able to list or otherwise query the content stored in the registry
+4. **Content Management** (OPTIONAL) - Clients are able to control the full life-cycle of the content stored in the registry
 
-At a bare minimum, registries claiming to be "OCI-Compliant" MUST support all facets of the pull workflow.
-
-In order to test a registry's conformance against these workflows, please use the [conformance testing tool](./conformance/).
+In order to test a registry's conformance against these workflow categories, please use the [conformance testing tool](./conformance/).
 
 ### Official Certification
 
-Registry providers can self-cetify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
+Registry providers can self-certify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
 
 ### Workflow Categories
 
