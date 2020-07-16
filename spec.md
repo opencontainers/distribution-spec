@@ -54,6 +54,45 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
 - **Digest**: a unique identifier created from a cryptographic hash of a blob's content
 
+## Conformance
+
+### Notational Conventions
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
+
+### Requirements
+
+Registries conforming to this specification MUST handle all APIs required by the following workflow categories:
+
+1. **Pull** - Clients are able to pull from the registry
+2. **Push** (OPTIONAL) - Clients are able to push to the registry
+3. **Content Discovery** (OPTIONAL) - Clients are able to list or otherwise query the content stored in the registry
+4. **Content Management** (OPTIONAL) - Clients are able to control the full life-cycle of the content stored in the registry
+
+In order to test a registry's conformance against these workflow categories, please use the [conformance testing tool](./conformance/).
+
+### Official Certification
+
+Registry providers can self-certify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
+
+### Workflow Categories
+
+#### Pull
+
+TODO: describe the Pull category and the high-level details
+
+#### Push
+
+TODO: describe the Push category and the high-level details
+
+#### Content Discovery
+
+TODO: describe the Content Discovery category and the high-level details
+
+#### Content Management
+
+TODO: describe the Content Management category and the high-level details
+
 ## Scope
 
 This specification covers URL layout and protocols for interaction between a registry and registry client.
