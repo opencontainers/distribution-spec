@@ -355,6 +355,24 @@ To delete a blob, perform a `DELETE` request to a path in the following format:
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the blob to be deleted. Upon success, the
 registry MUST respond with code `202 Accepted`. If the blob is not found, a `404 Not Found` code MUST be returned.
 
+### API
+
+#### Endpoints
+| ID | API endpoint | Accepted Successful Response Codes | Accepted Failure Response Codes |
+| ---|---|---|---|
+| 1a | `GET /v2/` | `200` | `404`/`401` |
+| 2a | `GET /v2/<name>/blobs/<digest>` | `200` | `404` |
+| 3a | `GET /v2/<name>/manifests/<reference>` | `200` | `404` |
+| 4a | `POST /v2/<name>/blobs/uploads/` | `202` | `404` |
+| 4b | `POST /v2/<name>/blobs/uploads/?digest=<digest>` | `201` | `404`/`400` |
+| 5a | `PATCH /v2/<name>/blobs/uploads/<reference>` | `202` | `404`/`416` |
+| 6a | `PUT /v2/<name>/blobs/uploads/<reference>?digest=<digest>` | `201` | `404`/`400` |
+| 7a | `PUT /v2/<name>/manifests/<reference>` | `201` | `404` |
+| 8a | `GET /v2/<name>/tags/list` | `200`  | `404` |
+| 8b | `GET /v2/<name>/tags/list?n=<integer>&last=<integer>` | `200` | `404` |
+| 9a | `DELETE /v2/<name>/manifests/<reference>` | `202` | `404`/`400`/`405` |
+| 10a | `DELETE /v2/<name>/blobs/<digest>` | `202` | `404`/`405` |
+
 ## Scope
 
 This specification covers URL layout and protocols for interaction between a registry and registry client.
