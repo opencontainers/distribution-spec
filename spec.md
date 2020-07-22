@@ -374,6 +374,48 @@ The API operates over HTTP. Below is a summary of the endpoints used by the API.
 | 9a | `DELETE` | `/v2/<name>/manifests/<reference>` | `202` | `404`/`400`/`405` |
 | 10a | `DELETE` | `/v2/<name>/blobs/<digest>` | `202` | `404`/`405` |
 
+#### Error Codes
+
+A `4XX` response code from the registry MAY return a body in any format. If the response body is in JSON format, it MUST
+have the following format:
+
+```json
+    {
+        "errors": [
+            {
+                "code": "<error identifier>",
+                "message": "<message describing condition>",
+                "detail": "<unstructured>"
+            },
+            ...
+        ]
+    }
+```
+
+The `code` field MUST be a unique identifier, containing only uppercase alphabetic characters and underscores. The
+`message` field is OPTIONAL, and if present, it SHOULD be a human readable string or MAY be empty. The `detail` field is
+OPTIONAL and MAY contain arbitrary JSON data providing information the client can use to resolve the issue.
+
+The `code` field MUST be one of the following:
+
+| Code                    | Description                                    |
+|-------------------------|------------------------------------------------|
+| `BLOB_UNKNOWN`          | blob unknown to registry                       |
+| `BLOB_UPLOAD_INVALID`   | blob upload invalid                            |
+| `BLOB_UPLOAD_UNKNOWN`   | blob upload unknown to registry                |
+| `DIGEST_INVALID`        | provided digest did not match uploaded content |
+| `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       |
+| `MANIFEST_INVALID`      | manifest invalid                               |
+| `MANIFEST_UNKNOWN`      | manifest unknown                               |
+| `MANIFEST_UNVERIFIED`   | manifest failed signature verification         |
+| `NAME_INVALID`          | invalid repository name                        |
+| `NAME_UNKNOWN`          | repository name not known to registry          |
+| `SIZE_INVALID`          | provided length did not match content length   |
+| `TAG_INVALID`           | manifest tag did not match URI                 |
+| `UNAUTHORIZED`          | authentication required                        |
+| `DENIED`                | requested access to the resource is denied     |
+| `UNSUPPORTED`           | the operation is unsupported                  |
+
 ## Scope
 
 This specification covers URL layout and protocols for interaction between a registry and registry client.
