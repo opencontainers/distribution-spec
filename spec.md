@@ -84,7 +84,7 @@ Registry providers can self-certify by submitting conformance results to [openco
 To pull a blob, perform a `GET` request to a url in the following form:
 `/v2/<name>/blobs/<digest>`
 
-`<name>` is the namespace of the repository, and `<digest>` being the blob's digest.
+`<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
 A GET request to an existing blob URL MUST provide the expected blob, with a reponse code that MUST be `200 OK`.
 
