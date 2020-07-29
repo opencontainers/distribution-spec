@@ -49,10 +49,11 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Push**: the act of uploading blobs and manifests to a registry
 - **Pull**: the act of downloading blobs and manifests from a registry
 - **Blob**: the binary form of content that is stored by a registry, addressable by a digest
-- **Manifest**: a JSON document which defines an artifact
+- **Manifest**: a JSON document which defines an artifact. Manifests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/manifest.md)
 - **Config**: a section in the manifest (and associated blob) which contains artifact metadata
 - **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
-- **Digest**: a unique identifier created from a cryptographic hash of a blob's content
+- **Digest**: a unique identifier created from a cryptographic hash of a blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/b6e51fa50549ee0bd5188494912a7f4c382cb0d4/descriptor.md#digests)
+- **Tag**: a custom, human-readable manifest identifier
 
 ## Conformance
 
@@ -355,6 +356,15 @@ registry MUST respond with code `202 Accepted`. If the blob is not found, a `404
 
 ### API
 The API operates over HTTP. Below is a summary of the endpoints used by the API.
+
+#### Determining Support
+To check whether or not the registry implements this specification, perform a `GET` request to the following endpoint:
+[1a](#Endpoints) `/v2/`.
+
+If the response is `200 OK`, then the registry implements this specification.
+
+This endpoint MAY be used for authentication/authorization purposes, but this is out of the purview
+of this specification.
 
 #### Endpoints
 | ID | Method | API endpoint | Accepted Successful Response Codes | Accepted Failure Response Codes |
