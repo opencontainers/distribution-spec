@@ -112,12 +112,12 @@ There are two ways to push blobs: chunked or monolithic.
 ##### Pushing a blob monolithically
 
 There are two ways to push a blob monolithically:
-1. A single`POST` request
+1. A single `POST` request
 2. A `POST` request followed by a `PUT` request
 
 ---
 
-To push a blob monolithically by the *first method*, perform a `POST` request to a URL in the following form, and with the following headers and body:
+To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
 
 `/v2/<name>/blobs/uploads/?digest=<digest>`
 ```
@@ -128,11 +128,11 @@ Content-Type: application/octet-stream
 <upload byte stream>
 ```
 
-With `<name>` being the repository's namespace, `<digest>` being the blob's digest, and `<length>` being the size (in bytes) of the blob.
+Here, `<name>` is the repository's namespace, `<digest>` is the blob's digest, and `<length>` is the size (in bytes) of the blob.
 
 The `Content-Length` header MUST match the blob's actual content length. Likewise, the `<digest>` MUST match the blob's digest.
 
-Successful completion of the request MUST return a `201 Created` code, and MUST include the following header:
+Successful completion of the request MUST return a `201 Created`, and MUST include the following header:
 
 ```
 Location: <blob-location>
@@ -142,7 +142,7 @@ With `<blob-location>` being a pullable blob URL.
 
 ---
 
-To push a blob monolithically by the *second method*, there are two steps:
+To push a blob monolithically by using a POST request followed by a PUT request, there are two steps:
 1. Obtain a session id (upload URL)
 2. Upload the blob to said URL
 
@@ -262,7 +262,7 @@ Here, `<blob-location>` is a pullable blob URL.
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
 and body:
 `/v2/<name>/manifests/<reference>`
-```http request
+```
 Content-Type: application/vnd.oci.image.manifest.v1+json
 ```
 ```
@@ -270,15 +270,12 @@ Content-Type: application/vnd.oci.image.manifest.v1+json
 ```
 
 `<name>` is the namespace of the repository, and the `<reference>` MUST be either a) a digest or b) a tag.
-```regexp
-^[0-9]+-[0-9]+$
-```
 
-The uploaded manifest MUST reference any layers that make up the repository. However, the layers field MAY
+The uploaded manifest MUST reference any layers that make up the artifact. However, the layers field MAY
 be empty. Upon a successful upload, the registry MUST return response code `201 Created`, and MUST have the
 following header:
 
-```http request
+```
 Location: <location>
 ```
 
