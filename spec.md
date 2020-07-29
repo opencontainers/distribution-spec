@@ -82,7 +82,7 @@ Registry providers can self-certify by submitting conformance results to [openco
 ##### Pulling Blobs
 
 To pull a blob, perform a `GET` request to a url in the following form:
-`/v2/<name>/blobs/<digest>`
+[2a](#Endpoints) `/v2/<name>/blobs/<digest>`
 
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
@@ -93,7 +93,7 @@ If the blob is not found in the registry, the response code MUST be `404 Not Fou
 ##### Pulling manifests
 
 To pull a manifest, perform a `GET` request to a url in the following form:
-`/v2/<name>/manifests/<reference>`
+[3a](#Endpoints) `/v2/<name>/manifests/<reference>`
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
 
@@ -119,7 +119,7 @@ There are two ways to push a blob monolithically:
 
 To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
 
-`/v2/<name>/blobs/uploads/?digest=<digest>`
+[4b](#Endpoints) `/v2/<name>/blobs/uploads/?digest=<digest>`
 ```
 Content-Length: <length>
 Content-Type: application/octet-stream
@@ -148,7 +148,7 @@ To push a blob monolithically by using a POST request followed by a PUT request,
 
 To obtain a session ID, perform a `POST` request to a URL in the following format:
 
-`/v2/<name>/blobs/uploads/`
+[4a](#Endpoints) `/v2/<name>/blobs/uploads/`
 
 Here, `<name>` refers to the namespace of the repository. Upon success, the response MUST have a code of `202 Accepted`, and MUST include the following header:
 
@@ -162,7 +162,7 @@ Optionally, the location MAY be absolute (containing the protocol and/or hostnam
 
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
-`<location>?digest=<digest>`
+[6a](#Endpoints) `<location>?digest=<digest>`
 ```
 Content-Length: <length>
 Content-Type: aplication/octet-stream
@@ -201,7 +201,7 @@ Please reference the above section for restrictions on the `<location>`.
 ---
 To upload a chunk, issue a `PATCH` request to a URL path in the following format, and with the following headers and body:
 
-URL path: `<location>`
+URL path: [5a](#Endpoints) `<location>`
 ```
 Content-Type: application/octet-stream
 Content-Range: <range>
@@ -261,7 +261,7 @@ Here, `<blob-location>` is a pullable blob URL.
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
 and body:
-`/v2/<name>/manifests/<reference>`
+[7a](#Endpoints) `/v2/<name>/manifests/<reference>`
 ```
 Content-Type: application/vnd.oci.image.manifest.v1+json
 ```
@@ -288,7 +288,7 @@ An attempt to pull a nonexistent repository MUST return response code `404 Not F
 Currently, the only functionality provided by this workflow is the ability to discover tags.
 
 To fetch the list of tags, perform a `GET` request to a path in the following format:
-`/v2/<name>/tags/list`
+[8a](#Endpoints) `/v2/<name>/tags/list`
 
 `<name>` is the namespace of the repository. Assuming a repository is found, this request MUST return a
 `200 OK` response code. The list of tags MAY be empty, if there are no tags on the repository. If the list is not empty,
@@ -310,7 +310,7 @@ Upon success, the response MUST be a json body in the following format:
 
 In addition to fetching the whole list of tags, a subset of the tags can be fetched by providing the `n` query parameter.
 In this case, the path will look like the following:
-`/v2/<name>/tags/list?n=<int>`
+[8b](#Endpoints) `/v2/<name>/tags/list?n=<int>`
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested. The response
 to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository
@@ -320,9 +320,7 @@ in lexical order.
 
 The `last` query parameter provides further means for limiting the number of tags. It is used exclusively in combination with the
 `n` parameter:
-```
-/v2/<name>/tags/list?n=<int>&last=<tagname>
-```
+[8b](#Endpoints) `/v2/<name>/tags/list?n=<int>&last=<tagname>`
 
 `<name>` is the namespace of the repository, `<int>` is the number of tags requested, and `<tagname>` is the *value* of
 the last tag. `<tagname>` MUST NOT be a numerical index, but rather it MUST be a proper tag. A request of this sort will return
@@ -339,18 +337,18 @@ MUST respond with a `202 Accepted` code. If tag deletion is disabled, the regist
 `400 Bad Request` or a `405 Method Not Allowed`.
 
 To delete a tag, perform a `DELETE` request to a path in the following format:
-`/v2/<name>/manifests/<tag>`
+[9a](#Endpoints) `/v2/<name>/manifests/<tag>`
 
 ##### Deleting Manifests
 To delete a manifest, perform a `DELETE` request to a path in the following format:
-`/v2/<name>/manifests/<digest>`
+[9a](#Endpoints) `/v2/<name>/manifests/<digest>`
 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest to be deleted. Upon success, the registry
 MUST respond with a `202 Accepted` code. If the repository does not exist, the response MUST return `404 Not Found`.
 
 ##### Deleting Blobs
 To delete a blob, perform a `DELETE` request to a path in the following format:
-`/v2/<name>/blobs/<digest>`
+[10a](#Endpoints) `/v2/<name>/blobs/<digest>`
 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the blob to be deleted. Upon success, the
 registry MUST respond with code `202 Accepted`. If the blob is not found, a `404 Not Found` code MUST be returned.
@@ -803,7 +801,7 @@ Range: bytes=0-0
 To get the status of an upload, issue a GET request to the upload URL:
 
 ```HTTP
-GET /v2/<name>/blobs/uploads/<session_id>
+GET /v2/<name>/globs/uploads/<session_id>
 Host: <registry host>
 ```
 
