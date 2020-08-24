@@ -132,7 +132,7 @@ Here, `<name>` is the repository's namespace, `<digest>` is the blob's digest, a
 
 The `Content-Length` header MUST match the blob's actual content length. Likewise, the `<digest>` MUST match the blob's digest.
 
-Successful completion of the request MUST return a `201 Created`, and MUST include the following header:
+Successful completion of the request MUST return either a `201 Created` or a `202 Accepted`, and MUST include the following header:
 
 ```
 Location: <blob-location>
@@ -372,7 +372,7 @@ of this specification.
 | 2a | `GET` | `/v2/<name>/blobs/<digest>` | `200` | `404` |
 | 3a | `GET` | `/v2/<name>/manifests/<reference>` | `200` | `404` |
 | 4a | `POST` | `/v2/<name>/blobs/uploads/` | `202` | `404` |
-| 4b | `POST` | `/v2/<name>/blobs/uploads/?digest=<digest>` | `201` | `404`/`400` |
+| 4b | `POST` | `/v2/<name>/blobs/uploads/?digest=<digest>` | `201`/`202` | `404`/`400` |
 | 5a | `PATCH` | `/v2/<name>/blobs/uploads/<reference>` | `202` | `404`/`416` |
 | 6a | `PUT` | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>` | `201` | `404`/`400` |
 | 7a | `PUT` | `/v2/<name>/manifests/<reference>` | `201` | `404` |
