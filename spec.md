@@ -52,7 +52,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Manifest**: a JSON document which defines an artifact. Manifests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/manifest.md)
 - **Config**: a section in the manifest (and associated blob) which contains artifact metadata
 - **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
-- **Digest**: a unique identifier created from a cryptographic hash of a blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/b6e51fa50549ee0bd5188494912a7f4c382cb0d4/descriptor.md#digests)
+- **Digest**: a unique identifier created from a cryptographic hash of a blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/descriptor.md)
 - **Tag**: a custom, human-readable manifest identifier
 
 ## Conformance
@@ -97,7 +97,6 @@ To pull a manifest, perform a `GET` request to a url in the following form:
 [3a](#Endpoints) `/v2/<name>/manifests/<reference>`
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
-
 The `<reference>` MUST NOT be in any other format.
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
@@ -292,7 +291,7 @@ To fetch the list of tags, perform a `GET` request to a path in the following fo
 [8a](#Endpoints) `/v2/<name>/tags/list`
 
 `<name>` is the namespace of the repository. Assuming a repository is found, this request MUST return a
-`200 OK` response code. The list of tags MAY be empty, if there are no tags on the repository. If the list is not empty,
+`200 OK` response code. The list of tags MAY be empty if there are no tags on the repository. If the list is not empty,
 the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
 
 Upon success, the response MUST be a json body in the following format:
@@ -391,7 +390,7 @@ have the following format:
     {
         "errors": [
             {
-                "code": "<error identifier>",
+                "code": "<error identifier, see below>",
                 "message": "<message describing condition>",
                 "detail": "<unstructured>"
             },
