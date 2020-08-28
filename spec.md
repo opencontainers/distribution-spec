@@ -78,6 +78,7 @@ The following is an incomplete list of features, discussed during the process of
 - Migration from v2compatibility representation
 
 ## Conformance
+TODO: add general text about artifact validation requirements
 
 ### Notational Conventions
 
