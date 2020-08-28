@@ -11,6 +11,7 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 	- [Introduction](#introduction)
 	- [Historical Context](#historical-context)
 	- [Definitions](#defintions)
+	- [Scope](#scope)
 - [Conformance](#conformance)
 	- [Notational Conventions](#notational-conventions)
 	- [Minimum Requirements](#minimum-requirements)
@@ -54,6 +55,27 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
 - **Digest**: a unique identifier created from a cryptographic hash of a blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/descriptor.md)
 - **Tag**: a custom, human-readable manifest identifier
+
+## Scope
+
+This specification covers URL layout and protocols for interaction between a registry and registry client.
+Registry implementations MAY implement other API endpoints, but they are not covered by this specification.
+
+This specification includes the following features:
+
+- Namespace-oriented URI Layout
+- PUSH/PULL registry server for V2 image manifest format
+- Resumable layer PUSH support
+- V2 Client (Consumer) requirements
+
+### Future
+
+The following is an incomplete list of features, discussed during the process of cutting this specification, which MAY be out of the scope of this specification, MAY be the purview of another specification, or MAY be deferred to a future version:
+
+- Authentication and authorization support: While authentication and authorization support will influence this specification, those details MAY be left to a future specification. However, relevant header definitions and error codes are present to provide an indication of what a client MAY encounter.
+- Immutable image references
+- Multiple architecture support
+- Migration from v2compatibility representation
 
 ## Conformance
 

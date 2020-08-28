@@ -4,9 +4,10 @@
 > For the purposes of implementation, if any details below differ from the described request flows above, the section below SHOULD be corrected.
 > When they match, this note SHOULD be removed.
 
-The behavior of the endpoints are covered in detail in this section, organized by route and entity.
-All aspects of the request and responses are covered, including headers, parameters and body formats.
-Examples of requests and their corresponding responses, with success and failure, are enumerated.
+The behavior of the endpoints are covered in detail in this section, organized by the API protocol flows (route)
+consisting of requests and responses between the entities implementing the API. All aspects of the request and responses
+are covered, including headers, parameters and body formats. Examples of requests and their corresponding responses, with
+success and failure, are enumerated.
 
 > **Note**: The sections on endpoint detail are arranged with an example request, a description of the request, followed by information about that request.
 
