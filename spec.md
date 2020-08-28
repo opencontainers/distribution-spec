@@ -101,17 +101,10 @@ Registry providers can self-certify by submitting conformance results to [openco
 ### Workflow Categories
 
 #### Pull
+The process of pulling an image centers around retrieving these two components. An "image" is a combination of a JSON
+manifest and individual layer files.
 
-##### Pulling Blobs
-
-To pull a blob, perform a `GET` request to a url in the following form:
-[2a](#Endpoints) `/v2/<name>/blobs/<digest>`
-
-`<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
-
-A GET request to an existing blob URL MUST provide the expected blob, with a reponse code that MUST be `200 OK`.
-
-If the blob is not found in the registry, the response code MUST be `404 Not Found`.
+The first step in pulling an image is to retrieve the manifest.
 
 ##### Pulling manifests
 
@@ -125,7 +118,21 @@ A GET request to an existing manifest URL MUST provide the expected manifest, wi
 
 If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
+##### Pulling Blobs
+
+To pull a blob, perform a `GET` request to a url in the following form:
+[2a](#Endpoints) `/v2/<name>/blobs/<digest>`
+
+`<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
+
+A GET request to an existing blob URL MUST provide the expected blob, with a reponse code that MUST be `200 OK`.
+
+If the blob is not found in the registry, the response code MUST be `404 Not Found`.
+
+
 #### Push
+Pushing an image works in the opposite order as a pull: the blobs making up the layers are pushed first, and the
+manifest last.
 
 ##### Pushing blobs
 
