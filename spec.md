@@ -45,7 +45,6 @@ For relevant details and a history leading up to this specification, please see 
 
 Several terms are used frequently in this document and warrant basic definitions:
 
-#### Other
 - **Registry**: a service that handles the required APIs defined in this specification
 - **Client**: a tool that communicates with registries
 - **Push**: the act of uploading blobs and manifests to a registry
