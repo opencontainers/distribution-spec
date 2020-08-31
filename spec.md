@@ -11,7 +11,7 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 	- [Introduction](#introduction)
 	- [Historical Context](#historical-context)
 	- [Definitions](#defintions)
-	- [Scope](#scope)
+- [Use Cases](#use-cases)
 - [Conformance](#conformance)
 	- [Notational Conventions](#notational-conventions)
 	- [Minimum Requirements](#minimum-requirements)
@@ -57,26 +57,36 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Digest**: a unique identifier created from a cryptographic hash of a blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests)
 - **Tag**: a custom, human-readable manifest identifier
 
-## Scope
+## Use Cases
 
-This specification covers URL layout and protocols for interaction between a registry and registry client.
-Registry implementations MAY implement other API endpoints, but they are not covered by this specification.
+### Image Verification
 
-This specification includes the following features:
+A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
+The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
+An untrusted registry returns a manifest.
+Before proceeding to download the individual layers, the engine verifies the manifest's signature, ensuring that the content was produced from a trusted source and no tampering has occurred.
+After each layer is downloaded, the engine verifies the digest of the layer, ensuring that the content matches that specified by the manifest.
 
-- Namespace-oriented URI Layout
-- PUSH/PULL registry server for V2 image manifest format
-- Resumable layer PUSH support
-- V2 Client (Consumer) requirements
+### Resumable Push
 
-### Future
+Company X's build servers lose connectivity to a distribution endpoint before completing an image layer transfer.
+After connectivity returns, the build server attempts to re-upload the image.
+The registry notifies the build server that the upload has already been partially attempted.
+The build server responds by only sending the remaining data to complete the image file.
 
-The following is an incomplete list of features, discussed during the process of cutting this specification, which MAY be out of the scope of this specification, MAY be the purview of another specification, or MAY be deferred to a future version:
+### Resumable Pull
 
-- Authentication and authorization support: While authentication and authorization support will influence this specification, those details MAY be left to a future specification. However, relevant header definitions and error codes are present to provide an indication of what a client MAY encounter.
-- Immutable image references
-- Multiple architecture support
-- Migration from v2compatibility representation
+Company X is having more connectivity problems but this time in their deployment datacenter.
+When downloading an image, the connection is interrupted before completion.
+The client keeps the partial data and uses http `Range` requests to avoid downloading repeated data.
+
+### Layer Upload De-duplication
+
+Company Y's build system creates two identical layers from build processes A and B.
+Build process A completes uploading the layer before B.
+When process B attempts to upload the layer, the registry indicates that its not necessary because the layer is already known.
+
+If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry (Note: we MAY modify this to prevent dogpile with some locking mechanism).
 
 ## Conformance
 TODO: add general text about artifact validation requirements
