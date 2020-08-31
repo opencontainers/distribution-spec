@@ -1,7 +1,7 @@
 ---
 title: "HTTP API V2"
 description: "Specification for the Registry API."
-keywords: registry, on-prem, images, tags, repository, distribution, api, advanced
+keywords: registry, on-prem, images, artifacts, tags, repository, distribution, api, advanced
 ---
 # Open Container Initiative
 
@@ -60,7 +60,7 @@ Several terms are used frequently in this document and warrant basic definitions
 
 TODO: more detail on workflows related
 
-### Image Verification
+### Artifact Verification
 
 A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
 The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
@@ -70,15 +70,15 @@ After each layer is downloaded, the engine verifies the digest of the layer, ens
 
 ### Resumable Push
 
-Company X's build servers lose connectivity to a distribution endpoint before completing an image layer transfer.
-After connectivity returns, the build server attempts to re-upload the image.
+Company X's build servers lose connectivity to a distribution endpoint before completing an artifact layer transfer.
+After connectivity returns, the build server attempts to re-upload the artifact.
 The registry notifies the build server that the upload has already been partially attempted.
-The build server responds by only sending the remaining data to complete the image file.
+The build server responds by only sending the remaining data to complete the artifact file.
 
 ### Resumable Pull
 
 Company X is having more connectivity problems but this time in their deployment datacenter.
-When downloading an image, the connection is interrupted before completion.
+When downloading an artifact, the connection is interrupted before completion.
 The client keeps the partial data and uses http `Range` requests to avoid downloading repeated data.
 
 ### Layer Upload De-duplication
@@ -114,10 +114,10 @@ Registry providers can self-certify by submitting conformance results to [openco
 ### Workflow Categories
 
 #### Pull
-The process of pulling an image centers around retrieving these two components. An "image" is a combination of a JSON
+The process of pulling an artifact centers around retrieving these two components. An "artifact" is a combination of a JSON
 manifest and individual layer files.
 
-The first step in pulling an image is to retrieve the manifest.
+The first step in pulling an artifact is to retrieve the manifest.
 
 ##### Pulling manifests
 
@@ -144,7 +144,7 @@ If the blob is not found in the registry, the response code MUST be `404 Not Fou
 
 
 #### Push
-Pushing an image works in the opposite order as a pull: the blobs making up the layers are pushed first, and the
+Pushing an artifact works in the opposite order as a pull: the blobs making up the layers are pushed first, and the
 manifest last.
 
 ##### Pushing blobs
