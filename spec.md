@@ -58,6 +58,8 @@ Several terms are used frequently in this document and warrant basic definitions
 
 ## Use Cases
 
+TODO: more detail on workflows related
+
 ### Image Verification
 
 A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
