@@ -46,15 +46,15 @@ For relevant details and a history leading up to this specification, please see 
 Several terms are used frequently in this document and warrant basic definitions:
 
 - **Registry**: a service that handles the required APIs defined in this specification
-- **Client**: a tool that communicates with registries
-- **Push**: the act of uploading blobs and manifests to a registry
-- **Pull**: the act of downloading blobs and manifests from a registry
-- **Blob**: the binary form of content that is stored by a registry, addressable by a digest
-- **Manifest**: a JSON document which defines an artifact. Manifests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/manifest.md)
-- **Config**: a section in the manifest (and associated blob) which contains artifact metadata
-- **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
-- **Digest**: a unique identifier created from a cryptographic hash of a blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests)
-- **Tag**: a custom, human-readable manifest identifier
+- **Client**: a tool that communicates with Registries
+- **Push**: the act of uploading Blobs and Manifests to a Registry
+- **Pull**: the act of downloading Blobs and Manifests from a Registry
+- **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
+- **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/manifest.md)
+- **Config**: a section in the Manifest (and associated Blob) which contains Artifact metadata
+- **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
+- **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests)
+- **Tag**: a custom, human-readable Manifest identifier
 
 ## Use Cases
 
