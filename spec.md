@@ -36,7 +36,7 @@ For guidance on how to apply this specification to other artifact types, please 
 
 ### Historical Context
 
-The spec is based on the specification for the Docker Registry HTTP API V2 protocol ([apdx-1](#appendix)).
+The spec is based on the specification for the Docker Registry HTTP API V2 protocol <sup>[apdx-1](#appendix)</sup>.
 
 For relevant details and a history leading up to this specification, please see the following issues:
 
@@ -53,10 +53,10 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Push**: the act of uploading Blobs and Manifests to a Registry
 - **Pull**: the act of downloading Blobs and Manifests from a Registry
 - **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
-- **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec ([apdx-2](#appendix))
+- **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>
 - **Config**: a section in the Manifest (and associated Blob) which contains Artifact metadata
 - **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
-- **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec ([apdx-3](#appendix))
+- **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable Manifest identifier
 
 ## Notational Conventions
@@ -124,7 +124,7 @@ Typically, the first step in pulling an artifact is to retrieve the manifest. Ho
 ##### Pulling manifests
 
 To pull a manifest, perform a `GET` request to a url in the following form:
-[end-3](#endpoints) `/v2/<name>/manifests/<reference>`
+`/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
 The `<reference>` MUST NOT be in any other format.
@@ -136,7 +136,7 @@ If the manifest is not found in the registry, the response code MUST be `404 Not
 ##### Pulling Blobs
 
 To pull a blob, perform a `GET` request to a url in the following form:
-[end-2](#endpoints) `/v2/<name>/blobs/<digest>`
+`/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
@@ -163,7 +163,7 @@ There are two ways to push a blob monolithically:
 
 To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
 
-[end-4b](#endpoints) `/v2/<name>/blobs/uploads/?digest=<digest>`
+`/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
 ```
 Content-Length: <length>
 Content-Type: application/octet-stream
@@ -192,7 +192,7 @@ To push a blob monolithically by using a POST request followed by a PUT request,
 
 To obtain a session ID, perform a `POST` request to a URL in the following format:
 
-[end-4a](#endpoints) `/v2/<name>/blobs/uploads/`
+`/v2/<name>/blobs/uploads/` <sup>[end-4a](#endpoints)</sup>
 
 Here, `<name>` refers to the namespace of the repository. Upon success, the response MUST have a code of `202 Accepted`, and MUST include the following header:
 
@@ -206,7 +206,7 @@ Optionally, the location MAY be absolute (containing the protocol and/or hostnam
 
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
-[end-6](#endpoints) `<location>?digest=<digest>`
+`<location>?digest=<digest>` <sup>[end-6](#endpoints)</sup>
 ```
 Content-Length: <length>
 Content-Type: aplication/octet-stream
@@ -245,7 +245,7 @@ Please reference the above section for restrictions on the `<location>`.
 ---
 To upload a chunk, issue a `PATCH` request to a URL path in the following format, and with the following headers and body:
 
-URL path: [end-5](#endpoints) `<location>`
+URL path: `<location>` <sup>[end-5](#endpoints)</sup>
 ```
 Content-Type: application/octet-stream
 Content-Range: <range>
@@ -305,7 +305,7 @@ Here, `<blob-location>` is a pullable blob URL.
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
 and body:
-[end-7](#endpoints) `/v2/<name>/manifests/<reference>`
+`/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
 ```
 Content-Type: application/vnd.oci.image.manifest.v1+json
 ```
@@ -332,7 +332,7 @@ An attempt to pull a nonexistent repository MUST return response code `404 Not F
 Currently, the only functionality provided by this workflow is the ability to discover tags.
 
 To fetch the list of tags, perform a `GET` request to a path in the following format:
-[end-8a](#endpoints) `/v2/<name>/tags/list`
+`/v2/<name>/tags/list` <sup>[end-8a](#endpoints)</sup>
 
 `<name>` is the namespace of the repository. Assuming a repository is found, this request MUST return a
 `200 OK` response code. The list of tags MAY be empty if there are no tags on the repository. If the list is not empty,
@@ -354,7 +354,7 @@ Upon success, the response MUST be a json body in the following format:
 
 In addition to fetching the whole list of tags, a subset of the tags can be fetched by providing the `n` query parameter.
 In this case, the path will look like the following:
-[end-8b](#endpoints) `/v2/<name>/tags/list?n=<int>`
+`/v2/<name>/tags/list?n=<int>` <sup>[end-8b](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested. The response
 to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository
@@ -364,7 +364,7 @@ in lexical order.
 
 The `last` query parameter provides further means for limiting the number of tags. It is used exclusively in combination with the
 `n` parameter:
-[end-8b](#endpoints) `/v2/<name>/tags/list?n=<int>&last=<tagname>`
+`/v2/<name>/tags/list?n=<int>&last=<tagname>` <sup>[end-8b](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, `<int>` is the number of tags requested, and `<tagname>` is the *value* of
 the last tag. `<tagname>` MUST NOT be a numerical index, but rather it MUST be a proper tag. A request of this sort will return
@@ -381,18 +381,18 @@ MUST respond with a `202 Accepted` code. If tag deletion is disabled, the regist
 `400 Bad Request` or a `405 Method Not Allowed`.
 
 To delete a tag, perform a `DELETE` request to a path in the following format:
-[end-9](#endpoints) `/v2/<name>/manifests/<tag>`
+`/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
 
 ##### Deleting Manifests
 To delete a manifest, perform a `DELETE` request to a path in the following format:
-[end-9](#endpoints) `/v2/<name>/manifests/<digest>`
+`/v2/<name>/manifests/<digest>` <sup>[end-9](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest to be deleted. Upon success, the registry
 MUST respond with a `202 Accepted` code. If the repository does not exist, the response MUST return `404 Not Found`.
 
 ##### Deleting Blobs
 To delete a blob, perform a `DELETE` request to a path in the following format:
-[end-10](#endpoints) `/v2/<name>/blobs/<digest>`
+`/v2/<name>/blobs/<digest>` <sup>[end-10](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the blob to be deleted. Upon success, the
 registry MUST respond with code `202 Accepted`. If the blob is not found, a `404 Not Found` code MUST be returned.
@@ -402,7 +402,7 @@ The API operates over HTTP. Below is a summary of the endpoints used by the API.
 
 #### Determining Support
 To check whether or not the registry implements this specification, perform a `GET` request to the following endpoint:
-[end-1](#endpoints) `/v2/`.
+`/v2/` <sup>[end-1](#endpoints)</sup>.
 
 If the response is `200 OK`, then the registry implements this specification.
 
