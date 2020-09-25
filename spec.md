@@ -94,7 +94,8 @@ Company Y's build system creates two identical layers from build processes A and
 Build process A completes uploading the layer before B.
 When process B attempts to upload the layer, the registry indicates that its not necessary because the layer is already known.
 
-If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry (Note: we MAY modify this to prevent dogpile with some locking mechanism).
+If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry.
+Even in the case where both uploads are accepted, the registry may securely only store one copy of the layer since the computed digests match.
 
 ## Conformance
 TODO: add general text about artifact validation requirements
@@ -148,6 +149,10 @@ If the blob is not found in the registry, the response code MUST be `404 Not Fou
 #### Push
 Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first, and the
 manifest last. However, this order is not required, and you MAY upload content to the registry in any order.
+
+Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first,
+and the manifest last. Strictly speaking, content can be uploaded to the registry in any order, but a registry MAY reject
+a manifest if it references blobs that are not yet uploaded, resulting in a `BLOB_UNKNOWN` error <sup>[code-1](#error-codes)</sup>.
 
 ##### Pushing blobs
 
