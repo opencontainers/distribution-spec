@@ -147,8 +147,6 @@ If the blob is not found in the registry, the response code MUST be `404 Not Fou
 
 
 #### Push
-Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first, and the
-manifest last. However, this order is not required, and you MAY upload content to the registry in any order.
 
 Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first,
 and the manifest last. Strictly speaking, content can be uploaded to the registry in any order, but a registry MAY reject
