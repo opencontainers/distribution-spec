@@ -1,9 +1,4 @@
----
-title: "HTTP API V2"
-description: "Specification for the Registry API."
-keywords: registry, on-prem, images, tags, repository, distribution, api, advanced
----
-# Open Container Initiative
+# Open Container Initiative Distribution Specification
 
 ## Table of Contents
 
@@ -11,9 +6,9 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 	- [Introduction](#introduction)
 	- [Historical Context](#historical-context)
 	- [Definitions](#defintions)
-	- [Scope](#scope)
+- [Use Cases](#use-cases)
+- [Notational Conventions](#notational-conventions)
 - [Conformance](#conformance)
-	- [Notational Conventions](#notational-conventions)
 	- [Minimum Requirements](#minimum-requirements)
 	- [Official Certification](#official-certification)
 	- [Workflow Categories](#workflow-categories)
@@ -21,19 +16,27 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 		2. [Push](#push)
 		3. [Content Discovery](#content-discovery)
 		4. [Content Management](#content-management)
-- [HTTP API](#http-api)
+- [API](#api)
 	- [Endpoints](#endpoints)
 	- [Error Codes](#error-codes)
+- [Appendix](#appendix)
+
 
 ## Overview
 
 ### Introduction
 
-The Open Container Initiative Distribution Specification defines an API protocol to facilitate and standardize the distribution of content, especially related to container images and associated artifacts.
+The **Open Container Initiative Distribution Specification** (a.k.a. "OCI Distribution Spec") defines an API protocol to facilitate and standardize the distribution of content.
+
+While this specification is designed to be agnostic to content types, much of it is centered around the distribution of container images.
+Many of the concepts here, such as "manifests" and "digests", are originally defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec"),
+and the OCI Image is considered to be the primary supported artifact type.
+
+For guidance on how to apply this specification to other artifact types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts/blob/master/artifact-authors.md) (a.k.a. "OCI Artifacts").
 
 ### Historical Context
 
-The spec is based on the specification for the [Docker Registry HTTP API V2 protocol](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md).
+The spec is based on the specification for the Docker Registry HTTP API V2 protocol <sup>[apdx-1](#appendix)</sup>.
 
 For relevant details and a history leading up to this specification, please see the following issues:
 
@@ -46,43 +49,56 @@ For relevant details and a history leading up to this specification, please see 
 Several terms are used frequently in this document and warrant basic definitions:
 
 - **Registry**: a service that handles the required APIs defined in this specification
-- **Client**: a tool that communicates with registries
-- **Push**: the act of uploading blobs and manifests to a registry
-- **Pull**: the act of downloading blobs and manifests from a registry
-- **Blob**: the binary form of content that is stored by a registry, addressable by a digest
-- **Manifest**: a JSON document which defines an artifact. Manifests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/manifest.md)
-- **Config**: a section in the manifest (and associated blob) which contains artifact metadata
-- **Artifact**: one conceptual piece of content stored as blobs with an accompanying manifest containing a config
-- **Digest**: a unique identifier created from a cryptographic hash of a blob's content. Digests are defined under the [OCI Image Spec](https://github.com/opencontainers/image-spec/blob/master/descriptor.md)
-- **Tag**: a custom, human-readable manifest identifier
+- **Client**: a tool that communicates with Registries
+- **Push**: the act of uploading Blobs and Manifests to a Registry
+- **Pull**: the act of downloading Blobs and Manifests from a Registry
+- **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
+- **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>
+- **Config**: a section in the Manifest (and associated Blob) which contains Artifact metadata
+- **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
+- **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
+- **Tag**: a custom, human-readable Manifest identifier
 
-## Scope
+## Notational Conventions
 
-This specification covers URL layout and protocols for interaction between a registry and registry client.
-Registry implementations MAY implement other API endpoints, but they are not covered by this specification.
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
 
-This specification includes the following features:
+## Use Cases
 
-- Namespace-oriented URI Layout
-- PUSH/PULL registry server for V2 image manifest format
-- Resumable layer PUSH support
-- V2 Client (Consumer) requirements
+TODO: more detail on workflows related
 
-### Future
+### Artifact Verification
 
-The following is an incomplete list of features, discussed during the process of cutting this specification, which MAY be out of the scope of this specification, MAY be the purview of another specification, or MAY be deferred to a future version:
+A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
+The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
+An untrusted registry returns a manifest.
+Before proceeding to download the individual layers, the engine verifies the manifest's signature, ensuring that the content was produced from a trusted source and no tampering has occurred.
+After each layer is downloaded, the engine verifies the digest of the layer, ensuring that the content matches that specified by the manifest.
 
-- Authentication and authorization support: While authentication and authorization support will influence this specification, those details MAY be left to a future specification. However, relevant header definitions and error codes are present to provide an indication of what a client MAY encounter.
-- Immutable image references
-- Multiple architecture support
-- Migration from v2compatibility representation
+### Resumable Push
+
+Company X's build servers lose connectivity to a distribution endpoint before completing an artifact layer transfer.
+After connectivity returns, the build server attempts to re-upload the artifact.
+The registry notifies the build server that the upload has already been partially attempted.
+The build server responds by only sending the remaining data to complete the artifact file.
+
+### Resumable Pull
+
+Company X is having more connectivity problems but this time in their deployment datacenter.
+When downloading an artifact, the connection is interrupted before completion.
+The client keeps the partial data and uses http `Range` requests to avoid downloading repeated data.
+
+### Layer Upload De-duplication
+
+Company Y's build system creates two identical layers from build processes A and B.
+Build process A completes uploading the layer before B.
+When process B attempts to upload the layer, the registry indicates that its not necessary because the layer is already known.
+
+If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry.
+Even in the case where both uploads are accepted, the registry may securely only store one copy of the layer since the computed digests match.
 
 ## Conformance
 TODO: add general text about artifact validation requirements
-
-### Notational Conventions
-
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](http://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
 
 ### Requirements
 
@@ -102,15 +118,14 @@ Registry providers can self-certify by submitting conformance results to [openco
 ### Workflow Categories
 
 #### Pull
-The process of pulling an image centers around retrieving these two components. An "image" is a combination of a JSON
-manifest and individual layer files.
+The process of pulling an artifact centers around retrieving two components: the manifest and one or more blobs.
 
-The first step in pulling an image is to retrieve the manifest.
+Typically, the first step in pulling an artifact is to retrieve the manifest. However, you MAY retrieve content from the registry in any order.
 
 ##### Pulling manifests
 
 To pull a manifest, perform a `GET` request to a url in the following form:
-[3a](#Endpoints) `/v2/<name>/manifests/<reference>`
+`/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
 The `<reference>` MUST NOT be in any other format.
@@ -122,18 +137,20 @@ If the manifest is not found in the registry, the response code MUST be `404 Not
 ##### Pulling Blobs
 
 To pull a blob, perform a `GET` request to a url in the following form:
-[2a](#Endpoints) `/v2/<name>/blobs/<digest>`
+`/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
-A GET request to an existing blob URL MUST provide the expected blob, with a reponse code that MUST be `200 OK`.
+A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
 
 If the blob is not found in the registry, the response code MUST be `404 Not Found`.
 
 
 #### Push
-Pushing an image works in the opposite order as a pull: the blobs making up the layers are pushed first, and the
-manifest last.
+
+Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first,
+and the manifest last. Strictly speaking, content can be uploaded to the registry in any order, but a registry MAY reject
+a manifest if it references blobs that are not yet uploaded, resulting in a `BLOB_UNKNOWN` error <sup>[code-1](#error-codes)</sup>.
 
 ##### Pushing blobs
 
@@ -149,7 +166,7 @@ There are two ways to push a blob monolithically:
 
 To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
 
-[4b](#Endpoints) `/v2/<name>/blobs/uploads/?digest=<digest>`
+`/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
 ```
 Content-Length: <length>
 Content-Type: application/octet-stream
@@ -178,7 +195,7 @@ To push a blob monolithically by using a POST request followed by a PUT request,
 
 To obtain a session ID, perform a `POST` request to a URL in the following format:
 
-[4a](#Endpoints) `/v2/<name>/blobs/uploads/`
+`/v2/<name>/blobs/uploads/` <sup>[end-4a](#endpoints)</sup>
 
 Here, `<name>` refers to the namespace of the repository. Upon success, the response MUST have a code of `202 Accepted`, and MUST include the following header:
 
@@ -192,7 +209,7 @@ Optionally, the location MAY be absolute (containing the protocol and/or hostnam
 
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
-[6a](#Endpoints) `<location>?digest=<digest>`
+`<location>?digest=<digest>` <sup>[end-6](#endpoints)</sup>
 ```
 Content-Length: <length>
 Content-Type: aplication/octet-stream
@@ -231,7 +248,7 @@ Please reference the above section for restrictions on the `<location>`.
 ---
 To upload a chunk, issue a `PATCH` request to a URL path in the following format, and with the following headers and body:
 
-URL path: [5a](#Endpoints) `<location>`
+URL path: `<location>` <sup>[end-5](#endpoints)</sup>
 ```
 Content-Type: application/octet-stream
 Content-Range: <range>
@@ -243,7 +260,7 @@ Content-Length: <length>
 
 The `<location>` refers to the URL obtained from the preceding `POST` request.
 
-The `<range>` refers to the byte range of the chunk, and MUST be inclusive on both ends.  The first chunk's range MUST begin with `0`. It MUST match the following regular expression:
+The `<range>` refers to the byte range of the chunk, and MUST be inclusive on both ends. The first chunk's range MUST begin with `0`. It MUST match the following regular expression:
 
 ```regexp
 ^[0-9]+-[0-9]+$
@@ -291,7 +308,7 @@ Here, `<blob-location>` is a pullable blob URL.
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
 and body:
-[7a](#Endpoints) `/v2/<name>/manifests/<reference>`
+`/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
 ```
 Content-Type: application/vnd.oci.image.manifest.v1+json
 ```
@@ -301,7 +318,7 @@ Content-Type: application/vnd.oci.image.manifest.v1+json
 
 `<name>` is the namespace of the repository, and the `<reference>` MUST be either a) a digest or b) a tag.
 
-The uploaded manifest MUST reference any layers that make up the artifact. However, the layers field MAY
+The uploaded manifest MUST reference any blobs that make up the artifact. However, the list of blobs MAY
 be empty. Upon a successful upload, the registry MUST return response code `201 Created`, and MUST have the
 following header:
 
@@ -318,7 +335,7 @@ An attempt to pull a nonexistent repository MUST return response code `404 Not F
 Currently, the only functionality provided by this workflow is the ability to discover tags.
 
 To fetch the list of tags, perform a `GET` request to a path in the following format:
-[8a](#Endpoints) `/v2/<name>/tags/list`
+`/v2/<name>/tags/list` <sup>[end-8a](#endpoints)</sup>
 
 `<name>` is the namespace of the repository. Assuming a repository is found, this request MUST return a
 `200 OK` response code. The list of tags MAY be empty if there are no tags on the repository. If the list is not empty,
@@ -340,7 +357,7 @@ Upon success, the response MUST be a json body in the following format:
 
 In addition to fetching the whole list of tags, a subset of the tags can be fetched by providing the `n` query parameter.
 In this case, the path will look like the following:
-[8b](#Endpoints) `/v2/<name>/tags/list?n=<int>`
+`/v2/<name>/tags/list?n=<int>` <sup>[end-8b](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested. The response
 to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository
@@ -350,7 +367,7 @@ in lexical order.
 
 The `last` query parameter provides further means for limiting the number of tags. It is used exclusively in combination with the
 `n` parameter:
-[8b](#Endpoints) `/v2/<name>/tags/list?n=<int>&last=<tagname>`
+`/v2/<name>/tags/list?n=<int>&last=<tagname>` <sup>[end-8b](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, `<int>` is the number of tags requested, and `<tagname>` is the *value* of
 the last tag. `<tagname>` MUST NOT be a numerical index, but rather it MUST be a proper tag. A request of this sort will return
@@ -367,18 +384,18 @@ MUST respond with a `202 Accepted` code. If tag deletion is disabled, the regist
 `400 Bad Request` or a `405 Method Not Allowed`.
 
 To delete a tag, perform a `DELETE` request to a path in the following format:
-[9a](#Endpoints) `/v2/<name>/manifests/<tag>`
+`/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
 
 ##### Deleting Manifests
 To delete a manifest, perform a `DELETE` request to a path in the following format:
-[9a](#Endpoints) `/v2/<name>/manifests/<digest>`
+`/v2/<name>/manifests/<digest>` <sup>[end-9](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest to be deleted. Upon success, the registry
 MUST respond with a `202 Accepted` code. If the repository does not exist, the response MUST return `404 Not Found`.
 
 ##### Deleting Blobs
 To delete a blob, perform a `DELETE` request to a path in the following format:
-[10a](#Endpoints) `/v2/<name>/blobs/<digest>`
+`/v2/<name>/blobs/<digest>` <sup>[end-10](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the blob to be deleted. Upon success, the
 registry MUST respond with code `202 Accepted`. If the blob is not found, a `404 Not Found` code MUST be returned.
@@ -388,7 +405,7 @@ The API operates over HTTP. Below is a summary of the endpoints used by the API.
 
 #### Determining Support
 To check whether or not the registry implements this specification, perform a `GET` request to the following endpoint:
-[1a](#Endpoints) `/v2/`.
+`/v2/` <sup>[end-1](#endpoints)</sup>.
 
 If the response is `200 OK`, then the registry implements this specification.
 
@@ -396,20 +413,21 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 of this specification.
 
 #### Endpoints
-| ID | Method | API endpoint | Accepted Successful Response Codes | Accepted Failure Response Codes |
-| ---| --- | ---|---|---|
-| 1a | `GET` | `/v2/` | `200` | `404`/`401` |
-| 2a | `GET` | `/v2/<name>/blobs/<digest>` | `200` | `404` |
-| 3a | `GET` | `/v2/<name>/manifests/<reference>` | `200` | `404` |
-| 4a | `POST` | `/v2/<name>/blobs/uploads/` | `202` | `404` |
-| 4b | `POST` | `/v2/<name>/blobs/uploads/?digest=<digest>` | `201`/`202` | `404`/`400` |
-| 5a | `PATCH` | `/v2/<name>/blobs/uploads/<reference>` | `202` | `404`/`416` |
-| 6a | `PUT` | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>` | `201` | `404`/`400` |
-| 7a | `PUT` | `/v2/<name>/manifests/<reference>` | `201` | `404` |
-| 8a | `GET` | `/v2/<name>/tags/list` | `200`  | `404` |
-| 8b | `GET` | `/v2/<name>/tags/list?n=<integer>&last=<integer>` | `200` | `404` |
-| 9a | `DELETE` | `/v2/<name>/manifests/<reference>` | `202` | `404`/`400`/`405` |
-| 10a | `DELETE` | `/v2/<name>/blobs/<digest>` | `202` | `404`/`405` |
+
+| ID     | Method   | API endpoint                                           | Accepted Successful Response Codes | Accepted Failure Response Codes |
+| ------ | -------- | ------------------------------------------------------ | ---------------------------------- | ------------------------------- |
+| end-1  | `GET`    | `/v2/`                                                 | `200`                              | `404`/`401`                     |
+| end-2  | `GET`    | `/v2/<name>/blobs/<digest>`                            | `200`                              | `404`                           |
+| end-3  | `GET`    | `/v2/<name>/manifests/<reference>`                     | `200`                              | `404`                           |
+| end-4a | `POST`   | `/v2/<name>/blobs/uploads/`                            | `202`                              | `404`                           |
+| end-4b | `POST`   | `/v2/<name>/blobs/uploads/?digest=<digest>`            | `201`/`202`                        | `404`/`400`                     |
+| end-5  | `PATCH`  | `/v2/<name>/blobs/uploads/<reference>`                 | `202`                              | `404`/`416`                     |
+| end-6  | `PUT`    | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>` | `201`                              | `404`/`400`                     |
+| end-7  | `PUT`    | `/v2/<name>/manifests/<reference>`                     | `201`                              | `404`                           |
+| end-8a | `GET`    | `/v2/<name>/tags/list`                                 | `200`                              | `404`                           |
+| end-8b | `GET`    | `/v2/<name>/tags/list?n=<integer>&last=<integer>`      | `200`                              | `404`                           |
+| end-9  | `DELETE` | `/v2/<name>/manifests/<reference>`                     | `202`                              | `404`/`400`/`405`               |
+| end-10 | `DELETE` | `/v2/<name>/blobs/<digest>`                            | `202`                              | `404`/`405`                     |
 
 #### Error Codes
 
@@ -435,20 +453,31 @@ OPTIONAL and MAY contain arbitrary JSON data providing information the client ca
 
 The `code` field MUST be one of the following:
 
-| Code                    | Description                                    |
-|-------------------------|------------------------------------------------|
-| `BLOB_UNKNOWN`          | blob unknown to registry                       |
-| `BLOB_UPLOAD_INVALID`   | blob upload invalid                            |
-| `BLOB_UPLOAD_UNKNOWN`   | blob upload unknown to registry                |
-| `DIGEST_INVALID`        | provided digest did not match uploaded content |
-| `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       |
-| `MANIFEST_INVALID`      | manifest invalid                               |
-| `MANIFEST_UNKNOWN`      | manifest unknown                               |
-| `MANIFEST_UNVERIFIED`   | manifest failed signature verification         |
-| `NAME_INVALID`          | invalid repository name                        |
-| `NAME_UNKNOWN`          | repository name not known to registry          |
-| `SIZE_INVALID`          | provided length did not match content length   |
-| `TAG_INVALID`           | manifest tag did not match URI                 |
-| `UNAUTHORIZED`          | authentication required                        |
-| `DENIED`                | requested access to the resource is denied     |
-| `UNSUPPORTED`           | the operation is unsupported                  |
+| ID      | Code                    | Description                                    |
+|-------- | ------------------------|------------------------------------------------|
+| code-1  | `BLOB_UNKNOWN`          | blob unknown to registry                       |
+| code-2  | `BLOB_UPLOAD_INVALID`   | blob upload invalid                            |
+| code-3  | `BLOB_UPLOAD_UNKNOWN`   | blob upload unknown to registry                |
+| code-4  | `DIGEST_INVALID`        | provided digest did not match uploaded content |
+| code-5  | `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       |
+| code-6  | `MANIFEST_INVALID`      | manifest invalid                               |
+| code-7  | `MANIFEST_UNKNOWN`      | manifest unknown                               |
+| code-8  | `MANIFEST_UNVERIFIED`   | manifest failed signature verification         |
+| code-9  | `NAME_INVALID`          | invalid repository name                        |
+| code-10 | `NAME_UNKNOWN`          | repository name not known to registry          |
+| code-11 | `SIZE_INVALID`          | provided length did not match content length   |
+| code-12 | `TAG_INVALID`           | manifest tag did not match URI                 |
+| code-13 | `UNAUTHORIZED`          | authentication required                        |
+| code-14 | `DENIED`                | requested access to the resource is denied     |
+| code-15 | `UNSUPPORTED`           | the operation is unsupported                  |
+
+### Appendix
+
+The following is a list of documents referenced in this spec:
+
+| ID     | Title | Description |
+| ------ | ----- | ----------- |
+| apdx-1 | [Docker Registry HTTP API V2](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md) | The original document upon which this spec was based |
+| apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail (warning: some of this information may be out-of-date or not yet implemented) |
+| apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
+| apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
