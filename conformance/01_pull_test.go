@@ -159,9 +159,13 @@ var test01Pull = func() {
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300)))
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
 				})
 			}
 
@@ -171,9 +175,13 @@ var test01Pull = func() {
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300),
+					),
+					Equal(http.StatusMethodNotAllowed),
+				))
 			})
 
 			g.Specify("Delete layer blob created in setup", func() {
@@ -182,9 +190,13 @@ var test01Pull = func() {
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					SatisfyAll(
+						BeNumerically(">=", 200),
+						BeNumerically("<", 300),
+					),
+					Equal(http.StatusMethodNotAllowed),
+				))
 			})
 
 			if !deleteManifestBeforeBlobs {
@@ -194,9 +206,13 @@ var test01Pull = func() {
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300)))
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
 				})
 			}
 		})
