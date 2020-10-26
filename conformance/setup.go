@@ -246,10 +246,10 @@ func init() {
 	testBlobBDigest = godigest.FromBytes(testBlobB).String()
 	testBlobBChunk1 = testBlobB[:3]
 	testBlobBChunk1Length = strconv.Itoa(len(testBlobBChunk1))
-	testBlobBChunk1Range = fmt.Sprintf("0-%d", len(testBlobBChunk1)-1)
+	testBlobBChunk1Range = fmt.Sprintf("bytes 0-%d", len(testBlobBChunk1)-1)
 	testBlobBChunk2 = testBlobB[3:]
 	testBlobBChunk2Length = strconv.Itoa(len(testBlobBChunk2))
-	testBlobBChunk2Range = fmt.Sprintf("%d-%d", len(testBlobBChunk1), len(testBlobB)-1)
+	testBlobBChunk2Range = fmt.Sprintf("bytes %d-%d", len(testBlobBChunk1), len(testBlobB)-1)
 
 	dummyDigest = godigest.FromString("hello world").String()
 
