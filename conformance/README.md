@@ -18,6 +18,7 @@ Next, set environment variables with your registry details:
 # Registry details
 export OCI_ROOT_URL="https://r.myreg.io"
 export OCI_NAMESPACE="myorg/myrepo"
+export OCI_CROSSMOUNT_NAMESPACE="myorg/other"
 export OCI_USERNAME="myuser"
 export OCI_PASSWORD="mypass"
 
@@ -103,6 +104,15 @@ environment:
 ```
 # Enable layer upload
 OCI_SKIP_EMPTY_LAYER_PUSH_TEST=1
+```
+
+Some registries allow cross-repository blob mounting.  As such, the test suite will need access to a second namespace.
+This namespace may need to be configured on the server-side in advance, and it is specified by setting the following in
+the environment:
+
+```
+# The destination repository for cross-repository mounting:
+OCI_CROSSMOUNT_NAMESPACE="myorg/other"
 ```
 
 ##### Content Discovery

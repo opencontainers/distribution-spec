@@ -23,6 +23,11 @@ type (
 )
 
 const (
+	pull = 1 << iota
+	push
+	contentDiscovery
+	contentManagement
+
 	BLOB_UNKNOWN = iota
 	BLOB_UPLOAD_INVALID
 	BLOB_UPLOAD_UNKNOWN
@@ -57,6 +62,7 @@ const (
 	envVarHideSkippedWorkflows      = "OCI_HIDE_SKIPPED_WORKFLOWS"
 	envVarAuthScope                 = "OCI_AUTH_SCOPE"
 	envVarDeleteManifestBeforeBlobs = "OCI_DELETE_MANIFEST_BEFORE_BLOBS"
+	envVarCrossmountNamespace       = "OCI_CROSSMOUNT_NAMESPACE"
 
 	emptyLayerTestTag = "emptylayer"
 	testTagName       = "tagtest0"
@@ -65,11 +71,6 @@ const (
 	titlePush              = "Push"
 	titleContentDiscovery  = "Content Discovery"
 	titleContentManagement = "Content Management"
-
-	pull = 1 << iota
-	push
-	contentDiscovery
-	contentManagement
 
 	//	layerBase64String is a base64 encoding of a simple tarball, obtained like this:
 	//		$ echo 'you bothered to find out what was in here. Congratulations!' > test.txt
@@ -103,6 +104,7 @@ var (
 	client                    *reggie.Client
 	configBlobContent         []byte
 	configBlobContentLength   string
+	crossmountNamespace       string
 	dummyDigest               string
 	errorCodes                []string
 	invalidManifestContent    []byte
@@ -111,8 +113,8 @@ var (
 	layerBlobContentLength    string
 	manifestContent           []byte
 	manifestDigest            string
-	emptyLayerManifestContent []byte
 	emptyLayerManifestDigest  string
+	emptyLayerManifestContent []byte
 	nonexistentManifest       string
 	reportJUnitFilename       string
 	reportHTMLFilename        string
@@ -136,6 +138,7 @@ func init() {
 	username := os.Getenv(envVarUsername)
 	password := os.Getenv(envVarPassword)
 	authScope := os.Getenv(envVarAuthScope)
+	crossmountNamespace = os.Getenv(envVarCrossmountNamespace)
 
 	debug, _ := strconv.ParseBool(os.Getenv(envVarDebug))
 

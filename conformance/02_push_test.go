@@ -195,6 +195,40 @@ var test02Push = func() {
 			})
 		})
 
+		g.Context("Cross-Repository Blob Mount", func() {
+			g.Specify("POST request to mount another repository's blob should return 201", func() {
+				SkipIfDisabled(push)
+				var err error
+
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
+					reggie.WithName(crossmountNamespace)).
+					SetQueryParam("mount", testBlobADigest).
+					SetQueryParam("from", client.Config.DefaultName)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusCreated),
+					Equal(http.StatusMethodNotAllowed),
+				))
+
+				lastResponse = nil
+				if resp.StatusCode() == http.StatusCreated {
+					lastResponse = resp
+					Expect(lastResponse.GetRelativeLocation()).ToNot(BeEmpty())
+				}
+			})
+
+			g.Specify("GET request to test digest within cross-mount namespace should return 200", func() {
+				SkipIfDisabled(push)
+				RunOnlyIfNot(lastResponse == nil)
+
+				req := client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
+		})
+
 		g.Context("Manifest Upload", func() {
 			g.Specify("GET nonexistent manifest should return 404", func() {
 				SkipIfDisabled(push)
