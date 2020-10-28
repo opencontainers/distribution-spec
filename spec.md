@@ -44,6 +44,11 @@ For relevant details and a history leading up to this specification, please see 
 - [moby/moby#9015](https://github.com/moby/moby/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
+#### Legacy Docker support HTTP headers
+
+Because of the origins this specification, the client MAY encounter Docker-specific headers, such as `Docker-Content-Digest`,
+or `Docker-Distribution-API-Version`. These headers are OPTIONAL and clients SHOULD NOT depend on them.
+
 ### Definitions
 
 Several terms are used frequently in this document and warrant basic definitions:
@@ -72,17 +77,16 @@ TODO: more detail on workflows related
 A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
 The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
 An untrusted registry returns a manifest.
-Before proceeding to download the individual layers, the engine verifies the manifest's signature, ensuring that the content was produced from a trusted source and no tampering has occurred.
 After each layer is downloaded, the engine verifies the digest of the layer, ensuring that the content matches that specified by the manifest.
 
-### Resumable Push
+### Resumable [Push](#push)
 
 Company X's build servers lose connectivity to a distribution endpoint before completing an artifact layer transfer.
 After connectivity returns, the build server attempts to re-upload the artifact.
 The registry notifies the build server that the upload has already been partially attempted.
 The build server responds by only sending the remaining data to complete the artifact file.
 
-### Resumable Pull
+### Resumable [Pull](#pull)
 
 Company X is having more connectivity problems but this time in their deployment datacenter.
 When downloading an artifact, the connection is interrupted before completion.
@@ -128,7 +132,9 @@ To pull a manifest, perform a `GET` request to a url in the following form:
 `/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
-The `<reference>` MUST NOT be in any other format.
+The `<reference>` MUST NOT be in any other format. Throughout this document, `<name>` MUST match the following regular expression:
+
+`[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*`
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
 
@@ -205,7 +211,8 @@ Location: <location>
 
 The `<location>` MUST contain a UUID representing a unique session ID for the upload to follow.
 
-Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path).
+Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path). For more information,
+see [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
 
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
@@ -304,6 +311,28 @@ Location: <blob-location>
 Here, `<blob-location>` is a pullable blob URL.
 
 
+##### Mounting a blob from another repository
+If a necessary blob exists already in another repository, it can be mounted into a different repository via a `POST`
+request in the following format:
+
+`/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>`  <sup>[end-11](#endpoints)</sup>.
+
+In this case, `<name>` is the namespace to which the blob will be mounted. `<digest>` is the digest of the blob to mount,
+and `<other_namespace>` is the namespace from which the blob should be mounted. This step is usually taken in place of the
+previously-described `POST` request to `/v2/<name>/blobs/uploads/` <sup>[end-4a](#endpoints)</sup> (which is used to initiate an
+upload session).
+
+The response to a successful mount MUST be `201 Created`, and MUST contain the following header:
+```
+Location: <blob-location>
+```
+
+The digest contained in the `Location` header MAY be different from that of the blob that was mounted. As such, a client
+SHOULD use the digest found in the path from this header and SHOULD NOT use the digest of the blob that was mounted.
+
+Alternatively, if a registry does not support cross-repository mounting, it SHOULD return a `202`, indicating that the
+upload session has begun and that the client MAY proceed with the upload.
+
 ##### Pushing Manifests
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
@@ -361,11 +390,11 @@ In this case, the path will look like the following:
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested. The response
 to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository
-is less than `<int>`. Otherwise, the response MUST include `<int>` results. Without the `last` query parameter (described
-next), the list returned will start at the beginning of the list and include `<int>` results. As above, the tags MUST be
-in lexical order.
+is less than `<int>`. Otherwise, the response MUST include `<int>` results. When `n` is zero, this endpoint MUST return
+an empty list, and MUST NOT include a `Link` header. Without the `last` query parameter (described next), the list returned will
+start at the beginning of the list and include `<int>` results. As above, the tags MUST be in lexical order.
 
-The `last` query parameter provides further means for limiting the number of tags. It is used exclusively in combination with the
+The `last` query parameter provides further means for limiting the number of tags. It is usually used in combination with the
 `n` parameter:
 `/v2/<name>/tags/list?n=<int>&last=<tagname>` <sup>[end-8b](#endpoints)</sup>
 
@@ -373,6 +402,8 @@ The `last` query parameter provides further means for limiting the number of tag
 the last tag. `<tagname>` MUST NOT be a numerical index, but rather it MUST be a proper tag. A request of this sort will return
 up to `<int>` tags, beginning non-inclusively with `<tagname>`. That is to say, `<tagname>` will not be included in the
 results, but up to `<int>` tags *after* `<tagname>` will be returned. The tags MUST be in lexical order.
+
+When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
 #### Content Management
 Content management refers to the deletion of blobs, tags, and manifests. Registries MAY implement deletion or they MAY
@@ -462,14 +493,12 @@ The `code` field MUST be one of the following:
 | code-5  | `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       |
 | code-6  | `MANIFEST_INVALID`      | manifest invalid                               |
 | code-7  | `MANIFEST_UNKNOWN`      | manifest unknown                               |
-| code-8  | `MANIFEST_UNVERIFIED`   | manifest failed signature verification         |
-| code-9  | `NAME_INVALID`          | invalid repository name                        |
-| code-10 | `NAME_UNKNOWN`          | repository name not known to registry          |
-| code-11 | `SIZE_INVALID`          | provided length did not match content length   |
-| code-12 | `TAG_INVALID`           | manifest tag did not match URI                 |
-| code-13 | `UNAUTHORIZED`          | authentication required                        |
-| code-14 | `DENIED`                | requested access to the resource is denied     |
-| code-15 | `UNSUPPORTED`           | the operation is unsupported                  |
+| code-8  | `NAME_INVALID`          | invalid repository name                        |
+| code-9  | `NAME_UNKNOWN`          | repository name not known to registry          |
+| code-10 | `SIZE_INVALID`          | provided length did not match content length   |
+| code-11 | `UNAUTHORIZED`          | authentication required                        |
+| code-12 | `DENIED`                | requested access to the resource is denied     |
+| code-13 | `UNSUPPORTED`           | the operation is unsupported                  |
 
 ### Appendix
 
@@ -481,3 +510,4 @@ The following is a list of documents referenced in this spec:
 | apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail (warning: some of this information may be out-of-date or not yet implemented) |
 | apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
+| apdx-4 | [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2) | Description of the "Location" header's behavior
