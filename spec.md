@@ -28,11 +28,10 @@
 
 The **Open Container Initiative Distribution Specification** (a.k.a. "OCI Distribution Spec") defines an API protocol to facilitate and standardize the distribution of content.
 
-While this specification is designed to be agnostic to content types, much of it is centered around the distribution of container images.
-Many of the concepts here, such as "manifests" and "digests", are originally defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec"),
-and the OCI Image is considered to be the primary supported artifact type.
+While OCI Image is the most prominent, the specification is designed to be agnostic of content types. Concepts such as "manifests" and "digests",
+are currently defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec").
 
-For guidance on how to apply this specification to other artifact types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts/blob/master/artifact-authors.md) (a.k.a. "OCI Artifacts").
+To support other artifact types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts) (a.k.a. "OCI Artifacts").
 
 ### Historical Context
 
@@ -59,7 +58,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Pull**: the act of downloading Blobs and Manifests from a Registry
 - **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
 - **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>
-- **Config**: a section in the Manifest (and associated Blob) which contains Artifact metadata
+- **Config**: a blob referenced in the Manifest (and associated Blob) which contains Artifact metadata and describes the Manifest
 - **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable Manifest identifier
@@ -79,14 +78,14 @@ The engine contacts the registry, requesting the manifest for "library/ubuntu:la
 An untrusted registry returns a manifest.
 After each layer is downloaded, the engine verifies the digest of the layer, ensuring that the content matches that specified by the manifest.
 
-### Resumable [Push](#push)
+### Resumable Push
 
 Company X's build servers lose connectivity to a distribution endpoint before completing an artifact layer transfer.
 After connectivity returns, the build server attempts to re-upload the artifact.
 The registry notifies the build server that the upload has already been partially attempted.
 The build server responds by only sending the remaining data to complete the artifact file.
 
-### Resumable [Pull](#pull)
+### Resumable Pull
 
 Company X is having more connectivity problems but this time in their deployment datacenter.
 When downloading an artifact, the connection is interrupted before completion.
@@ -102,7 +101,12 @@ If process A and B upload the same layer at the same time, both operations will 
 Even in the case where both uploads are accepted, the registry may securely only store one copy of the layer since the computed digests match.
 
 ## Conformance
-TODO: add general text about artifact validation requirements
+
+For more information on testing for conformance, please see the [conformance README](./conformance/README.md)
+
+### Official Certification
+
+Registry providers can self-certify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
 
 ### Requirements
 
@@ -114,10 +118,6 @@ Registries conforming to this specification MUST handle all APIs required by the
 4. **Content Management** (OPTIONAL) - Clients are able to control the full life-cycle of the content stored in the registry
 
 In order to test a registry's conformance against these workflow categories, please use the [conformance testing tool](./conformance/).
-
-### Official Certification
-
-Registry providers can self-certify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
 
 ### Workflow Categories
 
@@ -512,4 +512,3 @@ The following is a list of documents referenced in this spec:
 | apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail (warning: some of this information may be out-of-date or not yet implemented) |
 | apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
-| apdx-4 | [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2) | Description of the "Location" header's behavior
