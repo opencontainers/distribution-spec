@@ -321,6 +321,8 @@ Location: <blob-location>
 The digest contained in the `Location` header MAY be different from that of the blob that was mounted. As such, a client
 SHOULD use the digest found in the path from this header and SHOULD NOT use the digest of the blob that was mounted.
 
+If the source blob is not found, the response MUST be `404 Not Found`.
+
 ##### Pushing Manifests
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
@@ -445,7 +447,7 @@ of this specification.
 | end-8b | `GET`    | `/v2/<name>/tags/list?n=<integer>&last=<integer>`                 | `200`                              | `404`                           |
 | end-9  | `DELETE` | `/v2/<name>/manifests/<reference>`                                | `202`                              | `404`/`400`/`405`               |
 | end-10 | `DELETE` | `/v2/<name>/blobs/<digest>`                                       | `202`                              | `404`/`405`                     |
-| end-11 | `POST`   | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `405`                           |
+| end-11 | `POST`   | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
 
 #### Error Codes
 

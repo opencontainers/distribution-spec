@@ -206,21 +206,14 @@ var test02Push = func() {
 					SetQueryParam("from", client.Config.DefaultName)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					Equal(http.StatusCreated),
-					Equal(http.StatusMethodNotAllowed),
-				))
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.GetRelativeLocation()).To(ContainSubstring(crossmountNamespace))
 
-				lastResponse = nil
-				if resp.StatusCode() == http.StatusCreated {
-					lastResponse = resp
-					Expect(lastResponse.GetRelativeLocation()).ToNot(BeEmpty())
-				}
+				lastResponse = resp
 			})
 
 			g.Specify("GET request to test digest within cross-mount namespace should return 200", func() {
 				SkipIfDisabled(push)
-				RunOnlyIfNot(lastResponse == nil)
 
 				req := client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
 				resp, err := client.Do(req)

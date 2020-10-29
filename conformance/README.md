@@ -106,8 +106,8 @@ environment:
 OCI_SKIP_EMPTY_LAYER_PUSH_TEST=1
 ```
 
-Some registries allow cross-repository blob mounting.  As such, the test suite will need access to a second namespace.
-This namespace may need to be configured on the server-side in advance, and it is specified by setting the following in
+The test suite will need access to a second namespace. This namespace is used to check support for cross-repository mounting
+of blobs, and may need to be configured on the server-side in advance. It is specified by setting the following in
 the environment:
 
 ```
