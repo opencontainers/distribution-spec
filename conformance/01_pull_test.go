@@ -81,6 +81,24 @@ var test01Pull = func() {
 		})
 
 		g.Context("Pull blobs", func() {
+			g.Specify("HEAD request to nonexistent blob should result in 404 response", func() {
+				SkipIfDisabled(pull)
+				req := client.NewRequest(reggie.HEAD, "/v2/<name>/blobs/<digest>",
+					reggie.WithDigest(dummyDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+			})
+
+			g.Specify("HEAD request to existing blob should yield 200", func() {
+				SkipIfDisabled(pull)
+				req := client.NewRequest(reggie.HEAD, "/v2/<name>/blobs/<digest>",
+					reggie.WithDigest(configBlobDigest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
+
 			g.Specify("GET nonexistent blob should result in 404 response", func() {
 				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>",
@@ -100,6 +118,34 @@ var test01Pull = func() {
 		})
 
 		g.Context("Pull manifests", func() {
+			g.Specify("HEAD request to nonexistent manifest should return 404", func() {
+				SkipIfDisabled(pull)
+				req := client.NewRequest(reggie.HEAD, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(nonexistentManifest))
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+			})
+
+			g.Specify("HEAD request to manifest path (digest) should yield 200 response", func() {
+				SkipIfDisabled(pull)
+				req := client.NewRequest(reggie.HEAD, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest)).
+					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
+
+			g.Specify("HEAD request to manifest path (tag) should yield 200 response", func() {
+				SkipIfDisabled(pull)
+				Expect(tag).ToNot(BeEmpty())
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>", reggie.WithReference(tag)).
+					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
+
 			g.Specify("GET nonexistent manifest should return 404", func() {
 				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",

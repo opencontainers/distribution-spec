@@ -128,7 +128,7 @@ Typically, the first step in pulling an artifact is to retrieve the manifest. Ho
 
 ##### Pulling manifests
 
-To pull a manifest, perform a `GET` request to a url in the following form:
+To pull a manifest, perform a `GET` request to a URL in the following form:
 `/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
@@ -146,9 +146,9 @@ blob data.
 
 If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
-##### Pulling Blobs
+##### Pulling blobs
 
-To pull a blob, perform a `GET` request to a url in the following form:
+To pull a blob, perform a `GET` request to a URL in the following form:
 `/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
@@ -156,6 +156,18 @@ To pull a blob, perform a `GET` request to a url in the following form:
 A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
 
 If the blob is not found in the registry, the response code MUST be `404 Not Found`.
+
+##### Checking if content exists in the registry
+
+In order to verify that a repository contains a given manifest or blob, make a `HEAD` request to a URL in the following form:
+
+`/v2/<name>/manifests/<reference>` <sup>[end-12](#endpoints)</sup> (for manifests), or
+
+`/v2/<name>/blobs/<digest>` <sup>[end-11](#endpoints)</sup> (for blobs).
+
+A HEAD request to an existing blob or manifest URL MUST return `200 OK`.
+
+If the blob or manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
 
 #### Push
@@ -467,6 +479,8 @@ of this specification.
 | end-9  | `DELETE` | `/v2/<name>/manifests/<reference>`                                | `202`                              | `404`/`400`/`405`               |
 | end-10 | `DELETE` | `/v2/<name>/blobs/<digest>`                                       | `202`                              | `404`/`405`                     |
 | end-11 | `POST`   | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
+| end-12 | `HEAD`   | `/v2/<name>/blobs/<digest>`                                       | `200`                              | `404`                           |
+| end-13 | `HEAD`   | `/v2/<name>/manifests/<reference>`                                | `200`                              | `404`                           |
 
 #### Error Codes
 
