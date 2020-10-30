@@ -469,7 +469,8 @@ The `code` field MUST be one of the following:
 | code-12 | `TAG_INVALID`           | manifest tag did not match URI                 |
 | code-13 | `UNAUTHORIZED`          | authentication required                        |
 | code-14 | `DENIED`                | requested access to the resource is denied     |
-| code-15 | `UNSUPPORTED`           | the operation is unsupported                  |
+| code-15 | `UNSUPPORTED`           | the operation is unsupported                   |
+| code-16 | `TOOMANYREQUESTS`       | too many requests                              |
 
 ### Appendix
 
