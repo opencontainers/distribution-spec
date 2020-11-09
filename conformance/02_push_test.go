@@ -196,17 +196,18 @@ var test02Push = func() {
 		})
 
 		g.Context("Cross-Repository Blob Mount", func() {
-			g.Specify("POST request to mount another repository's blob should return 201", func() {
+			g.Specify("POST request to mount another repository's blob should return 201 or 202", func() {
 				SkipIfDisabled(push)
-				var err error
-
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
 					reggie.WithName(crossmountNamespace)).
 					SetQueryParam("mount", testBlobADigest).
 					SetQueryParam("from", client.Config.DefaultName)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusCreated),
+					Equal(http.StatusAccepted),
+				))
 				Expect(resp.GetRelativeLocation()).To(ContainSubstring(crossmountNamespace))
 
 				lastResponse = resp
@@ -214,11 +215,20 @@ var test02Push = func() {
 
 			g.Specify("GET request to test digest within cross-mount namespace should return 200", func() {
 				SkipIfDisabled(push)
+				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
 
 				req := client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
+
+			g.Specify("Cross-mounting of nonexistent blob should yield session id", func() {
+				SkipIfDisabled(push)
+				RunOnlyIf(lastResponse.StatusCode() == http.StatusAccepted)
+
+				loc := lastResponse.GetRelativeLocation()
+				Expect(loc).To(ContainSubstring("/blobs/uploads/"))
 			})
 		})
 

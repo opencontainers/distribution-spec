@@ -321,7 +321,11 @@ Location: <blob-location>
 The digest contained in the `Location` header MAY be different from that of the blob that was mounted. As such, a client
 SHOULD use the digest found in the path from this header and SHOULD NOT use the digest of the blob that was mounted.
 
-If the source blob is not found, the response MUST be `404 Not Found`.
+The response to an unsuccessful mount MUST be `202 Accepted`, and be handled in the same way as a `POST` request to
+`/v2/<name>/blobs/uploads/`<sup>[end-4a](#endpoints)</sup>.  That is, it MUST contain the following header, in the following format:
+```
+Location: /v2/<name>/blobs/uploads/<session-id>
+```
 
 ##### Pushing Manifests
 
