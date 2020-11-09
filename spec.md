@@ -137,6 +137,8 @@ The `<reference>` MUST NOT be in any other format. Throughout this document, `<n
 `[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*`
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
+A successful response SHOULD contain the digest of the uploaded blob in the header `OCI-Content-Digest`. For legacy
+reasons, the digest MAY be contained in the header `Docker-Content-Digest` instead. Either header is OPTIONAL.
 
 The `OCI-Content-Digest` header (or, as a fallback, `Docker-Content-Digest` header), if present on the response, returns the canonical
 digest of the uploaded blob which MAY differ from the provided digest. If the digest does differ, it MAY be the case that
@@ -154,6 +156,8 @@ To pull a blob, perform a `GET` request to a URL in the following form:
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
 A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
+A successful response SHOULD contain the digest of the uploaded blob in the header `OCI-Content-Digest`. For legacy
+reasons, the digest MAY be contained in the header `Docker-Content-Digest` instead. Either header is OPTIONAL.
 
 If the blob is not found in the registry, the response code MUST be `404 Not Found`.
 
@@ -165,10 +169,11 @@ In order to verify that a repository contains a given manifest or blob, make a `
 
 `/v2/<name>/blobs/<digest>` <sup>[end-11](#endpoints)</sup> (for blobs).
 
-A HEAD request to an existing blob or manifest URL MUST return `200 OK`.
+A HEAD request to an existing blob or manifest URL MUST return `200 OK`. A successful response SHOULD contain the digest
+of the uploaded blob in the header `OCI-Content-Digest`. For legacy reasons, the digest MAY be contained in the header
+`Docker-Content-Digest` instead. Either header is OPTIONAL.
 
 If the blob or manifest is not found in the registry, the response code MUST be `404 Not Found`.
-
 
 #### Push
 
