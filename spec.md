@@ -58,7 +58,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Pull**: the act of downloading Blobs and Manifests from a Registry
 - **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
 - **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>
-- **Config**: a blob referenced in the Manifest (and associated Blob) which contains Artifact metadata and describes the Manifest
+- **Config**: a blob referenced in the Manifest which contains Artifact metadata
 - **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable Manifest identifier
@@ -315,10 +315,10 @@ Here, `<blob-location>` is a pullable blob URL.
 If a necessary blob exists already in another repository, it can be mounted into a different repository via a `POST`
 request in the following format:
 
-`/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>`  <sup>[end-11](#endpoints)</sup>.
+`/v2/<name>/blobs/uploads/?mount=<digest>&from=<repository_name>`  <sup>[end-11](#endpoints)</sup>.
 
 In this case, `<name>` is the namespace to which the blob will be mounted. `<digest>` is the digest of the blob to mount,
-and `<other_namespace>` is the namespace from which the blob should be mounted. This step is usually taken in place of the
+and `<repository_name>` is the namespace from which the blob should be mounted. This step is usually taken in place of the
 previously-described `POST` request to `/v2/<name>/blobs/uploads/` <sup>[end-4a](#endpoints)</sup> (which is used to initiate an
 upload session).
 
