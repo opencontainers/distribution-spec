@@ -58,7 +58,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Pull**: the act of downloading Blobs and Manifests from a Registry
 - **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
 - **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>
-- **Config**: a blob referenced in the Manifest which contains Artifact metadata
+- **Config**: a blob referenced in the Manifest which contains Artifact metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>
 - **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable Manifest identifier
@@ -138,6 +138,12 @@ The `<reference>` MUST NOT be in any other format. Throughout this document, `<n
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
 
+The `OCI-Content-Digest` header (or, as a fallback, `Docker-Content-Digest` header), if present on the response, returns the canonical
+digest of the uploaded blob which MAY differ from the provided digest. If the digest does differ, it MAY be the case that
+the hashing algorithms used do not match. See [Content Digests](./detail.md) for information on how to detect the hashing
+algorithm in use. Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded
+blob data.
+
 If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
 ##### Pulling Blobs
@@ -191,7 +197,7 @@ Successful completion of the request MUST return either a `201 Created` or a `20
 Location: <blob-location>
 ```
 
-With `<blob-location>` being a pullable blob URL.
+Here, `<blob-location>` is a pullable blob URL.
 
 ---
 
@@ -327,8 +333,6 @@ The response to a successful mount MUST be `201 Created`, and MUST contain the f
 Location: <blob-location>
 ```
 
-The digest contained in the `Location` header MAY be different from that of the blob that was mounted. As such, a client
-SHOULD use the digest found in the path from this header and SHOULD NOT use the digest of the blob that was mounted.
 
 Alternatively, if a registry does not support cross-repository mounting, it SHOULD return a `202`, indicating that the
 upload session has begun and that the client MAY proceed with the upload.
@@ -512,3 +516,4 @@ The following is a list of documents referenced in this spec:
 | apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail (warning: some of this information may be out-of-date or not yet implemented) |
 | apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
+| apdx-4 | [OCI Image Spec - config](https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md) | Description of configs, defined by the OCI Image Spec |
