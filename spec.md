@@ -157,7 +157,8 @@ To pull a blob, perform a `GET` request to a URL in the following form:
 
 A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `OCI-Content-Digest`. For legacy
-reasons, the digest MAY be contained in the header `Docker-Content-Digest` instead. Either header is OPTIONAL.
+reasons, the digest MAY be contained in the header `Docker-Content-Digest` instead. Either header is OPTIONAL. However,
+if one of these headers is present, the value of the header MUST be a digest matching that of the response body.
 
 If the blob is not found in the registry, the response code MUST be `404 Not Found`.
 
