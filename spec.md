@@ -333,9 +333,12 @@ The response to a successful mount MUST be `201 Created`, and MUST contain the f
 Location: <blob-location>
 ```
 
+The Location header will contain the registry URL to access the accepted layer file. The Docker-Content-Digest
+header returns the canonical digest of the uploaded blob which MAY differ from the provided digest. Most clients MAY
+ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
-Alternatively, if a registry does not support cross-repository mounting, it SHOULD return a `202`, indicating that the
-upload session has begun and that the client MAY proceed with the upload.
+Alternatively, if a registry does not support cross-repository mounting or is unable to mount the requested blob,
+it SHOULD return a `202`. This indicates that the upload session has begun and that the client MAY proceed with the upload.
 
 ##### Pushing Manifests
 
