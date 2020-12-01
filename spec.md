@@ -304,6 +304,29 @@ Location: <blob-location>
 Here, `<blob-location>` is a pullable blob URL.
 
 
+##### Mounting a blob from another repository
+If a necessary blob exists already in another repository, it can be mounted into a different repository via a `POST`
+request in the following format:
+
+`/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>`  <sup>[end-11](#endpoints)</sup>.
+
+In this case, `<name>` is the namespace to which the blob will be mounted. `<digest>` is the digest of the blob to mount,
+and `<other_namespace>` is the namespace from which the blob should be mounted.
+
+The response to a successful mount MUST be `201 Created`, and MUST contain the following header:
+```
+Location: <blob-location>
+```
+
+The digest contained in the `Location` header MAY be different from that of the blob that was mounted. As such, a client
+SHOULD use the digest found in the path from this header and SHOULD NOT use the digest of the blob that was mounted.
+
+The response to an unsuccessful mount MUST be `202 Accepted`, and be handled in the same way as a `POST` request to
+`/v2/<name>/blobs/uploads/`<sup>[end-4a](#endpoints)</sup>.  That is, it MUST contain the following header, in the following format:
+```
+Location: /v2/<name>/blobs/uploads/<session-id>
+```
+
 ##### Pushing Manifests
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
@@ -414,20 +437,21 @@ of this specification.
 
 #### Endpoints
 
-| ID     | Method   | API endpoint                                           | Accepted Successful Response Codes | Accepted Failure Response Codes |
-| ------ | -------- | ------------------------------------------------------ | ---------------------------------- | ------------------------------- |
-| end-1  | `GET`    | `/v2/`                                                 | `200`                              | `404`/`401`                     |
-| end-2  | `GET`    | `/v2/<name>/blobs/<digest>`                            | `200`                              | `404`                           |
-| end-3  | `GET`    | `/v2/<name>/manifests/<reference>`                     | `200`                              | `404`                           |
-| end-4a | `POST`   | `/v2/<name>/blobs/uploads/`                            | `202`                              | `404`                           |
-| end-4b | `POST`   | `/v2/<name>/blobs/uploads/?digest=<digest>`            | `201`/`202`                        | `404`/`400`                     |
-| end-5  | `PATCH`  | `/v2/<name>/blobs/uploads/<reference>`                 | `202`                              | `404`/`416`                     |
-| end-6  | `PUT`    | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>` | `201`                              | `404`/`400`                     |
-| end-7  | `PUT`    | `/v2/<name>/manifests/<reference>`                     | `201`                              | `404`                           |
-| end-8a | `GET`    | `/v2/<name>/tags/list`                                 | `200`                              | `404`                           |
-| end-8b | `GET`    | `/v2/<name>/tags/list?n=<integer>&last=<integer>`      | `200`                              | `404`                           |
-| end-9  | `DELETE` | `/v2/<name>/manifests/<reference>`                     | `202`                              | `404`/`400`/`405`               |
-| end-10 | `DELETE` | `/v2/<name>/blobs/<digest>`                            | `202`                              | `404`/`405`                     |
+| ID     | Method   | API endpoint                                                      | Accepted Successful Response Codes | Accepted Failure Response Codes |
+| ------ | -------- | ----------------------------------------------------------------- | ---------------------------------- | ------------------------------- |
+| end-1  | `GET`    | `/v2/`                                                            | `200`                              | `404`/`401`                     |
+| end-2  | `GET`    | `/v2/<name>/blobs/<digest>`                                       | `200`                              | `404`                           |
+| end-3  | `GET`    | `/v2/<name>/manifests/<reference>`                                | `200`                              | `404`                           |
+| end-4a | `POST`   | `/v2/<name>/blobs/uploads/`                                       | `202`                              | `404`                           |
+| end-4b | `POST`   | `/v2/<name>/blobs/uploads/?digest=<digest>`                       | `201`/`202`                        | `404`/`400`                     |
+| end-5  | `PATCH`  | `/v2/<name>/blobs/uploads/<reference>`                            | `202`                              | `404`/`416`                     |
+| end-6  | `PUT`    | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`            | `201`                              | `404`/`400`                     |
+| end-7  | `PUT`    | `/v2/<name>/manifests/<reference>`                                | `201`                              | `404`                           |
+| end-8a | `GET`    | `/v2/<name>/tags/list`                                            | `200`                              | `404`                           |
+| end-8b | `GET`    | `/v2/<name>/tags/list?n=<integer>&last=<integer>`                 | `200`                              | `404`                           |
+| end-9  | `DELETE` | `/v2/<name>/manifests/<reference>`                                | `202`                              | `404`/`400`/`405`               |
+| end-10 | `DELETE` | `/v2/<name>/blobs/<digest>`                                       | `202`                              | `404`/`405`                     |
+| end-11 | `POST`   | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
 
 #### Error Codes
 
