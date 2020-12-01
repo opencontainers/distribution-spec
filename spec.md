@@ -28,11 +28,10 @@
 
 The **Open Container Initiative Distribution Specification** (a.k.a. "OCI Distribution Spec") defines an API protocol to facilitate and standardize the distribution of content.
 
-While this specification is designed to be agnostic to content types, much of it is centered around the distribution of container images.
-Many of the concepts here, such as "manifests" and "digests", are originally defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec"),
-and the OCI Image is considered to be the primary supported artifact type.
+While OCI Image is the most prominent, the specification is designed to be agnostic of content types. Concepts such as "manifests" and "digests",
+are currently defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec").
 
-For guidance on how to apply this specification to other artifact types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts/blob/master/artifact-authors.md) (a.k.a. "OCI Artifacts").
+To support other artifact types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts) (a.k.a. "OCI Artifacts").
 
 ### Historical Context
 
@@ -44,6 +43,11 @@ For relevant details and a history leading up to this specification, please see 
 - [moby/moby#9015](https://github.com/moby/moby/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
+#### Legacy Docker support HTTP headers
+
+Because of the origins this specification, the client MAY encounter Docker-specific headers, such as `Docker-Content-Digest`,
+or `Docker-Distribution-API-Version`. These headers are OPTIONAL and clients SHOULD NOT depend on them.
+
 ### Definitions
 
 Several terms are used frequently in this document and warrant basic definitions:
@@ -54,7 +58,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Pull**: the act of downloading Blobs and Manifests from a Registry
 - **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
 - **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>
-- **Config**: a section in the Manifest (and associated Blob) which contains Artifact metadata
+- **Config**: a blob referenced in the Manifest which contains Artifact metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>
 - **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable Manifest identifier
@@ -72,7 +76,6 @@ TODO: more detail on workflows related
 A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
 The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
 An untrusted registry returns a manifest.
-Before proceeding to download the individual layers, the engine verifies the manifest's signature, ensuring that the content was produced from a trusted source and no tampering has occurred.
 After each layer is downloaded, the engine verifies the digest of the layer, ensuring that the content matches that specified by the manifest.
 
 ### Resumable Push
@@ -98,7 +101,12 @@ If process A and B upload the same layer at the same time, both operations will 
 Even in the case where both uploads are accepted, the registry may securely only store one copy of the layer since the computed digests match.
 
 ## Conformance
-TODO: add general text about artifact validation requirements
+
+For more information on testing for conformance, please see the [conformance README](./conformance/README.md)
+
+### Official Certification
+
+Registry providers can self-certify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
 
 ### Requirements
 
@@ -110,10 +118,6 @@ Registries conforming to this specification MUST handle all APIs required by the
 4. **Content Management** (OPTIONAL) - Clients are able to control the full life-cycle of the content stored in the registry
 
 In order to test a registry's conformance against these workflow categories, please use the [conformance testing tool](./conformance/).
-
-### Official Certification
-
-Registry providers can self-certify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
 
 ### Workflow Categories
 
@@ -128,9 +132,17 @@ To pull a manifest, perform a `GET` request to a url in the following form:
 `/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
-The `<reference>` MUST NOT be in any other format.
+The `<reference>` MUST NOT be in any other format. Throughout this document, `<name>` MUST match the following regular expression:
+
+`[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*`
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
+
+The `OCI-Content-Digest` header (or, as a fallback, `Docker-Content-Digest` header), if present on the response, returns the canonical
+digest of the uploaded blob which MAY differ from the provided digest. If the digest does differ, it MAY be the case that
+the hashing algorithms used do not match. See [Content Digests](./detail.md) for information on how to detect the hashing
+algorithm in use. Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded
+blob data.
 
 If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
@@ -185,7 +197,7 @@ Successful completion of the request MUST return either a `201 Created` or a `20
 Location: <blob-location>
 ```
 
-With `<blob-location>` being a pullable blob URL.
+Here, `<blob-location>` is a pullable blob URL.
 
 ---
 
@@ -205,7 +217,8 @@ Location: <location>
 
 The `<location>` MUST contain a UUID representing a unique session ID for the upload to follow.
 
-Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path).
+Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path). For more information,
+see [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
 
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
@@ -308,24 +321,24 @@ Here, `<blob-location>` is a pullable blob URL.
 If a necessary blob exists already in another repository, it can be mounted into a different repository via a `POST`
 request in the following format:
 
-`/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>`  <sup>[end-11](#endpoints)</sup>.
+`/v2/<name>/blobs/uploads/?mount=<digest>&from=<repository_name>`  <sup>[end-11](#endpoints)</sup>.
 
 In this case, `<name>` is the namespace to which the blob will be mounted. `<digest>` is the digest of the blob to mount,
-and `<other_namespace>` is the namespace from which the blob should be mounted.
+and `<repository_name>` is the namespace from which the blob should be mounted. This step is usually taken in place of the
+previously-described `POST` request to `/v2/<name>/blobs/uploads/` <sup>[end-4a](#endpoints)</sup> (which is used to initiate an
+upload session).
 
 The response to a successful mount MUST be `201 Created`, and MUST contain the following header:
 ```
 Location: <blob-location>
 ```
 
-The digest contained in the `Location` header MAY be different from that of the blob that was mounted. As such, a client
-SHOULD use the digest found in the path from this header and SHOULD NOT use the digest of the blob that was mounted.
+The Location header will contain the registry URL to access the accepted layer file. The Docker-Content-Digest
+header returns the canonical digest of the uploaded blob which MAY differ from the provided digest. Most clients MAY
+ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
-The response to an unsuccessful mount MUST be `202 Accepted`, and be handled in the same way as a `POST` request to
-`/v2/<name>/blobs/uploads/`<sup>[end-4a](#endpoints)</sup>.  That is, it MUST contain the following header, in the following format:
-```
-Location: /v2/<name>/blobs/uploads/<session-id>
-```
+Alternatively, if a registry does not support cross-repository mounting or is unable to mount the requested blob,
+it SHOULD return a `202`. This indicates that the upload session has begun and that the client MAY proceed with the upload.
 
 ##### Pushing Manifests
 
@@ -384,11 +397,11 @@ In this case, the path will look like the following:
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested. The response
 to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository
-is less than `<int>`. Otherwise, the response MUST include `<int>` results. Without the `last` query parameter (described
-next), the list returned will start at the beginning of the list and include `<int>` results. As above, the tags MUST be
-in lexical order.
+is less than `<int>`. Otherwise, the response MUST include `<int>` results. When `n` is zero, this endpoint MUST return
+an empty list, and MUST NOT include a `Link` header. Without the `last` query parameter (described next), the list returned will
+start at the beginning of the list and include `<int>` results. As above, the tags MUST be in lexical order.
 
-The `last` query parameter provides further means for limiting the number of tags. It is used exclusively in combination with the
+The `last` query parameter provides further means for limiting the number of tags. It is usually used in combination with the
 `n` parameter:
 `/v2/<name>/tags/list?n=<int>&last=<tagname>` <sup>[end-8b](#endpoints)</sup>
 
@@ -396,6 +409,8 @@ The `last` query parameter provides further means for limiting the number of tag
 the last tag. `<tagname>` MUST NOT be a numerical index, but rather it MUST be a proper tag. A request of this sort will return
 up to `<int>` tags, beginning non-inclusively with `<tagname>`. That is to say, `<tagname>` will not be included in the
 results, but up to `<int>` tags *after* `<tagname>` will be returned. The tags MUST be in lexical order.
+
+When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
 #### Content Management
 Content management refers to the deletion of blobs, tags, and manifests. Registries MAY implement deletion or they MAY
@@ -486,15 +501,13 @@ The `code` field MUST be one of the following:
 | code-5  | `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       |
 | code-6  | `MANIFEST_INVALID`      | manifest invalid                               |
 | code-7  | `MANIFEST_UNKNOWN`      | manifest unknown                               |
-| code-8  | `MANIFEST_UNVERIFIED`   | manifest failed signature verification         |
-| code-9  | `NAME_INVALID`          | invalid repository name                        |
-| code-10 | `NAME_UNKNOWN`          | repository name not known to registry          |
-| code-11 | `SIZE_INVALID`          | provided length did not match content length   |
-| code-12 | `TAG_INVALID`           | manifest tag did not match URI                 |
-| code-13 | `UNAUTHORIZED`          | authentication required                        |
-| code-14 | `DENIED`                | requested access to the resource is denied     |
-| code-15 | `UNSUPPORTED`           | the operation is unsupported                   |
-| code-16 | `TOOMANYREQUESTS`       | too many requests                              |
+| code-8  | `NAME_INVALID`          | invalid repository name                        |
+| code-9  | `NAME_UNKNOWN`          | repository name not known to registry          |
+| code-10 | `SIZE_INVALID`          | provided length did not match content length   |
+| code-12 | `UNAUTHORIZED`          | authentication required                        |
+| code-13 | `DENIED`                | requested access to the resource is denied     |
+| code-14 | `UNSUPPORTED`           | the operation is unsupported                   |
+| code-15 | `TOOMANYREQUESTS`       | too many requests                              |
 
 ### Appendix
 
@@ -506,3 +519,4 @@ The following is a list of documents referenced in this spec:
 | apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail (warning: some of this information may be out-of-date or not yet implemented) |
 | apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
+| apdx-4 | [OCI Image Spec - config](https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md) | Description of configs, defined by the OCI Image Spec |
