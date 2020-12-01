@@ -11,6 +11,7 @@ import (
 
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
+	"github.com/google/uuid"
 	godigest "github.com/opencontainers/go-digest"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -139,6 +140,9 @@ func init() {
 	password := os.Getenv(envVarPassword)
 	authScope := os.Getenv(envVarAuthScope)
 	crossmountNamespace = os.Getenv(envVarCrossmountNamespace)
+	if len(crossmountNamespace) == 0 {
+		crossmountNamespace = fmt.Sprintf("a-%s", uuid.New())
+	}
 
 	debug, _ := strconv.ParseBool(os.Getenv(envVarDebug))
 
