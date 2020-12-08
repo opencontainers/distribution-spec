@@ -97,6 +97,9 @@ var test01Pull = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
+					Expect(h).To(Equal(configBlobDigest))
+				}
 			})
 
 			g.Specify("GET nonexistent blob should result in 404 response", func() {
@@ -134,6 +137,9 @@ var test01Pull = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
+					Expect(h).To(Equal(manifestDigest))
+				}
 			})
 
 			g.Specify("HEAD request to manifest path (tag) should yield 200 response", func() {
@@ -144,6 +150,9 @@ var test01Pull = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
+					Expect(h).To(Equal(manifestDigest))
+				}
 			})
 
 			g.Specify("GET nonexistent manifest should return 404", func() {
