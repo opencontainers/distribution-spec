@@ -581,6 +581,7 @@ func (reporter *HTMLReporter) SpecSuiteWillBegin(config config.GinkgoConfigType,
 		envVarTagList,
 		envVarHideSkippedWorkflows,
 		envVarAuthScope,
+		envVarCrossmountNamespace,
 	}
 	for _, v := range varsToCheck {
 		var replacement string

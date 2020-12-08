@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/bloodorangeio/reggie v0.4.0
+	github.com/google/uuid v1.1.2
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
 	github.com/opencontainers/go-digest v1.0.0-rc1
