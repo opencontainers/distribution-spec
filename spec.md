@@ -128,7 +128,7 @@ Typically, the first step in pulling an artifact is to retrieve the manifest. Ho
 
 ##### Pulling manifests
 
-To pull a manifest, perform a `GET` request to a url in the following form:
+To pull a manifest, perform a `GET` request to a URL in the following form:
 `/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
 
 `<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
@@ -137,8 +137,9 @@ The `<reference>` MUST NOT be in any other format. Throughout this document, `<n
 `[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*`
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
+A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 
-The `OCI-Content-Digest` header (or, as a fallback, `Docker-Content-Digest` header), if present on the response, returns the canonical
+The `Docker-Content-Digest` header, if present on the response, returns the canonical
 digest of the uploaded blob which MAY differ from the provided digest. If the digest does differ, it MAY be the case that
 the hashing algorithms used do not match. See [Content Digests](./detail.md) for information on how to detect the hashing
 algorithm in use. Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded
@@ -146,17 +147,31 @@ blob data.
 
 If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
-##### Pulling Blobs
+##### Pulling blobs
 
-To pull a blob, perform a `GET` request to a url in the following form:
+To pull a blob, perform a `GET` request to a URL in the following form:
 `/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
 A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
+A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`. If present,
+the value of this header MUST be a digest matching that of the response body.
 
 If the blob is not found in the registry, the response code MUST be `404 Not Found`.
 
+##### Checking if content exists in the registry
+
+In order to verify that a repository contains a given manifest or blob, make a `HEAD` request to a URL in the following form:
+
+`/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup> (for manifests), or
+
+`/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup> (for blobs).
+
+A HEAD request to an existing blob or manifest URL MUST return `200 OK`. A successful response SHOULD contain the digest
+of the uploaded blob in the header `Docker-Content-Digest`.
+
+If the blob or manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
 #### Push
 
@@ -452,21 +467,21 @@ of this specification.
 
 #### Endpoints
 
-| ID     | Method   | API endpoint                                                      | Accepted Successful Response Codes | Accepted Failure Response Codes |
-| ------ | -------- | ----------------------------------------------------------------- | ---------------------------------- | ------------------------------- |
-| end-1  | `GET`    | `/v2/`                                                            | `200`                              | `404`/`401`                     |
-| end-2  | `GET`    | `/v2/<name>/blobs/<digest>`                                       | `200`                              | `404`                           |
-| end-3  | `GET`    | `/v2/<name>/manifests/<reference>`                                | `200`                              | `404`                           |
-| end-4a | `POST`   | `/v2/<name>/blobs/uploads/`                                       | `202`                              | `404`                           |
-| end-4b | `POST`   | `/v2/<name>/blobs/uploads/?digest=<digest>`                       | `201`/`202`                        | `404`/`400`                     |
-| end-5  | `PATCH`  | `/v2/<name>/blobs/uploads/<reference>`                            | `202`                              | `404`/`416`                     |
-| end-6  | `PUT`    | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`            | `201`                              | `404`/`400`                     |
-| end-7  | `PUT`    | `/v2/<name>/manifests/<reference>`                                | `201`                              | `404`                           |
-| end-8a | `GET`    | `/v2/<name>/tags/list`                                            | `200`                              | `404`                           |
-| end-8b | `GET`    | `/v2/<name>/tags/list?n=<integer>&last=<integer>`                 | `200`                              | `404`                           |
-| end-9  | `DELETE` | `/v2/<name>/manifests/<reference>`                                | `202`                              | `404`/`400`/`405`               |
-| end-10 | `DELETE` | `/v2/<name>/blobs/<digest>`                                       | `202`                              | `404`/`405`                     |
-| end-11 | `POST`   | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
+| ID     | Method         | API endpoint                                                      | Accepted Successful Response Codes | Accepted Failure Response Codes |
+| ------ | -------------- | ----------------------------------------------------------------- | ---------------------------------- | ------------------------------- |
+| end-1  | `GET`          | `/v2/`                                                            | `200`                              | `404`/`401`                     |
+| end-2  | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                       | `200`                              | `404`                           |
+| end-3  | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                                | `200`                              | `404`                           |
+| end-4a | `POST`         | `/v2/<name>/blobs/uploads/`                                       | `202`                              | `404`                           |
+| end-4b | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                       | `201`/`202`                        | `404`/`400`                     |
+| end-5  | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                            | `202`                              | `404`/`416`                     |
+| end-6  | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`            | `201`                              | `404`/`400`                     |
+| end-7  | `PUT`          | `/v2/<name>/manifests/<reference>`                                | `201`                              | `404`                           |
+| end-8a | `GET`          | `/v2/<name>/tags/list`                                            | `200`                              | `404`                           |
+| end-8b | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`                 | `200`                              | `404`                           |
+| end-9  | `DELETE`       | `/v2/<name>/manifests/<reference>`                                | `202`                              | `404`/`400`/`405`               |
+| end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                       | `202`                              | `404`/`405`                     |
+| end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
 
 #### Error Codes
 
