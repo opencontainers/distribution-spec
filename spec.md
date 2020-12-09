@@ -122,6 +122,7 @@ In order to test a registry's conformance against these workflow categories, ple
 ### Workflow Categories
 
 #### Pull
+
 The process of pulling an artifact centers around retrieving two components: the manifest and one or more blobs.
 
 Typically, the first step in pulling an artifact is to retrieve the manifest. However, you MAY retrieve content from the registry in any order.
@@ -135,6 +136,10 @@ To pull a manifest, perform a `GET` request to a url in the following form:
 The `<reference>` MUST NOT be in any other format. Throughout this document, `<name>` MUST match the following regular expression:
 
 `[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*`
+
+The client SHOULD include an `Accept` header indicating which manifest content types it supports.
+In a successful response, the `Content-Type` header will indicate the type of the returned manifest.
+For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negortiation.md)
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
 
