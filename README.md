@@ -8,7 +8,8 @@ The specification can be found [here](https://github.com/opencontainers/distribu
 
 - [Code of Conduct][code-of-conduct]
 - [Releases](RELEASES.md)
-- [charter][charter]
+- [Charter][charter]
+- [Frequently Asked Questions](faq.md)
 
 ### Use Cases
 

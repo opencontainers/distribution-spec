@@ -183,6 +183,7 @@ If the blob or manifest is not found in the registry, the response code MUST be 
 Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first,
 and the manifest last. Strictly speaking, content can be uploaded to the registry in any order, but a registry MAY reject
 a manifest if it references blobs that are not yet uploaded, resulting in a `BLOB_UNKNOWN` error <sup>[code-1](#error-codes)</sup>.
+A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
 
 ##### Pushing blobs
 
@@ -217,7 +218,8 @@ Successful completion of the request MUST return either a `201 Created` or a `20
 Location: <blob-location>
 ```
 
-Here, `<blob-location>` is a pullable blob URL.
+Here, `<blob-location>` is a pullable blob URL. This location does not necessarily have to be served by your register, for example, in the case of a signed URL from
+some cloud storage provider that your registry generates.
 
 ---
 
@@ -235,7 +237,7 @@ Here, `<name>` refers to the namespace of the repository. Upon success, the resp
 Location: <location>
 ```
 
-The `<location>` MUST contain a UUID representing a unique session ID for the upload to follow.
+The `<location>` MUST contain a UUID representing a unique session ID for the upload to follow. The `<location>` does not necessarily need to be provided by the registry itself. In fact, offloading to another server can be a [better strategy](https://www.backblaze.com/blog/design-thinking-b2-apis-the-hidden-costs-of-s3-compatibility/).
 
 Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path). For more information,
 see [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
