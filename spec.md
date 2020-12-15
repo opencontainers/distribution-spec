@@ -110,12 +110,17 @@ Registry providers can self-certify by submitting conformance results to [openco
 
 ### Requirements
 
-Registries conforming to this specification MUST handle all APIs required by the following workflow categories:
+Registry conformance applies to the following workflow categories:
 
 1. **Pull** - Clients are able to pull from the registry
-2. **Push** (OPTIONAL) - Clients are able to push to the registry
-3. **Content Discovery** (OPTIONAL) - Clients are able to list or otherwise query the content stored in the registry
-4. **Content Management** (OPTIONAL) - Clients are able to control the full life-cycle of the content stored in the registry
+2. **Push** - Clients are able to push to the registry
+3. **Content Discovery** - Clients are able to list or otherwise query the content stored in the registry
+4. **Content Management** - Clients are able to control the full life-cycle of the content stored in the registry
+
+All registries conforming to this specification MUST support, at a minimum, all APIs in the **Pull** category.
+
+Registries SHOULD also support the **Push**, **Content Discovery**, and **Content Management** categories.
+A registry claiming conformance with one of these specification categories MUST implement all APIs in the claimed category.
 
 In order to test a registry's conformance against these workflow categories, please use the [conformance testing tool](./conformance/).
 
