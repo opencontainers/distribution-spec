@@ -144,7 +144,7 @@ The `<reference>` MUST NOT be in any other format. Throughout this document, `<n
 
 The client SHOULD include an `Accept` header indicating which manifest content types it supports.
 In a successful response, the `Content-Type` header will indicate the type of the returned manifest.
-For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negortiation.md)
+For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negotiation.md)
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
