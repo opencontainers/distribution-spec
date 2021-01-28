@@ -1,4 +1,4 @@
-## Detail
+# Endpoint Detail
 
 > **Note**: This section is still under construction.
 > For the purposes of implementation, if any details below differ from the described request flows above, the section below SHOULD be corrected.
@@ -29,7 +29,7 @@ A list of methods and URIs are covered in the table below:
 | DELETE | `/v2/<name>/blobs/uploads/<session_id>`  | Blob Upload          | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.                                                                                              |
 The detail for each endpoint is covered in the following sections.
 
-### Errors
+## Errors
 
 The error codes encountered via the API are enumerated in the following table:
 
@@ -51,12 +51,12 @@ The error codes encountered via the API are enumerated in the following table:
 | `DENIED`                | requested access to the resource is denied     | The access controller denied access for the operation on a resource.                                                                                                                                                                                                                                |
 | `UNSUPPORTED`           | The operation is unsupported.                  | The operation was unsupported due to a missing implementation or invalid set of parameters.                                                                                                                                                                                                         |
 
-### Base
+## Base
 
 Base V2 API route.
 Typically, this can be used for lightweight version checks and to validate registry authentication.
 
-#### GET Base
+### GET Base
 
 Check that the endpoint implements the distribution API.
 
@@ -73,7 +73,7 @@ The following parameters SHOULD be specified on the request:
 | `Host`          | header | Standard HTTP Host Header. SHOULD be set to the registry host. |
 | `Authorization` | header | An RFC7235 compliant authorization header.                     |
 
-###### On Success: OK
+#### On Success: OK
 
 ```HTTP
 200 OK
@@ -81,7 +81,7 @@ The following parameters SHOULD be specified on the request:
 
 The API implements V2 protocol and is accessible.
 
-###### On Failure: Not Found
+#### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -89,7 +89,7 @@ The API implements V2 protocol and is accessible.
 
 The registry does not implement the V2 API.
 
-###### On Failure: Authentication Required
+#### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -124,7 +124,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: Too Many Requests
+#### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -157,15 +157,15 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-### Tags
+## Tags
 
 Retrieve information about tags.
 
-#### GET Tags
+### GET Tags
 
 Fetch the tags under the repository identified by `name`.
 
-##### Tags
+#### Tags
 
 ```HTTP
 GET /v2/<name>/tags/list
@@ -184,7 +184,7 @@ The following parameters SHOULD be specified on the request:
 | `Authorization` | header | An RFC7235 compliant authorization header.                     |
 | `name`          | path   | Name of the target repository.                                 |
 
-###### On Success: OK
+##### On Success: OK
 
 ```HTTP
 200 OK
@@ -208,7 +208,7 @@ The following headers will be returned with the response:
 |------------------|-----------------------------------|
 | `Content-Length` | Length of the JSON response body. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -243,7 +243,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -276,7 +276,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -309,7 +309,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -342,7 +342,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-##### Tags Paginated
+#### Tags Paginated
 
 ```HTTP
 GET /v2/<name>/tags/list?n=<integer>&last=<integer>
@@ -359,7 +359,7 @@ The following parameters SHOULD be specified on the request:
 | `n`    | query | Limit the number of entries in each response. If not present, all entries will be returned. |
 | `last` | query | Result set will include values lexically after last.                                        |
 
-###### On Success: OK
+##### On Success: OK
 
 ```HTTP
 200 OK
@@ -385,7 +385,7 @@ The following headers will be returned with the response:
 | `Content-Length` | Length of the JSON response body.                                      |
 | `Link`           | RFC5988 compliant rel='next' with URL to next result set, if available |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -420,7 +420,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -453,7 +453,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -486,7 +486,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -519,11 +519,11 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-### Manifest
+## Manifest
 
 Create, update, delete and retrieve manifests.
 
-#### GET Manifest
+### GET Manifest
 
 Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
 A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.
@@ -543,7 +543,7 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                 |
 | `reference`     | path   | Tag or digest of the target manifest.                          |
 
-###### On Success: OK
+##### On Success: OK
 
 ```HTTP
 200 OK
@@ -580,7 +580,7 @@ The following headers will be returned with the response:
 |-------------------------|-------------------------------------------------|
 | `Docker-Content-Digest` | Digest of the targeted content for the request. |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -607,7 +607,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID` | invalid repository name        | Invalid repository name encountered either during manifest validation or any API operation.                   |
 | `TAG_INVALID`  | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -642,7 +642,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -675,7 +675,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -708,7 +708,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -741,7 +741,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-#### PUT Manifest
+### PUT Manifest
 
 Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
 
@@ -781,7 +781,7 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                |
 | `reference`     | path   | Tag or digest of the target manifest.                         |
 
-###### On Success: Created
+##### On Success: Created
 
 ```HTTP
 201 Created
@@ -800,7 +800,7 @@ The following headers will be returned with the response:
 | `Content-Length`        | The `Content-Length` header MUST be zero and the body MUST be empty. |
 | `Docker-Content-Digest` | Digest of the targeted content for the request.                      |
 
-###### On Failure: Invalid Manifest
+##### On Failure: Invalid Manifest
 
 ```HTTP
 400 Bad Request
@@ -831,7 +831,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `MANIFEST_UNVERIFIED` | manifest failed signature verification | During manifest upload, if the manifest fails signature verification, this error will be returned.                                                                                                                       |
 | `BLOB_UNKNOWN`        | blob unknown to registry               | This error MAY be returned when a blob is unknown to the registry in a specified repository.This can be returned with a standard get or if a manifest references an unknown layer during upload.                         |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -866,7 +866,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -899,7 +899,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -932,7 +932,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -965,7 +965,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-###### On Failure: Missing Layer(s)
+##### On Failure: Missing Layer(s)
 
 ```HTTP
 400 Bad Request
@@ -994,7 +994,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|--------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `BLOB_UNKNOWN` | blob unknown to registry | This error MAY be returned when a blob is unknown to the registry in a specified repository.This can be returned with a standard get or if a manifest references an unknown layer during upload. |
 
-###### On Failure: Not allowed
+##### On Failure: Not allowed
 
 ```HTTP
 405 Method Not Allowed
@@ -1008,7 +1008,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |---------------|-------------------------------|---------------------------------------------------------------------------------------------|
 | `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
-#### DELETE Manifest
+### DELETE Manifest
 
 Delete the manifest identified by `name` and `reference`.
 Note that a manifest can _only_ be deleted by `digest`.
@@ -1028,13 +1028,13 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                 |
 | `reference`     | path   | Tag or digest of the target manifest.                          |
 
-###### On Success: Accepted
+##### On Success: Accepted
 
 ```HTTP
 202 Accepted
 ```
 
-###### On Failure: Invalid Name or Reference
+##### On Failure: Invalid Name or Reference
 
 ```HTTP
 400 Bad Request
@@ -1061,7 +1061,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID` | invalid repository name        | Invalid repository name encountered either during manifest validation or any API operation.                   |
 | `TAG_INVALID`  | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -1096,7 +1096,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -1129,7 +1129,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -1162,7 +1162,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -1195,7 +1195,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|----------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times. |
 
-###### On Failure: Unknown Manifest
+##### On Failure: Unknown Manifest
 
 ```HTTP
 404 Not Found
@@ -1223,7 +1223,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_UNKNOWN`     | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.                  |
 | `MANIFEST_UNKNOWN` | manifest unknown                      | This error is returned when the manifest, identified by name and tag is unknown to the repository. |
 
-###### On Failure: Not allowed
+##### On Failure: Not allowed
 
 ```HTTP
 405 Method Not Allowed
@@ -1237,17 +1237,17 @@ The error codes that MAY be included in the response body are enumerated below:
 |---------------|-------------------------------|---------------------------------------------------------------------------------------------|
 | `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
-### Blob
+## Blob
 
 Operations on blobs identified by `name` and `digest`.
 Used to fetch or delete layers by digest.
 
-#### GET Blob
+### GET Blob
 
 Retrieve the blob from the registry identified by `digest`.
 A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.
 
-##### Fetch Blob
+#### Fetch Blob
 
 ```HTTP
 GET /v2/<name>/blobs/<digest>
@@ -1264,7 +1264,7 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                |
 | `digest`        | path   | Digest of desired blob.                                       |
 
-###### On Success: OK
+##### On Success: OK
 
 ```HTTP
 200 OK
@@ -1285,7 +1285,7 @@ The following headers will be returned with the response:
 | `Content-Length`        | The length of the requested blob content.       |
 | `Docker-Content-Digest` | Digest of the targeted content for the request. |
 
-###### On Success: Temporary Redirect
+##### On Success: Temporary Redirect
 
 ```HTTP
 307 Temporary Redirect
@@ -1302,7 +1302,7 @@ The following headers will be returned with the response:
 | `Location`              | The location where the layer SHOULD be accessible. |
 | `Docker-Content-Digest` | Digest of the targeted content for the request.    |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -1329,7 +1329,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID`   | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client.The error MAY include a detail structure with the key "digest", including the invalid digest string.This error MAY also be returned when a manifest includes an invalid layer digest. |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -1356,7 +1356,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.                                                                                                                |
 | `BLOB_UNKNOWN` | blob unknown to registry              | This error MAY be returned when a blob is unknown to the registry in a specified repository.This can be returned with a standard get or if a manifest references an unknown layer during upload. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -1393,7 +1393,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -1426,7 +1426,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -1459,7 +1459,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -1492,7 +1492,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-##### Fetch Blob Part
+#### Fetch Blob Part
 
 ```HTTP
 GET /v2/<name>/blobs/<digest>
@@ -1515,7 +1515,7 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                |
 | `digest`        | path   | Digest of desired blob.                                       |
 
-###### On Success: Partial Content
+##### On Success: Partial Content
 
 ```HTTP
 206 Partial Content
@@ -1536,7 +1536,7 @@ The following headers will be returned with the response:
 | `Content-Length` | The length of the requested blob chunk. |
 | `Content-Range`  | Content range of blob chunk.            |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -1563,7 +1563,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID`   | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client.The error MAY include a detail structure with the key "digest", including the invalid digest string.This error MAY also be returned when a manifest includes an invalid layer digest. |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -1588,7 +1588,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.                                                                                                                |
 | `BLOB_UNKNOWN` | blob unknown to registry              | This error MAY be returned when a blob is unknown to the registry in a specified repository.This can be returned with a standard get or if a manifest references an unknown layer during upload. |
 
-###### On Failure: Requested Range Not Satisfiable
+##### On Failure: Requested Range Not Satisfiable
 
 ```HTTP
 416 Requested Range Not Satisfiable
@@ -1597,7 +1597,7 @@ The error codes that MAY be included in the response body are enumerated below:
 The range specification cannot be satisfied for the requested content.
 This can happen when the range is not formatted correctly or if the range is outside of the valid size of the content.
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -1632,7 +1632,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -1665,7 +1665,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -1698,7 +1698,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -1731,7 +1731,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-#### DELETE Blob
+### DELETE Blob
 
 Delete the blob identified by `name` and `digest`
 
@@ -1750,7 +1750,7 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                |
 | `digest`        | path   | Digest of desired blob.                                       |
 
-###### On Success: Accepted
+##### On Success: Accepted
 
 ```HTTP
 202 Accepted
@@ -1765,7 +1765,7 @@ The following headers will be returned with the response:
 | `Content-Length`        | 0                                               |
 | `Docker-Content-Digest` | Digest of the targeted content for the request. |
 
-###### On Failure: Invalid Name or Digest
+##### On Failure: Invalid Name or Digest
 
 ```HTTP
 400 Bad Request
@@ -1778,7 +1778,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client.The error MAY include a detail structure with the key "digest", including the invalid digest string.This error MAY also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID`   | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -1805,7 +1805,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.                                                                                                                |
 | `BLOB_UNKNOWN` | blob unknown to registry              | This error MAY be returned when a blob is unknown to the registry in a specified repository.This can be returned with a standard get or if a manifest references an unknown layer during upload. |
 
-###### On Failure: Method Not Allowed
+##### On Failure: Method Not Allowed
 
 ```HTTP
 405 Method Not Allowed
@@ -1831,7 +1831,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |---------------|-------------------------------|---------------------------------------------------------------------------------------------|
 | `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -1866,7 +1866,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -1899,7 +1899,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -1932,7 +1932,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -1965,18 +1965,18 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-### Initiate Blob Upload
+## Initiate Blob Upload
 
 Initiate a blob upload.
 This endpoint can be used to create resumable uploads or monolithic uploads.
 
-#### POST Initiate Blob Upload
+### POST Initiate Blob Upload
 
 Initiate a resumable blob upload.
 If successful, an upload location will be provided to complete the upload.
 Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request.
 
-##### Initiate Monolithic Blob Upload
+#### Initiate Monolithic Blob Upload
 
 ```
 POST /v2/<name>/blobs/uploads/?digest=<digest>
@@ -2001,7 +2001,7 @@ The following parameters SHOULD be specified on the request:
 | `name`           | path   | Name of the target repository.                                                                                                                  |
 | `digest`         | query  | Digest of uploaded blob.If present, the upload will be completed, in a single request, with contents of the request body as the resulting blob. |
 
-###### On Success: Created
+##### On Success: Created
 
 ```HTTP
 201 Created
@@ -2020,7 +2020,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty. |
 | `Blob-Upload-Session-ID` | Identifies the upload session_id for the current request.           |
 
-###### On Failure: Invalid Name or Digest
+##### On Failure: Invalid Name or Digest
 
 ```HTTP
 400 Bad Request
@@ -2033,7 +2033,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client.The error MAY include a detail structure with the key "digest", including the invalid digest string.This error MAY also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID`   | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 
-###### On Failure: Not allowed
+##### On Failure: Not allowed
 
 ```HTTP
 405 Method Not Allowed
@@ -2047,7 +2047,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |---------------|-------------------------------|---------------------------------------------------------------------------------------------|
 | `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -2082,7 +2082,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -2115,7 +2115,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -2148,7 +2148,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -2181,7 +2181,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-##### Initiate Resumable Blob Upload
+#### Initiate Resumable Blob Upload
 
 ```HTTP
 POST /v2/<name>/blobs/uploads/
@@ -2201,7 +2201,7 @@ The following parameters SHOULD be specified on the request:
 | `Content-Length` | header | The `Content-Length` header MUST be zero and the body MUST be empty. |
 | `name`           | path   | Name of the target repository.                                       |
 
-###### On Success: Accepted
+##### On Success: Accepted
 
 ```HTTP
 202 Accepted
@@ -2224,7 +2224,7 @@ The following headers will be returned with the response:
 | `Range`              | Range header indicating the progress of the upload.When starting an upload, it will return an empty range, since no content has been received. |
 | `Blob-Upload-Session-ID` | Identifies the upload session_id for the current request.                                                                                     |
 
-###### On Failure: Invalid Name or Digest
+##### On Failure: Invalid Name or Digest
 
 ```HTTP
 400 Bad Request
@@ -2237,7 +2237,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client.The error MAY include a detail structure with the key "digest", including the invalid digest string.This error MAY also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID`   | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -2272,7 +2272,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -2305,7 +2305,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -2338,7 +2338,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -2371,7 +2371,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-##### Mount Blob
+#### Mount Blob
 
 ```HTTP
 POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repository name>
@@ -2393,7 +2393,7 @@ The following parameters SHOULD be specified on the request:
 | `mount`          | query  | Digest of blob to mount from the source repository.                  |
 | `from`           | query  | Name of the source repository.                                       |
 
-###### On Success: Created
+##### On Success: Created
 
 ```HTTP
 201 Created
@@ -2412,7 +2412,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty. |
 | `Blob-Upload-Session-ID` | Identifies the upload session_id for the current request.           |
 
-###### On Failure: Invalid Name or Digest
+##### On Failure: Invalid Name or Digest
 
 ```HTTP
 400 Bad Request
@@ -2425,7 +2425,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client.The error MAY include a detail structure with the key "digest", including the invalid digest string.This error MAY also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID`   | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 
-###### On Failure: Not allowed
+##### On Failure: Not allowed
 
 ```HTTP
 405 Method Not Allowed
@@ -2439,7 +2439,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |---------------|-------------------------------|---------------------------------------------------------------------------------------------|
 | `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -2474,7 +2474,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -2507,7 +2507,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -2540,7 +2540,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -2573,13 +2573,13 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-### Blob Upload
+## Blob Upload
 
 Interact with blob uploads.
 Clients SHOULD never assemble URLs for this endpoint and SHOULD only take it through the `Location` header on related API requests.
 The `Location` header and its parameters SHOULD be preserved by clients, using the latest value returned via upload related API calls.
 
-#### GET Blob Upload
+### GET Blob Upload
 
 Retrieve status of upload identified by `session_id`.
 The primary purpose of this endpoint is to resolve the current status of a resumable upload.
@@ -2601,7 +2601,7 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                                                |
 | `session_id`          | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
-###### On Success: Upload Progress
+##### On Success: Upload Progress
 
 ```HTTP
 204 No Content
@@ -2621,7 +2621,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty. |
 | `Blob-Upload-Session-ID` | Identifies the upload session ID for the current request.           |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -2649,7 +2649,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID`        | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid                            | The blob upload encountered an error and can no longer proceed.                                                                                                                                                                                                                                   |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -2676,7 +2676,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-----------------------|---------------------------------|--------------------------------------------------------------------------------------------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code MAY be returned. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -2711,7 +2711,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -2744,7 +2744,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -2777,7 +2777,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -2810,11 +2810,11 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-#### PATCH Blob Upload
+### PATCH Blob Upload
 
 Upload a chunk of data for the specified upload.
 
-##### Stream upload
+#### Stream upload
 
 ```HTTP
 PATCH /v2/<name>/blobs/uploads/<session_id>
@@ -2836,7 +2836,7 @@ The following parameters SHOULD be specified on the request:
 | `name`          | path   | Name of the target repository.                                                                |
 | `session_id`          | path   | A unique string identifying the upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
-###### On Success: Data Accepted
+##### On Success: Data Accepted
 
 ```HTTP
 202 Accepted
@@ -2858,7 +2858,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty.                                                                                                                |
 | `Blob-Upload-Session-ID` | Identifies the upload session ID for the current request.                                                                                                                          |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -2886,7 +2886,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID`        | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                        |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid                            | The blob upload encountered an error and can no longer proceed.                                                                                                                                                                                                                                    |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -2913,7 +2913,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-----------------------|---------------------------------|--------------------------------------------------------------------------------------------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code MAY be returned. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -2948,7 +2948,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -2981,7 +2981,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -3014,7 +3014,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -3047,7 +3047,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-##### Chunked upload
+#### Chunked upload
 
 ```HTTP
 PATCH /v2/<name>/blobs/uploads/<session_id>
@@ -3074,7 +3074,7 @@ The following parameters SHOULD be specified on the request:
 | `name`           | path   | Name of the target repository.                                                                                                                                                                                    |
 | `session_id`           | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                                                                                                                     |
 
-###### On Success: Chunk Accepted
+##### On Success: Chunk Accepted
 
 ```HTTP
 202 Accepted
@@ -3096,7 +3096,7 @@ The following headers will be returned with the response:
 | `Content-Length`     | The `Content-Length` header MUST be zero and the body MUST be empty.                                                                                                                |
 | `Blob-Upload-Session-ID` | Identifies the upload session ID for the current request.                                                                                                                          |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -3124,7 +3124,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID`        | invalid repository name                        | Invalid repository name encountered either during manifest validation or any API operation.                                                                                                                                                                                                       |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid                            | The blob upload encountered an error and can no longer proceed.                                                                                                                                                                                                                                   |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -3151,7 +3151,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-----------------------|---------------------------------|--------------------------------------------------------------------------------------------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code MAY be returned. |
 
-###### On Failure: Requested Range Not Satisfiable
+##### On Failure: Requested Range Not Satisfiable
 
 ```HTTP
 416 Requested Range Not Satisfiable
@@ -3159,7 +3159,7 @@ The error codes that MAY be included in the response body are enumerated below:
 
 The `Content-Range` specification cannot be accepted, either because it does not overlap with the current progress or it is invalid.
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -3194,7 +3194,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -3227,7 +3227,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----|-------|-----------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -3260,7 +3260,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -3293,7 +3293,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-#### PUT Blob Upload
+### PUT Blob Upload
 
 Complete the upload specified by `session_id`, optionally appending the body as the final chunk.
 
@@ -3321,7 +3321,7 @@ The following parameters SHOULD be specified on the request:
 | `session_id`           | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`.                          |
 | `digest`         | query  | Digest of uploaded blob.                                                                                               |
 
-###### On Success: Upload Complete
+##### On Success: Upload Complete
 
 ```HTTP
 204 No Content
@@ -3343,7 +3343,7 @@ The following headers will be returned with the response:
 | `Content-Length`        | The `Content-Length` header MUST be zero and the body MUST be empty.                                                                                                                                              |
 | `Docker-Content-Digest` | Digest of the targeted content for the request.                                                                                                                                                                   |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -3372,7 +3372,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `BLOB_UPLOAD_INVALID` | blob upload invalid                            | The blob upload encountered an error and can no longer proceed.                                                                                                                                                                                                                                   |
 | `UNSUPPORTED`         | The operation is unsupported.                  | The operation was unsupported due to a missing implementation or invalid set of parameters.                                                                                                                                                                                                       |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -3399,7 +3399,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-----------------------|---------------------------------|--------------------------------------------------------------------------------------------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code MAY be returned. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -3434,7 +3434,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -3467,7 +3467,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -3500,7 +3500,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
@@ -3533,7 +3533,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-------------------|-------------------|---------------------------------------------------------------------|
 | `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
 
-#### DELETE Blob Upload
+### DELETE Blob Upload
 
 Cancel outstanding upload processes, releasing associated resources.
 If this is not called, the unfinished uploads will eventually timeout.
@@ -3557,7 +3557,7 @@ The following parameters SHOULD be specified on the request:
 | `name`           | path   | Name of the target repository.                                                                |
 | `session_id`           | path   | A unique string identifying session of the particular upload.This field can accept characters that match `[a-zA-Z0-9-_.=]+`. |
 
-###### On Success: Upload Deleted
+##### On Success: Upload Deleted
 
 ```HTTP
 204 No Content
@@ -3572,7 +3572,7 @@ The following headers will be returned with the response:
 |------------------|-----------------------------------|
 | `Content-Length` | Length of the JSON response body. |
 
-###### On Failure: Bad Request
+##### On Failure: Bad Request
 
 ```HTTP
 400 Bad Request
@@ -3600,7 +3600,7 @@ The error codes that MAY be included in the response body are enumerated below:
 | `NAME_INVALID`        | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid     | The blob upload encountered an error and can no longer proceed.                             |
 
-###### On Failure: Not Found
+##### On Failure: Not Found
 
 ```HTTP
 404 Not Found
@@ -3627,7 +3627,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |-----------------------|---------------------------------|--------------------------------------------------------------------------------------------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code MAY be returned. |
 
-###### On Failure: Authentication Required
+##### On Failure: Authentication Required
 
 ```HTTP
 401 Unauthorized
@@ -3662,7 +3662,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|-------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client.Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
 
-###### On Failure: No Such Repository Error
+##### On Failure: No Such Repository Error
 
 ```HTTP
 404 Not Found
@@ -3695,7 +3695,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------------|---------------------------------------|-----------------------------------------------------------------------------------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
-###### On Failure: Access Denied
+##### On Failure: Access Denied
 
 ```HTTP
 403 Forbidden
@@ -3728,7 +3728,7 @@ The error codes that MAY be included in the response body are enumerated below:
 |----------|--------------------------------------------|----------------------------------------------------------------------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
-###### On Failure: Too Many Requests
+##### On Failure: Too Many Requests
 
 ```HTTP
 429 Too Many Requests
