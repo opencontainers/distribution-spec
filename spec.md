@@ -2,25 +2,43 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-	- [Introduction](#introduction)
-	- [Historical Context](#historical-context)
-	- [Definitions](#defintions)
-- [Use Cases](#use-cases)
-- [Notational Conventions](#notational-conventions)
-- [Conformance](#conformance)
-	- [Minimum Requirements](#minimum-requirements)
-	- [Official Certification](#official-certification)
-	- [Workflow Categories](#workflow-categories)
-		1. [Pull](#pull)
-		2. [Push](#push)
-		3. [Content Discovery](#content-discovery)
-		4. [Content Management](#content-management)
-- [API](#api)
-	- [Endpoints](#endpoints)
-	- [Error Codes](#error-codes)
-- [Appendix](#appendix)
-
+- [Open Container Initiative Distribution Specification](#open-container-initiative-distribution-specification)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+    - [Introduction](#introduction)
+    - [Historical Context](#historical-context)
+      - [Legacy Docker support HTTP headers](#legacy-docker-support-http-headers)
+    - [Definitions](#definitions)
+  - [Notational Conventions](#notational-conventions)
+  - [Use Cases](#use-cases)
+    - [Artifact Verification](#artifact-verification)
+    - [Resumable Push](#resumable-push)
+    - [Resumable Pull](#resumable-pull)
+    - [Layer Upload De-duplication](#layer-upload-de-duplication)
+  - [Conformance](#conformance)
+    - [Official Certification](#official-certification)
+    - [Requirements](#requirements)
+    - [Workflow Categories](#workflow-categories)
+      - [Pull](#pull)
+        - [Pulling manifests](#pulling-manifests)
+        - [Pulling blobs](#pulling-blobs)
+        - [Checking if content exists in the registry](#checking-if-content-exists-in-the-registry)
+      - [Push](#push)
+        - [Pushing blobs](#pushing-blobs)
+        - [Pushing a blob monolithically](#pushing-a-blob-monolithically)
+        - [Pushing a blob in chunks](#pushing-a-blob-in-chunks)
+        - [Mounting a blob from another repository](#mounting-a-blob-from-another-repository)
+        - [Pushing Manifests](#pushing-manifests)
+      - [Content Discovery](#content-discovery)
+      - [Content Management](#content-management)
+        - [Deleting tags](#deleting-tags)
+        - [Deleting Manifests](#deleting-manifests)
+        - [Deleting Blobs](#deleting-blobs)
+    - [API](#api)
+      - [Determining Support](#determining-support)
+      - [Endpoints](#endpoints)
+      - [Error Codes](#error-codes)
+    - [Appendix](#appendix)
 
 ## Overview
 
@@ -197,6 +215,7 @@ There are two ways to push blobs: chunked or monolithic.
 ##### Pushing a blob monolithically
 
 There are two ways to push a blob monolithically:
+
 1. A single `POST` request
 2. A `POST` request followed by a `PUT` request
 
@@ -205,11 +224,13 @@ There are two ways to push a blob monolithically:
 To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
 
 `/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
-```
+
+```http
 Content-Length: <length>
 Content-Type: application/octet-stream
 ```
-```
+
+```text
 <upload byte stream>
 ```
 
@@ -219,7 +240,7 @@ The `Content-Length` header MUST match the blob's actual content length. Likewis
 
 Successful completion of the request MUST return either a `201 Created` or a `202 Accepted`, and MUST include the following header:
 
-```
+```http
 Location: <blob-location>
 ```
 
@@ -229,6 +250,7 @@ some cloud storage provider that your registry generates.
 ---
 
 To push a blob monolithically by using a POST request followed by a PUT request, there are two steps:
+
 1. Obtain a session id (upload URL)
 2. Upload the blob to said URL
 
@@ -238,7 +260,7 @@ To obtain a session ID, perform a `POST` request to a URL in the following forma
 
 Here, `<name>` refers to the namespace of the repository. Upon success, the response MUST have a code of `202 Accepted`, and MUST include the following header:
 
-```
+```http
 Location: <location>
 ```
 
@@ -250,11 +272,13 @@ see [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
 `<location>?digest=<digest>` <sup>[end-6](#endpoints)</sup>
-```
+
+```http
 Content-Length: <length>
 Content-Type: aplication/octet-stream
 ```
-```
+
+```text
 <upload byte stream>
 ```
 
@@ -264,7 +288,7 @@ Here, `<digest>` is the digest of the blob being uploaded, and `<length>` is its
 
 Upon successful completion of the request, the response MUST have code `201 Created` and MUST have the following header:
 
-```
+```http
 Location: <blob-location>
 ```
 
@@ -273,28 +297,32 @@ With `<blob-location>` being a pullable blob URL.
 ##### Pushing a blob in chunks
 
 A chunked blob upload is accomplished in three phases:
+
 1. Obtain a session ID (upload URL) (`POST`)
 2. Upload the chunks (`PATCH`)
 3. Close the session (`PUT`)
 
 For information on obtaining a session ID, reference the above section on pushing a blob monolithically via the `POST`/`PUT` method. The process remains unchanged for chunked upload, except that the post request MUST include the following header:
 
-```
+```http
 Content-Length: 0
 ```
 
 Please reference the above section for restrictions on the `<location>`.
 
 ---
+
 To upload a chunk, issue a `PATCH` request to a URL path in the following format, and with the following headers and body:
 
 URL path: `<location>` <sup>[end-5](#endpoints)</sup>
-```
+
+```http
 Content-Type: application/octet-stream
 Content-Range: <range>
 Content-Length: <length>
 ```
-```
+
+```text
 <upload byte stream of chunk>
 ```
 
@@ -310,7 +338,7 @@ The `<length>` is the content-length, in bytes, of the current chunk.
 
 Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following header:
 
-```
+```http
 Location <location>
 ```
 
@@ -325,26 +353,29 @@ The final chunk MAY be uploaded using a `PATCH` request or it MAY be uploaded in
 To close the session, issue a `PUT` request to a url in the following format, and with the following headers (and optional body, depending on whether or not the final chunk was uploaded already via a `PATCH` request):
 
 `<location>?digest=<digest>`
-```
+
+```http
 Content-Length: <length of chunk, if present>
 Content-Range: <range of chunk, if present>
 Content-Type: application/octet-stream <if chunk provided>
 ```
-```
+
+```http
 OPTIONAL: <final chunk byte stream>
 ```
 
 The closing `PUT` request MUST include the `<digest>` of the whole blob (not the final chunk) as a query parameter.
 
 The response to a successful closing of the session MUST be `201 Created`, and MUST contain the following header:
-```
+
+```http
 Location: <blob-location>
 ```
 
 Here, `<blob-location>` is a pullable blob URL.
 
-
 ##### Mounting a blob from another repository
+
 If a necessary blob exists already in another repository, it can be mounted into a different repository via a `POST`
 request in the following format:
 
@@ -356,7 +387,8 @@ previously-described `POST` request to `/v2/<name>/blobs/uploads/` <sup>[end-4a]
 upload session).
 
 The response to a successful mount MUST be `201 Created`, and MUST contain the following header:
-```
+
+```http
 Location: <blob-location>
 ```
 
@@ -372,10 +404,12 @@ it SHOULD return a `202`. This indicates that the upload session has begun and t
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
 and body:
 `/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
-```
+
+```http
 Content-Type: application/vnd.oci.image.manifest.v1+json
 ```
-```
+
+```text
 <manifest byte stream>
 ```
 
@@ -385,7 +419,7 @@ The uploaded manifest MUST reference any blobs that make up the artifact. Howeve
 be empty. Upon a successful upload, the registry MUST return response code `201 Created`, and MUST have the
 following header:
 
-```
+```http
 Location: <location>
 ```
 
@@ -405,6 +439,7 @@ To fetch the list of tags, perform a `GET` request to a path in the following fo
 the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
 
 Upon success, the response MUST be a json body in the following format:
+
 ```json
 {
   "name": "<name>",
@@ -440,10 +475,12 @@ results, but up to `<int>` tags *after* `<tagname>` will be returned. The tags M
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
 #### Content Management
+
 Content management refers to the deletion of blobs, tags, and manifests. Registries MAY implement deletion or they MAY
 disable it. Similarly, a registry MAY implement tag deletion, while others MAY allow deletion only by manifest.
 
 ##### Deleting tags
+
 `<name>` is the namespace of the repository, and `<tag>` is the name of the tag to be deleted. Upon success, the registry
 MUST respond with a `202 Accepted` code. If tag deletion is disabled, the registry MUST respond with either a
 `400 Bad Request` or a `405 Method Not Allowed`.
@@ -452,6 +489,7 @@ To delete a tag, perform a `DELETE` request to a path in the following format:
 `/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
 
 ##### Deleting Manifests
+
 To delete a manifest, perform a `DELETE` request to a path in the following format:
 `/v2/<name>/manifests/<digest>` <sup>[end-9](#endpoints)</sup>
 
@@ -459,6 +497,7 @@ To delete a manifest, perform a `DELETE` request to a path in the following form
 MUST respond with a `202 Accepted` code. If the repository does not exist, the response MUST return `404 Not Found`.
 
 ##### Deleting Blobs
+
 To delete a blob, perform a `DELETE` request to a path in the following format:
 `/v2/<name>/blobs/<digest>` <sup>[end-10](#endpoints)</sup>
 
@@ -466,9 +505,11 @@ To delete a blob, perform a `DELETE` request to a path in the following format:
 registry MUST respond with code `202 Accepted`. If the blob is not found, a `404 Not Found` code MUST be returned.
 
 ### API
+
 The API operates over HTTP. Below is a summary of the endpoints used by the API.
 
 #### Determining Support
+
 To check whether or not the registry implements this specification, perform a `GET` request to the following endpoint:
 `/v2/` <sup>[end-1](#endpoints)</sup>.
 
