@@ -44,8 +44,10 @@ ifeq "$(strip $(GOLANGCILINT))" ''
 	endif
 endif
 
-DOC_FILES	:= spec.md
+DOC_FILES		:= spec.md detail.md content-negotiation.md faq.md
 FIGURE_FILES	:=
+
+default: test docs conformance
 
 test: .gitvalidation
 
