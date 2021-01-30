@@ -6,7 +6,7 @@ To foster consistency across registries, enabling the community to build tooling
 
 To facilitate discussions, prioritization and phased implementations, we will capture a list of scenarios and requirements. Once the requirements are felt complete and prioritized, we can transition to a design that implements the agreed prioritized items, while reserving space for the future enhancements.
 
-For the purposes of examples within a scenario, we'll assume an `oci-reg` cli exists. The purpose is not to design the specific CLI, rather provide concrete examples whos specific names and parameters will evolve.
+For the purposes of examples within a scenario, we'll assume an `oci-reg` cli exists. The purpose is not to design the specific CLI, rather provide concrete examples whose specific names and parameters will evolve.
 
 ## Scenarios
 
