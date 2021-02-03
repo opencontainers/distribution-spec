@@ -30,7 +30,7 @@ The [OCI Runtime Specification] defines how to properly run a container "[filesy
 which fully adheres to the OCI Image Format Specification. The OCI Runtime Specification is relevant to the OCI Distribution Specification in that they both support OCI Images,
 and that container runtimes use the APIs defined in the OCI Distribution Specification to fetch pre-built container images and run them.
 
-The [OCI Distribution Specification] is also designed generically enough to be leveraged as a distribution mechanism for
+The [OCI Distribution Specification] (this project) is also designed generically enough to be leveraged as a distribution mechanism for
 any type of content. The format of uploaded manifests, for example, need not necessarily adhere to the OCI Image Format Specification
 so long as it references the blobs which comprise a given artifact.
 
