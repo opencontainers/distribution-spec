@@ -18,29 +18,34 @@ The _optional_ and _base_ layers of all OCI projects are tracked in the [OCI Sco
 
 ## Distributing OCI Images and other content
 
-The OCI Distribution Spec is closely related to the [OCI Image Format Spec project](https://github.com/opencontainers/image-spec),
-the [OCI Runtime Spec project](https://github.com/opencontainers/runtime-spec),
-and the [OCI Artifacts project](https://github.com/opencontainers/artifacts).
+The OCI Distribution Spec is closely related to the [OCI Image Format Specification] project,
+the [OCI Runtime Specification] project,
+and the [OCI Artifacts] project.
 
-The Image Format Specification strictly defines the requirements for an OCI Image (container image), which consists of
+The [OCI Image Format Specification] strictly defines the requirements for an OCI Image (container image), which consists of
 a manifest, an optional image index, a set of filesystem layers, and a configuration.
-The schema for OCI Image components is fully supported by the APIs defined in the Distribution Spec.
+The schema for OCI Image components is fully supported by the APIs defined in the OCI Distribution Specification.
 
-The OCI Runtime Specification defines how to properly run a container "[filesystem bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md)"
-which fully adheres to the OCI Image Format. The Runtime Spec is relevant to the Distribution Spec in that they both support OCI Images,
-and that container runtimes use the APIs defined in the Distribution Spec to fetch pre-built container images and run them.
+The [OCI Runtime Specification] defines how to properly run a container "[filesystem bundle](https://github.com/opencontainers/runtime-spec/blob/master/bundle.md)"
+which fully adheres to the OCI Image Format Specification. The OCI Runtime Specification is relevant to the OCI Distribution Specification in that they both support OCI Images,
+and that container runtimes use the APIs defined in the OCI Distribution Specification to fetch pre-built container images and run them.
 
-The Distribution Spec is also designed generically enough to be leveraged as a distribution mechanism for
-any type of content. The format of uploaded manifests, for example, need not necessarily adhere to the OCI Image Format
+The [OCI Distribution Specification] is also designed generically enough to be leveraged as a distribution mechanism for
+any type of content. The format of uploaded manifests, for example, need not necessarily adhere to the OCI Image Format Specification
 so long as it references the blobs which comprise a given artifact.
 
-The OCI Artifacts project is an effort to provide guidance on how to
-properly define and distribute content using the Distribution Spec for artifacts which are not container filesystem bundles,
-in a way that is mostly compatible with the existing schemas defined in the Image Format Spec.
+The [OCI Artifacts] project is an effort to provide guidance on how to
+properly define and distribute content using the OCI Distribution Specification for artifacts which are not container filesystem bundles,
+in a way that is mostly compatible with the existing schemas defined in the OCI Image Format Specification.
+
+[OCI Image Format Specification]: https://github.com/opencontainers/image-spec
+[OCI Runtime Specification]: https://github.com/opencontainers/runtime-spec
+[OCI Distribution Specification]: https://github.com/opencontainers/distribution-spec
+[OCI Artifacts]: https://github.com/opencontainers/artifacts
 
 ## FAQ
 
-For questions about the Distribution Spec, please see the [FAQ](FAQ.md).
+For questions about the OCI Distribution Specification, please see the [FAQ](FAQ.md).
 
 For general questions about OCI, please see the [FAQ on the OCI site](https://www.opencontainers.org/faq).
 
