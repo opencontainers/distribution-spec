@@ -197,34 +197,8 @@ There are two ways to push blobs: chunked or monolithic.
 ##### Pushing a blob monolithically
 
 There are two ways to push a blob monolithically:
-1. A single `POST` request
-2. A `POST` request followed by a `PUT` request
-
----
-
-To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
-
-`/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
-```
-Content-Length: <length>
-Content-Type: application/octet-stream
-```
-```
-<upload byte stream>
-```
-
-Here, `<name>` is the repository's namespace, `<digest>` is the blob's digest, and `<length>` is the size (in bytes) of the blob.
-
-The `Content-Length` header MUST match the blob's actual content length. Likewise, the `<digest>` MUST match the blob's digest.
-
-Successful completion of the request MUST return either a `201 Created` or a `202 Accepted`, and MUST include the following header:
-
-```
-Location: <blob-location>
-```
-
-Here, `<blob-location>` is a pullable blob URL. This location does not necessarily have to be served by your register, for example, in the case of a signed URL from
-some cloud storage provider that your registry generates.
+1. A `POST` request followed by a `PUT` request
+2. A single `POST` request
 
 ---
 
@@ -269,6 +243,33 @@ Location: <blob-location>
 ```
 
 With `<blob-location>` being a pullable blob URL.
+
+---
+
+To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
+
+`/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
+```
+Content-Length: <length>
+Content-Type: application/octet-stream
+```
+```
+<upload byte stream>
+```
+
+Here, `<name>` is the repository's namespace, `<digest>` is the blob's digest, and `<length>` is the size (in bytes) of the blob.
+
+The `Content-Length` header MUST match the blob's actual content length. Likewise, the `<digest>` MUST match the blob's digest.
+
+Successful completion of the request MUST return either a `201 Created` or a `202 Accepted`, and MUST include the following header:
+
+```
+Location: <blob-location>
+```
+
+Here, `<blob-location>` is a pullable blob URL. This location does not necessarily have to be served by your register, for example, in the case of a signed URL from
+some cloud storage provider that your registry generates.
+
 
 ##### Pushing a blob in chunks
 
