@@ -202,6 +202,8 @@ There are two ways to push a blob monolithically:
 
 ---
 
+###### POST then PUT
+
 To push a blob monolithically by using a POST request followed by a PUT request, there are two steps:
 1. Obtain a session id (upload URL)
 2. Upload the blob to said URL
@@ -246,6 +248,10 @@ With `<blob-location>` being a pullable blob URL.
 
 ---
 
+###### Single POST
+
+Registries MAY support pushing blobs using a single POST request.
+
 To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
 
 `/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
@@ -261,7 +267,9 @@ Here, `<name>` is the repository's namespace, `<digest>` is the blob's digest, a
 
 The `Content-Length` header MUST match the blob's actual content length. Likewise, the `<digest>` MUST match the blob's digest.
 
-Successful completion of the request MUST return either a `201 Created` or a `202 Accepted`, and MUST include the following header:
+Registries that do not support single request monolithic uploads SHOULD return a `202 Accepted` status code and `Location` header and clients SHOULD proceed with a subsequent PUT request, as described by the [POST then PUT upload method](#post-then-put).
+
+Successful completion of the request MUST return a `201 Created` and MUST include the following header:
 
 ```
 Location: <blob-location>
