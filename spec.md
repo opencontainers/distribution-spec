@@ -197,36 +197,12 @@ There are two ways to push blobs: chunked or monolithic.
 ##### Pushing a blob monolithically
 
 There are two ways to push a blob monolithically:
-1. A single `POST` request
-2. A `POST` request followed by a `PUT` request
+1. A `POST` request followed by a `PUT` request
+2. A single `POST` request
 
 ---
 
-To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
-
-`/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
-```
-Content-Length: <length>
-Content-Type: application/octet-stream
-```
-```
-<upload byte stream>
-```
-
-Here, `<name>` is the repository's namespace, `<digest>` is the blob's digest, and `<length>` is the size (in bytes) of the blob.
-
-The `Content-Length` header MUST match the blob's actual content length. Likewise, the `<digest>` MUST match the blob's digest.
-
-Successful completion of the request MUST return either a `201 Created` or a `202 Accepted`, and MUST include the following header:
-
-```
-Location: <blob-location>
-```
-
-Here, `<blob-location>` is a pullable blob URL. This location does not necessarily have to be served by your register, for example, in the case of a signed URL from
-some cloud storage provider that your registry generates.
-
----
+###### POST then PUT
 
 To push a blob monolithically by using a POST request followed by a PUT request, there are two steps:
 1. Obtain a session id (upload URL)
@@ -269,6 +245,39 @@ Location: <blob-location>
 ```
 
 With `<blob-location>` being a pullable blob URL.
+
+---
+
+###### Single POST
+
+Registries MAY support pushing blobs using a single POST request.
+
+To push a blob monolithically by using a single POST request, perform a `POST` request to a URL in the following form, and with the following headers and body:
+
+`/v2/<name>/blobs/uploads/?digest=<digest>` <sup>[end-4b](#endpoints)</sup>
+```
+Content-Length: <length>
+Content-Type: application/octet-stream
+```
+```
+<upload byte stream>
+```
+
+Here, `<name>` is the repository's namespace, `<digest>` is the blob's digest, and `<length>` is the size (in bytes) of the blob.
+
+The `Content-Length` header MUST match the blob's actual content length. Likewise, the `<digest>` MUST match the blob's digest.
+
+Registries that do not support single request monolithic uploads SHOULD return a `202 Accepted` status code and `Location` header and clients SHOULD proceed with a subsequent PUT request, as described by the [POST then PUT upload method](#post-then-put).
+
+Successful completion of the request MUST return a `201 Created` and MUST include the following header:
+
+```
+Location: <blob-location>
+```
+
+Here, `<blob-location>` is a pullable blob URL. This location does not necessarily have to be served by your register, for example, in the case of a signed URL from
+some cloud storage provider that your registry generates.
+
 
 ##### Pushing a blob in chunks
 
