@@ -2,10 +2,12 @@ package conformance
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"strconv"
 
@@ -167,6 +169,9 @@ func init() {
 	client.SetLogger(logger)
 	client.SetCookieJar(nil)
 
+	// in order to get a unique blob digest, we create a new author
+	// field for the config on each run
+	randomAuthor := randomString(16)
 	config := imagespec.Image{
 		Architecture: "amd64",
 		OS:           "linux",
@@ -174,6 +179,7 @@ func init() {
 			Type:    "layers",
 			DiffIDs: []godigest.Digest{},
 		},
+		Author: randomAuthor,
 	}
 	configBlobContent, err = json.MarshalIndent(&config, "", "\t")
 	if err != nil {
@@ -357,4 +363,18 @@ func getTagNameFromResponse(lastResponse *reggie.Response) (tagName string) {
 	}
 
 	return
+}
+
+// Adapted from https://gist.github.com/dopey/c69559607800d2f2f90b1b1ed4e550fb
+func randomString(n int) string {
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			panic(err)
+		}
+		ret[i] = letters[num.Int64()]
+	}
+	return string(ret)
 }
