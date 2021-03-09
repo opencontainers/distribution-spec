@@ -75,6 +75,7 @@ var test02Push = func() {
 					Equal(http.StatusCreated),
 					Equal(http.StatusAccepted),
 				))
+				lastResponse = resp
 			})
 
 			g.Specify("GET request to blob URL from prior request should yield 200 or 404 based on response code", func() {
