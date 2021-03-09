@@ -57,7 +57,7 @@ All decisions affecting this project, big and small, follow the same procedure:
 
 ### I'm a maintainer, should I make pull requests too?
 
-Yes. Nobody should ever push to master directly. All changes should be
+Yes. Nobody should ever push to main directly. All changes should be
 made through a pull request.
 
 ## Who decides what?

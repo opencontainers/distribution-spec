@@ -203,7 +203,7 @@ This will create a local `results/` directory containing all of the test report 
 A GitHub Action is provided by this repo which you can use
 as part of a GitHub-based CI pipeline.
 
-The following example will build the binary off of the master branch,
+The following example will build the binary off of the main branch,
 run the tests, and upload `junit.xml` and `report.html` as build artifacts:
 
 ```yaml
@@ -215,7 +215,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run OCI Distribution Spec conformance tests
-        uses: opencontainers/distribution-spec@master
+        uses: opencontainers/distribution-spec@main
         env:
           OCI_ROOT_URL: https://myreg.io
           OCI_NAMESPACE: mytestorg/mytestrepo
