@@ -57,7 +57,6 @@ const (
 	envVarContentDiscovery          = "OCI_TEST_CONTENT_DISCOVERY"
 	envVarContentManagement         = "OCI_TEST_CONTENT_MANAGEMENT"
 	envVarPushEmptyLayer            = "OCI_SKIP_EMPTY_LAYER_PUSH_TEST"
-	envVarSingleShotUpload          = "OCI_SKIP_SINGLE_SHOT_UPLOAD_TEST"
 	envVarBlobDigest                = "OCI_BLOB_DIGEST"
 	envVarManifestDigest            = "OCI_MANIFEST_DIGEST"
 	envVarEmptyLayerManifestDigest  = "OCI_EMPTY_LAYER_MANIFEST_DIGEST"
@@ -130,7 +129,6 @@ var (
 	runContentDiscoverySetup  bool
 	runContentManagementSetup bool
 	skipEmptyLayerTest        bool
-	skipSingleShotUploadTest  bool
 	deleteManifestBeforeBlobs bool
 	Version                   = "unknown"
 )
@@ -291,7 +289,6 @@ func init() {
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
 	skipEmptyLayerTest = false
-	skipSingleShotUploadTest = false
 	deleteManifestBeforeBlobs = false
 
 	if os.Getenv(envVarTagName) != "" &&
@@ -305,7 +302,6 @@ func init() {
 	}
 
 	skipEmptyLayerTest, _ = strconv.ParseBool(os.Getenv(envVarPushEmptyLayer))
-	skipSingleShotUploadTest, _ = strconv.ParseBool(os.Getenv(envVarSingleShotUpload))
 	deleteManifestBeforeBlobs, _ = strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
 
 	reportJUnitFilename = "junit.xml"

@@ -62,7 +62,6 @@ var test02Push = func() {
 
 			g.Specify("POST request with digest and blob should yield a 201 or 202", func() {
 				SkipIfDisabled(push)
-				RunOnlyIfNot(skipSingleShotUploadTest)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
 					SetHeader("Content-Length", configBlobContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
@@ -81,7 +80,6 @@ var test02Push = func() {
 
 			g.Specify("GET request to blob URL from prior request should yield 200 or 404 based on response code", func() {
 				SkipIfDisabled(push)
-				RunOnlyIfNot(skipSingleShotUploadTest)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
