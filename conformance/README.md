@@ -102,8 +102,15 @@ and another with no layers. If the empty-layer test is causing a failure, it can
 environment:
 
 ```
-# Enable layer upload
 OCI_SKIP_EMPTY_LAYER_PUSH_TEST=1
+```
+
+Some registries support pushing blobs with a single POST request; however, this behaviour is not strictly required.
+If you wish to disable the single POST test (a.k.a. the "single shot upload"), it can be skipped by setting the
+following in the environment:
+
+```
+OCI_SKIP_SINGLE_SHOT_UPLOAD_TEST=1
 ```
 
 The test suite will need access to a second namespace. This namespace is used to check support for cross-repository mounting
