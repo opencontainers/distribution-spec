@@ -2,10 +2,12 @@ package conformance
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"strconv"
 
@@ -20,6 +22,12 @@ type (
 	TagList struct {
 		Name string   `json:"name"`
 		Tags []string `json:"tags"`
+	}
+
+	TestBlob struct {
+		Content       []byte
+		ContentLength string
+		Digest        string
 	}
 )
 
@@ -101,10 +109,7 @@ var (
 	testBlobBChunk2Length     string
 	testBlobBChunk1Range      string
 	testBlobBChunk2Range      string
-	configBlobDigest          string
 	client                    *reggie.Client
-	configBlobContent         []byte
-	configBlobContentLength   string
 	crossmountNamespace       string
 	dummyDigest               string
 	errorCodes                []string
@@ -112,8 +117,6 @@ var (
 	layerBlobData             []byte
 	layerBlobDigest           string
 	layerBlobContentLength    string
-	manifestContent           []byte
-	manifestDigest            string
 	emptyLayerManifestDigest  string
 	emptyLayerManifestContent []byte
 	nonexistentManifest       string
@@ -128,6 +131,8 @@ var (
 	runContentManagementSetup bool
 	skipEmptyLayerTest        bool
 	deleteManifestBeforeBlobs bool
+	configs                   []TestBlob
+	manifests                 []TestBlob
 	Version                   = "unknown"
 )
 
@@ -167,24 +172,38 @@ func init() {
 	client.SetLogger(logger)
 	client.SetCookieJar(nil)
 
-	config := imagespec.Image{
-		Architecture: "amd64",
-		OS:           "linux",
-		RootFS: imagespec.RootFS{
-			Type:    "layers",
-			DiffIDs: []godigest.Digest{},
-		},
-	}
-	configBlobContent, err = json.MarshalIndent(&config, "", "\t")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// create a unique config for each workflow category
+	for i := 0; i < 4; i++ {
 
-	configBlobContentLength = strconv.Itoa(len(configBlobContent))
-	configBlobDigestRaw := godigest.FromBytes(configBlobContent)
-	configBlobDigest = configBlobDigestRaw.String()
-	if v := os.Getenv(envVarBlobDigest); v != "" {
-		configBlobDigest = v
+		// in order to get a unique blob digest, we create a new author
+		// field for the config on each run.
+		randomAuthor := randomString(16)
+		config := imagespec.Image{
+			Architecture: "amd64",
+			OS:           "linux",
+			RootFS: imagespec.RootFS{
+				Type:    "layers",
+				DiffIDs: []godigest.Digest{},
+			},
+			Author: randomAuthor,
+		}
+		configBlobContent, err := json.MarshalIndent(&config, "", "\t")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		configBlobContentLength := strconv.Itoa(len(configBlobContent))
+		configBlobDigestRaw := godigest.FromBytes(configBlobContent)
+		configBlobDigest := configBlobDigestRaw.String()
+		if v := os.Getenv(envVarBlobDigest); v != "" {
+			configBlobDigest = v
+		}
+
+		configs = append(configs, TestBlob{
+			Content:       configBlobContent,
+			ContentLength: configBlobContentLength,
+			Digest:        configBlobDigest,
+		})
 	}
 
 	layerBlobData, err = base64.StdEncoding.DecodeString(layerBase64String)
@@ -202,31 +221,42 @@ func init() {
 		Digest:    layerBlobDigestRaw,
 	}}
 
-	manifest := imagespec.Manifest{
-		Config: imagespec.Descriptor{
-			MediaType: "application/vnd.oci.image.config.v1+json",
-			Digest:    configBlobDigestRaw,
-			Size:      int64(len(configBlobContent)),
-		},
-		Layers: layers,
-	}
-	manifest.SchemaVersion = 2
+	// create a unique manifest for each workflow category
+	for i := 0; i < 4; i++ {
+		manifest := imagespec.Manifest{
+			Config: imagespec.Descriptor{
+				MediaType: "application/vnd.oci.image.config.v1+json",
+				Digest:    godigest.Digest(configs[i].Digest),
+				Size:      int64(len(configs[i].Content)),
+			},
+			Layers: layers,
+		}
+		manifest.SchemaVersion = 2
 
-	manifestContent, err = json.MarshalIndent(&manifest, "", "\t")
-	if err != nil {
-		log.Fatal(err)
+		manifestContent, err := json.MarshalIndent(&manifest, "", "\t")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		manifestContentLength := strconv.Itoa(len(manifestContent))
+		manifestDigest := godigest.FromBytes(manifestContent).String()
+		if v := os.Getenv(envVarManifestDigest); v != "" {
+			manifestDigest = v
+		}
+
+		manifests = append(manifests, TestBlob{
+			Content:       manifestContent,
+			ContentLength: manifestContentLength,
+			Digest:        manifestDigest,
+		})
 	}
 
-	manifestDigest = godigest.FromBytes(manifestContent).String()
-	if v := os.Getenv(envVarManifestDigest); v != "" {
-		manifestDigest = v
-	}
-
+	// used in push test
 	emptyLayerManifest := imagespec.Manifest{
 		Config: imagespec.Descriptor{
 			MediaType: "application/vnd.oci.image.config.v1+json",
-			Digest:    configBlobDigestRaw,
-			Size:      int64(len(configBlobContent)),
+			Digest:    godigest.Digest(configs[1].Digest),
+			Size:      int64(len(configs[1].Content)),
 		},
 		Layers: []imagespec.Descriptor{},
 	}
@@ -357,4 +387,18 @@ func getTagNameFromResponse(lastResponse *reggie.Response) (tagName string) {
 	}
 
 	return
+}
+
+// Adapted from https://gist.github.com/dopey/c69559607800d2f2f90b1b1ed4e550fb
+func randomString(n int) string {
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			panic(err)
+		}
+		ret[i] = letters[num.Int64()]
+	}
+	return string(ret)
 }
