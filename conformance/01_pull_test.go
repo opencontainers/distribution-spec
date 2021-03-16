@@ -76,7 +76,7 @@ var test01Pull = func() {
 					reggie.WithReference(tag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(manifests[0].Content)
-				client.Do(req)
+				_, _ = client.Do(req)
 			})
 
 			g.Specify("Get tag name from environment", func() {
