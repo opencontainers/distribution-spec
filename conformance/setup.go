@@ -65,7 +65,6 @@ const (
 	envVarPushEmptyLayer            = "OCI_SKIP_EMPTY_LAYER_PUSH_TEST"
 	envVarBlobDigest                = "OCI_BLOB_DIGEST"
 	envVarManifestDigest            = "OCI_MANIFEST_DIGEST"
-	envVarEmptyLayerManifestDigest  = "OCI_EMPTY_LAYER_MANIFEST_DIGEST"
 	envVarTagName                   = "OCI_TAG_NAME"
 	envVarTagList                   = "OCI_TAG_LIST"
 	envVarHideSkippedWorkflows      = "OCI_HIDE_SKIPPED_WORKFLOWS"
@@ -117,7 +116,6 @@ var (
 	layerBlobData             []byte
 	layerBlobDigest           string
 	layerBlobContentLength    string
-	emptyLayerManifestDigest  string
 	emptyLayerManifestContent []byte
 	nonexistentManifest       string
 	reportJUnitFilename       string
@@ -265,11 +263,6 @@ func init() {
 	emptyLayerManifestContent, err = json.MarshalIndent(&emptyLayerManifest, "", "\t")
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	emptyLayerManifestDigest = godigest.FromBytes(emptyLayerManifestContent).String()
-	if v := os.Getenv(envVarEmptyLayerManifestDigest); v != "" {
-		emptyLayerManifestDigest = v
 	}
 
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
