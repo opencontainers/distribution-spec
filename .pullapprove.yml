@@ -20,7 +20,7 @@ group_defaults:
     ignored: true
   conditions:
     branches:
-      - master
+      - main
 
 groups:
   distribution-spec:

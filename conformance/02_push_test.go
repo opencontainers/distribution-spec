@@ -63,10 +63,10 @@ var test02Push = func() {
 			g.Specify("POST request with digest and blob should yield a 201 or 202", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
-					SetHeader("Content-Length", configBlobContentLength).
+					SetHeader("Content-Length", configs[1].ContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", configBlobDigest).
-					SetBody(configBlobContent)
+					SetQueryParam("digest", configs[1].Digest).
+					SetBody(configs[1].Content)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
@@ -80,7 +80,7 @@ var test02Push = func() {
 
 			g.Specify("GET request to blob URL from prior request should yield 200 or 404 based on response code", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				if lastResponse.StatusCode() == http.StatusAccepted {
@@ -102,10 +102,10 @@ var test02Push = func() {
 			g.Specify("PUT upload of a blob should yield a 201 Response", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
-					SetHeader("Content-Length", configBlobContentLength).
+					SetHeader("Content-Length", configs[1].ContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", configBlobDigest).
-					SetBody(configBlobContent)
+					SetQueryParam("digest", configs[1].Digest).
+					SetBody(configs[1].Content)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
@@ -115,7 +115,7 @@ var test02Push = func() {
 
 			g.Specify("GET request to existing blob should yield 200 response", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
@@ -257,7 +257,7 @@ var test02Push = func() {
 					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(tag)).
 						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-						SetBody(manifestContent)
+						SetBody(manifests[1].Content)
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
 					location := resp.Header().Get("Location")
@@ -282,7 +282,7 @@ var test02Push = func() {
 
 			g.Specify("GET request to manifest URL (digest) should yield 200 response", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest)).
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -295,7 +295,7 @@ var test02Push = func() {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(
@@ -311,7 +311,7 @@ var test02Push = func() {
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(runPushSetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAny(
@@ -342,7 +342,7 @@ var test02Push = func() {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(

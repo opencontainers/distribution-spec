@@ -26,10 +26,10 @@ var test03ContentDiscovery = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", configBlobDigest).
+					SetQueryParam("digest", configs[2].Digest).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", fmt.Sprintf("%d", len(configBlobContent))).
-					SetBody(configBlobContent)
+					SetHeader("Content-Length", configs[2].ContentLength).
+					SetBody(configs[2].Content)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -64,7 +64,7 @@ var test03ContentDiscovery = func() {
 					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(tag)).
 						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-						SetBody(manifestContent)
+						SetBody(manifests[2].Content)
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAll(
@@ -132,7 +132,7 @@ var test03ContentDiscovery = func() {
 				g.Specify("Delete created manifest & associated tags", func() {
 					SkipIfDisabled(contentDiscovery)
 					RunOnlyIf(runContentDiscoverySetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[2].Digest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(
@@ -148,7 +148,7 @@ var test03ContentDiscovery = func() {
 			g.Specify("Delete config blob created in tests", func() {
 				SkipIfDisabled(contentDiscovery)
 				RunOnlyIf(runContentDiscoverySetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[2].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAny(
@@ -179,7 +179,7 @@ var test03ContentDiscovery = func() {
 				g.Specify("Delete created manifest & associated tags", func() {
 					SkipIfDisabled(contentDiscovery)
 					RunOnlyIf(runContentDiscoverySetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[2].Digest))
 					resp, err := client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(
