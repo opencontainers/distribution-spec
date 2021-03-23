@@ -24,10 +24,10 @@ var test04ContentManagement = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetHeader("Content-Length", configBlobContentLength).
+					SetHeader("Content-Length", configs[3].ContentLength).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", configBlobDigest).
-					SetBody(configBlobContent)
+					SetQueryParam("digest", configs[3].Digest).
+					SetBody(configs[3].Content)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -60,7 +60,7 @@ var test04ContentManagement = func() {
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tagToDelete)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifestContent)
+					SetBody(manifests[3].Content)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
@@ -104,7 +104,7 @@ var test04ContentManagement = func() {
 
 			g.Specify("DELETE request to manifest (digest) should yield 202 response unless already deleted", func() {
 				SkipIfDisabled(contentManagement)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				// In the case that the previous request was accepted, this may or may not fail (which is ok)
@@ -116,7 +116,7 @@ var test04ContentManagement = func() {
 
 			g.Specify("GET request to deleted manifest URL should yield 404 response, unless delete is disallowed", func() {
 				SkipIfDisabled(contentManagement)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifestDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAny(
@@ -144,7 +144,7 @@ var test04ContentManagement = func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
 				// config blob
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
@@ -159,7 +159,7 @@ var test04ContentManagement = func() {
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configBlobDigest))
+				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
