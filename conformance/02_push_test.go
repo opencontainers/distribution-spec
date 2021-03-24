@@ -60,7 +60,7 @@ var test02Push = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 			})
 
-			g.Specify("POST request with digest and blob should yield a 201", func() {
+			g.Specify("POST request with digest and blob should yield a 201 or 202", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
 					SetHeader("Content-Length", configs[1].ContentLength).
@@ -71,15 +71,23 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusCreated),
+					Equal(http.StatusAccepted),
+				))
+				lastResponse = resp
 			})
 
-			g.Specify("GET request to blob URL from prior request should yield 200", func() {
+			g.Specify("GET request to blob URL from prior request should yield 200 or 404 based on response code", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				if lastResponse.StatusCode() == http.StatusAccepted {
+					Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+				} else {
+					Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				}
 			})
 
 			g.Specify("POST request should yield a session ID", func() {

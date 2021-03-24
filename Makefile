@@ -24,9 +24,7 @@ ifeq "$(strip $(PANDOC))" ''
 	endif
 endif
 
-# Using older version of golangci-lint
-# see https://github.com/golangci/golangci-lint/issues/825#issuecomment-553210121
-GOLANGCILINT_CONTAINER ?= docker.io/golangci/golangci-lint:v1.17.1
+GOLANGCILINT_CONTAINER ?= docker.io/golangci/golangci-lint:v1.38.0
 ifeq "$(strip $(GOLANGCILINT))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		GOLANGCILINT = $(DOCKER) run \
@@ -35,6 +33,7 @@ ifeq "$(strip $(GOLANGCILINT))" ''
 			-v $(shell pwd)/:/input:ro \
 			-e GOCACHE=/tmp/.cache \
 			-e GO111MODULE=on \
+			-e GOLANGCI_LINT_CACHE=/tmp/.cache \
 			--entrypoint /bin/bash \
 			-u $(shell id -u) \
 			--workdir /input \
