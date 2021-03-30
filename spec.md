@@ -151,7 +151,7 @@ A successful response SHOULD contain the digest of the uploaded blob in the head
 
 The `Docker-Content-Digest` header, if present on the response, returns the canonical
 digest of the uploaded blob which MAY differ from the provided digest. If the digest does differ, it MAY be the case that
-the hashing algorithms used do not match. See [Content Digests](./detail.md) for information on how to detect the hashing
+the hashing algorithms used do not match. See [Content Digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) for information on how to detect the hashing
 algorithm in use. Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded
 blob data.
 
