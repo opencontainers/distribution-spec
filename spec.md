@@ -137,10 +137,14 @@ Typically, the first step in pulling an artifact is to retrieve the manifest. Ho
 To pull a manifest, perform a `GET` request to a URL in the following form:
 `/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
 
-`<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag name.
+`<name>` refers to the namespace of the repository. `<reference>` MUST be either (a) the digest of the manifest or (b) a tag.
 The `<reference>` MUST NOT be in any other format. Throughout this document, `<name>` MUST match the following regular expression:
 
 `[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*`
+
+Throughout this document, `<reference>` as a tag MUST be at most 128 characters in length and MUST match the following regular expression:
+
+`[a-zA-Z0-9_]+[a-zA-Z0-9._-]*`
 
 The client SHOULD include an `Accept` header indicating which manifest content types it supports.
 In a successful response, the `Content-Type` header will indicate the type of the returned manifest.
