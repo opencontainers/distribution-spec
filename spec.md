@@ -5,7 +5,7 @@
 - [Overview](#overview)
 	- [Introduction](#introduction)
 	- [Historical Context](#historical-context)
-	- [Definitions](#defintions)
+	- [Definitions](#definitions)
 - [Use Cases](#use-cases)
 - [Notational Conventions](#notational-conventions)
 - [Conformance](#conformance)
