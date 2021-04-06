@@ -8,5 +8,4 @@ inputs: {}
 outputs: {}
 runs:
   using: docker
-  # TODO: change to "docker://ghcr.io/opencontainers/distribution-spec/conformance:<TAG>"
-  image: conformance/Dockerfile
+  image: "docker://ghcr.io/opencontainers/distribution-spec/conformance:v1.0.0-rc2@sha256:2f0ced454ce31793cc69d48a05233ea76f2ebe791936d053342b66388a6de260"

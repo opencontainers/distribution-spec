@@ -8,7 +8,7 @@ GOLANGCILINT	?= $(shell command -v golangcli-lint 2>/dev/null)
 OUTPUT_DIRNAME	?= output/
 DOC_FILENAME	?= oci-distribution-spec
 
-PANDOC_CONTAINER ?= docker.io/vbatts/pandoc:1.19.1-3.fc27.x86_64
+PANDOC_CONTAINER ?= ghcr.io/jdolitsky/pandoc:aab258d@sha256:4772df87734a8c7cf1f4c8407a8b452ab3c9b250b425f27b657f9ca01d9a696b
 ifeq "$(strip $(PANDOC))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		PANDOC = $(DOCKER) run \
@@ -65,17 +65,18 @@ $(OUTPUT_DIRNAME)/$(DOC_FILENAME).pdf: $(DOC_FILES) $(FIGURE_FILES)
 else
 $(OUTPUT_DIRNAME)/$(DOC_FILENAME).pdf: $(DOC_FILES) $(FIGURE_FILES)
 	mkdir -p $(OUTPUT_DIRNAME)/ && \
-	$(PANDOC) -f markdown_github -t latex --latex-engine=xelatex -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
+	$(PANDOC) -f gfm -t latex --pdf-engine=xelatex -V geometry:margin=0.4in,bottom=0.8in -V block-headings -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
 	ls -sh $(realpath $@)
 
 $(OUTPUT_DIRNAME)/$(DOC_FILENAME).html: header.html $(DOC_FILES) $(FIGURE_FILES)
 	mkdir -p $(OUTPUT_DIRNAME)/ && \
 	cp -ap img/ $(shell pwd)/$(OUTPUT_DIRNAME)/&& \
-	$(PANDOC) -f markdown_github -t html5 -H $(PANDOC_SRC)header.html --standalone -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
+	$(PANDOC) -f gfm -t html5 -H $(PANDOC_SRC)header.html --standalone -o $(PANDOC_DST)$@ $(patsubst %,$(PANDOC_SRC)%,$(DOC_FILES))
 	ls -sh $(realpath $@)
 endif
 
 header.html: .tool/genheader.go specs-go/version.go
+	go mod init && \
 	go run .tool/genheader.go > $@
 
 install.tools: .install.gitvalidation
