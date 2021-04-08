@@ -8,7 +8,7 @@ GOLANGCILINT	?= $(shell command -v golangcli-lint 2>/dev/null)
 OUTPUT_DIRNAME	?= output/
 DOC_FILENAME	?= oci-distribution-spec
 
-PANDOC_CONTAINER ?= ghcr.io/jdolitsky/pandoc:aab258d@sha256:4772df87734a8c7cf1f4c8407a8b452ab3c9b250b425f27b657f9ca01d9a696b
+PANDOC_CONTAINER ?= ghcr.io/opencontainers/pandoc:2.9.2.1-8.fc33.x86_64@sha256:f589b9ed61cfbe2abdc0cc0f226507601acbae844f5bd8725b908dc493596dc1
 ifeq "$(strip $(PANDOC))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		PANDOC = $(DOCKER) run \
