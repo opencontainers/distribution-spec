@@ -1,6 +1,6 @@
 ## Detail
 
-> **Note**: This section is still under construction.
+> **Note**: This section is still under construction. Information may be out-of-date or not yet implemented.
 > For the purposes of implementation, if any details below differ from the described request flows above, the section below SHOULD be corrected.
 > When they match, this note SHOULD be removed.
 

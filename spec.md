@@ -69,8 +69,6 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ## Use Cases
 
-TODO: more detail on workflows related
-
 ### Artifact Verification
 
 A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
@@ -354,13 +352,14 @@ Here, `<blob-location>` is a pullable blob URL.
 
 
 ##### Mounting a blob from another repository
+
 If a necessary blob exists already in another repository, it can be mounted into a different repository via a `POST`
 request in the following format:
 
-`/v2/<name>/blobs/uploads/?mount=<digest>&from=<repository_name>`  <sup>[end-11](#endpoints)</sup>.
+`/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`  <sup>[end-11](#endpoints)</sup>.
 
 In this case, `<name>` is the namespace to which the blob will be mounted. `<digest>` is the digest of the blob to mount,
-and `<repository_name>` is the namespace from which the blob should be mounted. This step is usually taken in place of the
+and `<other_name>` is the namespace from which the blob should be mounted. This step is usually taken in place of the
 previously-described `POST` request to `/v2/<name>/blobs/uploads/` <sup>[end-4a](#endpoints)</sup> (which is used to initiate an
 upload session).
 
@@ -449,10 +448,12 @@ results, but up to `<int>` tags *after* `<tagname>` will be returned. The tags M
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
 #### Content Management
+
 Content management refers to the deletion of blobs, tags, and manifests. Registries MAY implement deletion or they MAY
 disable it. Similarly, a registry MAY implement tag deletion, while others MAY allow deletion only by manifest.
 
 ##### Deleting tags
+
 `<name>` is the namespace of the repository, and `<tag>` is the name of the tag to be deleted. Upon success, the registry
 MUST respond with a `202 Accepted` code. If tag deletion is disabled, the registry MUST respond with either a
 `400 Bad Request` or a `405 Method Not Allowed`.
@@ -461,6 +462,7 @@ To delete a tag, perform a `DELETE` request to a path in the following format:
 `/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
 
 ##### Deleting Manifests
+
 To delete a manifest, perform a `DELETE` request to a path in the following format:
 `/v2/<name>/manifests/<digest>` <sup>[end-9](#endpoints)</sup>
 
@@ -468,6 +470,7 @@ To delete a manifest, perform a `DELETE` request to a path in the following form
 MUST respond with a `202 Accepted` code. If the repository does not exist, the response MUST return `404 Not Found`.
 
 ##### Deleting Blobs
+
 To delete a blob, perform a `DELETE` request to a path in the following format:
 `/v2/<name>/blobs/<digest>` <sup>[end-10](#endpoints)</sup>
 
@@ -475,9 +478,11 @@ To delete a blob, perform a `DELETE` request to a path in the following format:
 registry MUST respond with code `202 Accepted`. If the blob is not found, a `404 Not Found` code MUST be returned.
 
 ### API
+
 The API operates over HTTP. Below is a summary of the endpoints used by the API.
 
 #### Determining Support
+
 To check whether or not the registry implements this specification, perform a `GET` request to the following endpoint:
 `/v2/` <sup>[end-1](#endpoints)</sup>.
 
@@ -488,21 +493,21 @@ of this specification.
 
 #### Endpoints
 
-| ID     | Method         | API endpoint                                                      | Accepted Successful Response Codes | Accepted Failure Response Codes |
-| ------ | -------------- | ----------------------------------------------------------------- | ---------------------------------- | ------------------------------- |
-| end-1  | `GET`          | `/v2/`                                                            | `200`                              | `404`/`401`                     |
-| end-2  | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                       | `200`                              | `404`                           |
-| end-3  | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                                | `200`                              | `404`                           |
-| end-4a | `POST`         | `/v2/<name>/blobs/uploads/`                                       | `202`                              | `404`                           |
-| end-4b | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                       | `201`/`202`                        | `404`/`400`                     |
-| end-5  | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                            | `202`                              | `404`/`416`                     |
-| end-6  | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`            | `201`                              | `404`/`400`                     |
-| end-7  | `PUT`          | `/v2/<name>/manifests/<reference>`                                | `201`                              | `404`                           |
-| end-8a | `GET`          | `/v2/<name>/tags/list`                                            | `200`                              | `404`                           |
-| end-8b | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`                 | `200`                              | `404`                           |
-| end-9  | `DELETE`       | `/v2/<name>/manifests/<reference>`                                | `202`                              | `404`/`400`/`405`               |
-| end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                       | `202`                              | `404`/`405`                     |
-| end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_namespace>` | `201`                              | `404`                           |
+| ID     | Method         | API Endpoint                                                      | Success     | Failure           |
+| ------ | -------------- | ------------------------------------------------------------ | ----------- | ----------------- |
+| end-1  | `GET`          | `/v2/`                                                       | `200`       | `404`/`401`       |
+| end-2  | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                  | `200`       | `404`             |
+| end-3  | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                           | `200`       | `404`             |
+| end-4a | `POST`         | `/v2/<name>/blobs/uploads/`                                  | `202`       | `404`             |
+| end-4b | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                  | `201`/`202` | `404`/`400`       |
+| end-5  | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                       | `202`       | `404`/`416`       |
+| end-6  | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`       | `201`       | `404`/`400`       |
+| end-7  | `PUT`          | `/v2/<name>/manifests/<reference>`                           | `201`       | `404`             |
+| end-8a | `GET`          | `/v2/<name>/tags/list`                                       | `200`       | `404`             |
+| end-8b | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`            | `200`       | `404`             |
+| end-9  | `DELETE`       | `/v2/<name>/manifests/<reference>`                           | `202`       | `404`/`400`/`405` |
+| end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                  | `202`       | `404`/`405`       |
+| end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>` | `201`       | `404`             |
 
 #### Error Codes
 
@@ -552,7 +557,7 @@ The following is a list of documents referenced in this spec:
 | ID     | Title | Description |
 | ------ | ----- | ----------- |
 | apdx-1 | [Docker Registry HTTP API V2](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md) | The original document upon which this spec was based |
-| apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail (warning: some of this information may be out-of-date or not yet implemented) |
+| apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail |
 | apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
 | apdx-4 | [OCI Image Spec - config](https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md) | Description of configs, defined by the OCI Image Spec |
