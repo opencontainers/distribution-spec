@@ -226,7 +226,7 @@ Once the `<location>` has been obtained, perform the upload proper by making a `
 `<location>?digest=<digest>` <sup>[end-6](#endpoints)</sup>
 ```
 Content-Length: <length>
-Content-Type: aplication/octet-stream
+Content-Type: application/octet-stream
 ```
 ```
 <upload byte stream>
