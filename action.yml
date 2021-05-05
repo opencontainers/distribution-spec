@@ -8,4 +8,4 @@ inputs: {}
 outputs: {}
 runs:
   using: docker
-  image: "docker://ghcr.io/opencontainers/distribution-spec/conformance:v1.0.0-rc2@sha256:2f0ced454ce31793cc69d48a05233ea76f2ebe791936d053342b66388a6de260"
+  image: "docker://ghcr.io/opencontainers/distribution-spec/conformance:v1.0.0@sha256:6302582c3b35169f7846282ad5b81471cd8814f30f7a958030e04fd82b19e17f"
