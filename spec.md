@@ -144,7 +144,7 @@ The `<reference>` MUST NOT be in any other format. Throughout this document, `<n
 
 Throughout this document, `<reference>` as a tag MUST be at most 128 characters in length and MUST match the following regular expression:
 
-`[a-zA-Z0-9_]+[a-zA-Z0-9._-]*`
+`[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}`
 
 The client SHOULD include an `Accept` header indicating which manifest content types it supports.
 In a successful response, the `Content-Type` header will indicate the type of the returned manifest.
