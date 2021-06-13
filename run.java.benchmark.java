@@ -1,7 +1,8 @@
-he following additional packages will be installed:
+The following additional packages will be installed:
 binutils build-essential bzip2 ca-certificates comerr-dev cpp cpp
--5 cr
-dbus dh-python distro-info-data dpkg-dev fakeroot file g++ 
+-5 
+	
+dbus dh-python distro-info-data dpkg-dev fakeroot file g
 	9++-5
 	gcc
 girl.2
@@ -37,7 +38,8 @@ libglib2.
 	libglib2.
 	0-
 	 libgmp10 libgnutls30 libgompl libgssapi
-libgssapi3-heimdal libgssrpc4 libhcrypto4-heimdal libheimbase1-heimdal
+libgssapi3-heimdal libgssrpc4 libhcrypto4-heimdal 
+libheimbase1-heimdal
 libheimntlm0-heimdal libhogweed4 libhx509-
 5-
 	 libicu55 libidn11
@@ -54,16 +56,29 @@ libkrb5support0 libldap-
 	liblsan0 libmagic1 libmn10 libmpc3 libmp
 libmpfr4 libmpx0 libmysqlclient20 libnettle6 libpl1-kit0 libper15.22
 libpopt0 libpq5 libpython-all-dev libpython-dev libpython-stdlib
-libpython2. 7 libpython2. 7-dev libpython2. 7-minimal libpython2.7-stdli
+libpython2. 7 libpython2. 7-dev libpython2. 7-minimal 
+libpython2. 7-
+	
 
-libpython3-stdlib libpython3.
+libpython3-stdlib l
+libpython3
 	5-
 	 libpython3.
 	5-
 	 libquadmath
-libregexp-common-perl libroken18-heimdal librtmp1 libsas12-2
-libsas12-modules libsas12-modules-db libsqlite3-0 libssl-dev libssl-do
-libssl1.0.0 libstdc+
-	+-5-dev libtasn1-6 libtsan0 libubsan0 libwind0-he
-libx11-6 libx11-data libxaul libxcb1 libxdmcp6 libxext6 libxml2 libxm
+libregexp-common-perl libroken18-heimdal librtmp1
+
+ libsas12-2
+libsas12-modules libsas12-modules-db libsqlite3-0
+
+ libssl-dev libssl-
+libssl1.
+	0.0 l
+	
+	+-5-
+	 libtasn1-
+	6 
+	 libubsan0 libwind0-he
+libx11-
+	ta libxaul libxcb1 libxdmcp6 libxext6 libxml2 libxm
 libxtables11 linux-libc-dev Isb-release make manpages manpages-dev
