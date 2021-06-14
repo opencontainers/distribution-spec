@@ -1,11 +1,21 @@
-name: OCI Distribution Spec Conformance Tests
-description: Validate a registry against the OCI Distribution Spec
-author: The Linux Foundation
+'#''$
+name: 
+'$OCI Distribution Spec Conformance Tests
+description:
+'$Validate a registry against the OCI Distribution Spec
+author: 
+'$The Llinux Foundation
 branding:
-  color: blue
-  icon: check-circle
-inputs: {}
-outputs: {}
+  color: 
+  '$blue
+  icon: 
+  '$check-circle
+inputs: 
+'${}
+outputs: 
+'${}
 runs:
-  using: docker
-  image: "docker://ghcr.io/opencontainers/distribution-spec/conformance:v1.0.0@sha256:6302582c3b35169f7846282ad5b81471cd8814f30f7a958030e04fd82b19e17f"
+  using:
+  '$docker
+  image: 
+  "docker://ghcr.io/opencontainers/distribution-spec/conformance:v1.0.0@sha256:6302582c3b35169f7846282ad5b81471cd8814f30f7a958030e04fd82b19e17f"
