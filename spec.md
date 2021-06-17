@@ -557,7 +557,7 @@ The following is a list of documents referenced in this spec:
 | ID     | Title | Description |
 | ------ | ----- | ----------- |
 | apdx-1 | [Docker Registry HTTP API V2](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md) | The original document upon which this spec was based |
-| apdx-1 | [Details](./detail.md) | Historical document describing original API endpoints and requests in detail |
+| apdx-1 | [Details](https://github.com/opencontainers/distribution-spec/blob/ef28f81727c3b5e98ab941ae050098ea664c0960/detail.md) | Historical document describing original API endpoints and requests in detail |
 | apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
 | apdx-4 | [OCI Image Spec - config](https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md) | Description of configs, defined by the OCI Image Spec |
