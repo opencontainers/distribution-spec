@@ -68,3 +68,10 @@ choose to expire it after, for example, a minute or an hour, in the case that yo
 **Q: What happens if the `<tagname>` (last) parameter does not exist?**
 
 There is no suggested behavior in the specification for what to do if the tag does not exist. Registries might consider ignoring te parameter, or assuming a non-existing tag is at the start or the end of the sorted list. In the first case, at the start of the list would imply returning the entire set of tags. In the second cast, at the end of the list would imply returningan empty list, as it references the last tag onward (an empty set).
+
+**Q: How are clients expected to adopt (and probe for) automatic mount origin discovery?**
+
+The process of mounting a blob is supposed to fail in such a way that if a blob cannot be cross-mounted, the registry the registry initiates an upload. 
+Clients should try to use the automatic content mount origin discovery mechanism when they do not know of an origin in the registry with the requisite blob. 
+Nonconformant registries may return a non-201 or non-202 error code. 
+If the client is trying to be defensive to nonconformant registries, and receives a non-201 or non-202 error code, it should fall back to [pushing the blob](https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-blobs).
