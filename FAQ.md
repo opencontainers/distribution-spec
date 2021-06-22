@@ -75,3 +75,9 @@ The process of mounting a blob is supposed to fail in such a way that if a blob 
 Clients should try to use the automatic content mount origin discovery mechanism when they do not know of an origin in the registry with the requisite blob. 
 Nonconformant registries may return a non-201 or non-202 error code. 
 If the client is trying to be defensive to nonconformant registries, and receives a non-201 or non-202 error code, it should fall back to [pushing the blob](https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-blobs).
+
+**Q: How come `from` is required on cross-repo mount for some registries?**
+
+Mounting without having to specify `from`, also known as automatic mount origin discovery, requires the registry to determine whether or not a blob exists in any repository. 
+If the existence check for the blob is done first, an immediate failure will indicate the lack of presence of a blob. 
+On the other hand, if the registry needs to perform further work to determine if the blob can be accessed by the mounter, it could create an information disclosure risk, in leaking that presence of a blob with that digest in the registry.
