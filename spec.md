@@ -357,7 +357,7 @@ Here, `<blob-location>` is a pullable blob URL.
 
 ##### Mounting a blob from another repository
 
-If a necessary blob exists already in another repository, it can be mounted into a different repository via a `POST`
+If a necessary blob exists already in another repository within the same registry, it can be mounted into a different repository via a `POST`
 request in the following format:
 
 `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`  <sup>[end-11](#endpoints)</sup>.
@@ -375,6 +375,8 @@ Location: <blob-location>
 The Location header will contain the registry URL to access the accepted layer file. The Docker-Content-Digest
 header returns the canonical digest of the uploaded blob which MAY differ from the provided digest. Most clients MAY
 ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
+
+The registry MAY treat the `from` parameter as optional, and it MAY cross-mount the blob if it can be found.
 
 Alternatively, if a registry does not support cross-repository mounting or is unable to mount the requested blob,
 it SHOULD return a `202`. This indicates that the upload session has begun and that the client MAY proceed with the upload.
