@@ -1,0 +1,23 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout source code
+        uses: actions/checkout@master
+      - name: setup go environment
+        uses: actions/setup-go@v1
+        with:
+          go-version: '1.16.5'
+      - name: run tests
+        run: |
+          export PATH="$(go env GOPATH)/bin:${PATH}"
+          make install.tools
+          make .gitvalidation
+          make docs conformance

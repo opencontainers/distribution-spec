@@ -12,7 +12,6 @@ PANDOC_CONTAINER ?= ghcr.io/opencontainers/pandoc:2.9.2.1-8.fc33.x86_64@sha256:5
 ifeq "$(strip $(PANDOC))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		PANDOC = $(DOCKER) run \
-			-it \
 			--rm \
 			-v $(shell pwd)/:/input/:ro \
 			-v $(shell pwd)/$(OUTPUT_DIRNAME)/:/$(OUTPUT_DIRNAME)/ \
@@ -28,7 +27,6 @@ GOLANGCILINT_CONTAINER ?= ghcr.io/opencontainers/golangci-lint:v1.39.0@sha256:7b
 ifeq "$(strip $(GOLANGCILINT))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		GOLANGCILINT = $(DOCKER) run \
-			-it \
 			--rm \
 			-v $(shell pwd)/:/input:ro \
 			-e GOCACHE=/tmp/.cache \
@@ -48,11 +46,11 @@ FIGURE_FILES	:=
 
 test: .gitvalidation
 
-# When this is running in travis, it will only check the travis commit range
+# When this is running in GitHub, it will only check the GitHub commit range
 .gitvalidation:
 	@command -v git-validation >/dev/null 2>/dev/null || (echo "ERROR: git-validation not found. Consider 'make install.tools' target" && false)
-ifdef TRAVIS_COMMIT_RANGE
-	git-validation -q -run DCO,short-subject,dangling-whitespace
+ifdef GITHUB_SHA
+	git-validation -q -run DCO,short-subject,dangling-whitespace -range $(GITHUB_SHA)..HEAD
 else
 	git-validation -v -run DCO,short-subject,dangling-whitespace -range $(EPOCH_TEST_COMMIT)..HEAD
 endif
@@ -76,7 +74,9 @@ $(OUTPUT_DIRNAME)/$(DOC_FILENAME).html: header.html $(DOC_FILES) $(FIGURE_FILES)
 endif
 
 header.html: .tool/genheader.go specs-go/version.go
-	go mod init && \
+	rm -f go.mod go.sum && \
+    go mod init github.com/opencontainers/distribution-spec && \
+	go get github.com/opencontainers/distribution-spec/specs-go && \
 	go run .tool/genheader.go > $@
 
 install.tools: .install.gitvalidation
