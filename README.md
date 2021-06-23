@@ -1,5 +1,7 @@
 # OCI Distribution Specification
 
+[![GitHub Actions status](https://github.com/opencontainers/distribution-spec/workflows/build/badge.svg)](https://github.com/opencontainers/distribution-spec/actions?query=workflow%3Abuild)
+
 The OCI Distribution Spec project defines an API protocol to facilitate and standardize the distribution of content.
 
 **[The specification can be found here](spec.md).**
