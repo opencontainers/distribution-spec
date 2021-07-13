@@ -98,6 +98,11 @@ When process B attempts to upload the layer, the registry indicates that its not
 If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry.
 Even in the case where both uploads are accepted, the registry may securely only store one copy of the layer since the computed digests match.
 
+### Conditional Requests
+
+A container engine would like to safely push a new tag or modify an existing tag without racing against another container engine acting upon the registry at the same time.
+Registries and clients MAY rely on [conditional request](./preconditions.md) semantics to avoid race conditions in the face of concurrent mutations.
+
 ## Conformance
 
 For more information on testing for conformance, please see the [conformance README](./conformance/README.md)
