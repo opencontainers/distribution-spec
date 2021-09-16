@@ -238,6 +238,34 @@ var test02Push = func() {
 				loc := lastResponse.GetRelativeLocation()
 				Expect(loc).To(ContainSubstring("/blobs/uploads/"))
 			})
+
+			g.Specify("Cross-mounting without from, and automatic content discovery enabled should return a 201", func() {
+				SkipIfDisabled(push)
+				RunOnlyIf(runAutomaticCrossmountTest)
+				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
+				RunOnlyIf(automaticCrossmountEnabled)
+
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
+					reggie.WithName(crossmountNamespace)).
+					SetQueryParam("mount", testBlobADigest)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+			})
+
+			g.Specify("Cross-mounting without from, and automatic content discovery disabled should return a 202", func() {
+				SkipIfDisabled(push)
+				RunOnlyIf(runAutomaticCrossmountTest)
+				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
+				RunOnlyIfNot(automaticCrossmountEnabled)
+
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
+					reggie.WithName(crossmountNamespace)).
+					SetQueryParam("mount", testBlobADigest)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+			})
 		})
 
 		g.Context("Manifest Upload", func() {
