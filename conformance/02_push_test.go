@@ -204,6 +204,17 @@ var test02Push = func() {
 		})
 
 		g.Context("Cross-Repository Blob Mount", func() {
+			g.Specify("Cross-mounting of a blob without the from argument should yield session id", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
+					reggie.WithName(crossmountNamespace)).
+					SetQueryParam("mount", dummyDigest)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.GetAbsoluteLocation()).To(Not(BeEmpty()))
+			})
+
 			g.Specify("POST request to mount another repository's blob should return 201 or 202", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
