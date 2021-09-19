@@ -71,6 +71,7 @@ const (
 	envVarAuthScope                 = "OCI_AUTH_SCOPE"
 	envVarDeleteManifestBeforeBlobs = "OCI_DELETE_MANIFEST_BEFORE_BLOBS"
 	envVarCrossmountNamespace       = "OCI_CROSSMOUNT_NAMESPACE"
+	envVarAutomaticCrossmount       = "OCI_AUTOMATIC_CROSSMOUNT"
 
 	emptyLayerTestTag = "emptylayer"
 	testTagName       = "tagtest0"
@@ -97,41 +98,43 @@ var (
 		envVarContentManagement: contentManagement,
 	}
 
-	testBlobA                 []byte
-	testBlobALength           string
-	testBlobADigest           string
-	testBlobB                 []byte
-	testBlobBDigest           string
-	testBlobBChunk1           []byte
-	testBlobBChunk1Length     string
-	testBlobBChunk2           []byte
-	testBlobBChunk2Length     string
-	testBlobBChunk1Range      string
-	testBlobBChunk2Range      string
-	client                    *reggie.Client
-	crossmountNamespace       string
-	dummyDigest               string
-	errorCodes                []string
-	invalidManifestContent    []byte
-	layerBlobData             []byte
-	layerBlobDigest           string
-	layerBlobContentLength    string
-	emptyLayerManifestContent []byte
-	nonexistentManifest       string
-	reportJUnitFilename       string
-	reportHTMLFilename        string
-	httpWriter                *httpDebugWriter
-	testsToRun                int
-	suiteDescription          string
-	runPullSetup              bool
-	runPushSetup              bool
-	runContentDiscoverySetup  bool
-	runContentManagementSetup bool
-	skipEmptyLayerTest        bool
-	deleteManifestBeforeBlobs bool
-	configs                   []TestBlob
-	manifests                 []TestBlob
-	Version                   = "unknown"
+	testBlobA                  []byte
+	testBlobALength            string
+	testBlobADigest            string
+	testBlobB                  []byte
+	testBlobBDigest            string
+	testBlobBChunk1            []byte
+	testBlobBChunk1Length      string
+	testBlobBChunk2            []byte
+	testBlobBChunk2Length      string
+	testBlobBChunk1Range       string
+	testBlobBChunk2Range       string
+	client                     *reggie.Client
+	crossmountNamespace        string
+	dummyDigest                string
+	errorCodes                 []string
+	invalidManifestContent     []byte
+	layerBlobData              []byte
+	layerBlobDigest            string
+	layerBlobContentLength     string
+	emptyLayerManifestContent  []byte
+	nonexistentManifest        string
+	reportJUnitFilename        string
+	reportHTMLFilename         string
+	httpWriter                 *httpDebugWriter
+	testsToRun                 int
+	suiteDescription           string
+	runPullSetup               bool
+	runPushSetup               bool
+	runContentDiscoverySetup   bool
+	runContentManagementSetup  bool
+	skipEmptyLayerTest         bool
+	deleteManifestBeforeBlobs  bool
+	runAutomaticCrossmountTest bool
+	automaticCrossmountEnabled bool
+	configs                    []TestBlob
+	manifests                  []TestBlob
+	Version                    = "unknown"
 )
 
 func init() {
@@ -320,6 +323,9 @@ func init() {
 
 	skipEmptyLayerTest, _ = strconv.ParseBool(os.Getenv(envVarPushEmptyLayer))
 	deleteManifestBeforeBlobs, _ = strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
+	automaticCrossmountVal := ""
+	automaticCrossmountVal, runAutomaticCrossmountTest = os.LookupEnv(envVarAutomaticCrossmount)
+	automaticCrossmountEnabled, _ = strconv.ParseBool(automaticCrossmountVal)
 
 	reportJUnitFilename = "junit.xml"
 	reportHTMLFilename = "report.html"

@@ -115,6 +115,19 @@ the environment:
 OCI_CROSSMOUNT_NAMESPACE="myorg/other"
 ```
 
+If you want to test the behaviour of automatic content discovery, you should set the `OCI_AUTOMATIC_CROSSMOUNT` variable.
+
+```
+# Do not test automatic cross mounting
+unset OCI_AUTOMATIC_CROSSMOUNT
+
+# Test that automatic cross mounting is working as expected
+OCI_AUTOMATIC_CROSSMOUNT=1
+
+# Test that automatic cross mounting is disabled
+OCI_AUTOMATIC_CROSSMOUNT=0
+```
+
 ##### Content Discovery
 
 The Content Discovery tests validate that the contents of a registry can be discovered.
