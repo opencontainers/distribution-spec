@@ -1,7 +1,7 @@
 # ---
 # Stage 1: Install certs and build conformance binary
 # ---
-FROM docker.io/golang:1.13.6-alpine3.11 AS builder
+FROM docker.io/golang:1.17.1-alpine3.14 AS builder
 ARG VERSION=unknown
 ARG GO_PKG=github.com/opencontainers/distribution-spec/conformance
 RUN apk --update add git make ca-certificates && mkdir -p /go/src/${GO_PKG}

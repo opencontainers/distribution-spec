@@ -4,7 +4,7 @@
 
 #### Binary
 
-Requires Go 1.13+.
+Requires Go 1.17+.
 
 In this directory, build the test binary:
 ```
