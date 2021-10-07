@@ -55,6 +55,23 @@ For general questions about OCI, please see the [FAQ on the OCI site](https://ww
 
 The [GitHub milestones](https://github.com/opencontainers/distribution-spec/milestones) lay out the path to the future improvements.
 
+# Extensions
+
+The Distribution Specification Project is including, herein, a process and API for prototyping
+and testing extensions to the Distribution API.
+
+We invite contributions, comments, and reviews to these extensions.
+These extensions will only move forward with significant support from registies, registry clients, and users.
+
+Disclaimer: Unless stated otherwise, extension prototypes are subject to change. Extensions
+should NOT be considered as final or approved official extensions to the OCI Distribution API until they
+have been included in an OCI Distribution Specification.
+
+## Extensions API - (status: WIP)
+
+The Distribution maintainers recognize that an API may be necessary, or at least potentially advantageous, for specifying
+extensions to the Distribution API. Thus, we propose to add an [Extensions API for Distribution](EXTENSIONS.md).
+
 # Contributing
 
 Development happens on GitHub for the spec.
