@@ -1,45 +1,74 @@
-# Extensions
+---
+tags: oci,distribution
+breaks: false
+---
 
-The basis of the Extension API is described in a document which should be emulated for all extensions.
+# Extensions API for Distribution
 
-## Table of Contents
-
-<!-- toc -->
-* [Table](#table)
-* [Name](#name)
-* [Filename](#filename)
-* [Detail](#detail)
-* [Prior Art](#prior-art)
-<!-- /toc -->
+The basis of the Extension API is described in a document which should
+be emulated for all extensions.
 
 ## Table
 
 _notice_: All new `./ext/ext-$name.md` docs MUST be added to this table.
 
-| `$name` (and definition) | Summary |
-|:--:|:--:|
-| [0](./ext-0.md) | Extensions discovering extensions on registry server |
-|  |  |
-
+| `$name`                  | Summary                                              |
+|:------------------------:|:----------------------------------------------------:|
+| [ext](./ext.md)          | Extensions discovering extensions on registry server |
 
 ## Name
 
-Extension names MUST be unique.
-Names SHOULD include a version.
+Extension names MUST be unique. Extensions are  specified by
+`namespace` aligning with the project, followed by the `extension` provided by the project and last by by the `component`. This constitues the URI segments
+of the extension endpoint. Additional options may be passed as parameters to the endpoint.
 
-Each extension's endpoints will be nested below its name.
+```http
+_<ns>/<ext>/<component>[?<key>=<value>&...]
+```
 
-```HTTP
-    GET /v2/ext/0/...
+For versioning, extensions SHOULD use versioned `mediaType`.
+
+### Registry Level Extensions
+
+Registry level extensions are nested under `/v2`.
+
+```http
+GET /v2/_<ns>/<ext>/<component>[?<key>=<value>&...]
+```
+
+For example a search extension may be of the form `/v2/_oci/catalog/search?pattern=foo?n=10`
+
+### Repository Level Extensions
+
+Repository level extensions follow the same naming rules the endpoints
+can be access under a repository.
+
+```http
+GET /v2/<name>/_<ns>/<ext>/<component>[?<key>=<value>&...]
 ```
 
 ## Filename
 
-XXX
+Extention definitions SHOULD be placed under `./ext/`. Extension files
+SHOULD follow the `ext-$name.md`. Refer [ext.md](./ext.md) for more details.
 
 ## Detail
 
-XXX acceptable error codes
+Extensions details MAY describe more endpoints and  APIs that it MAY support.
+It is also recommended to call out error codes encountered and enumerated as in the
+in the following table:
+
+| Code                | Message              | Description                                                                                                                                                                                            |
+|---------------------|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `EXTENSION_UNKNOWN` | Extension is unknown | This error MAY be returned when a extension is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload. |
+
+## Pagination
+
+Extensions implementing pagination and SHOULD align with the
+[pagination](./spec.md#pagination) specification.
+
+Extension MAY provide enumeration without lexical ordering and in this case,
+it is not required to support the `last` parameter. Clients are NOT RECOMMENDED to construct the `link` and SHOULD treat the URL as opaque.
 
 ## Prior Art
 
