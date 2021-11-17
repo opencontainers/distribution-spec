@@ -146,7 +146,9 @@ Throughout this document, `<reference>` as a tag MUST be at most 128 characters 
 
 The client SHOULD include an `Accept` header indicating which manifest content types it supports.
 In a successful response, the `Content-Type` header will indicate the type of the returned manifest.
-For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negotiation.md)
+The `Content-Type` header SHOULD match what the client [pushed as the manifest's `Content-Type`](#pushing-manifests).
+If the manifest has a `mediaType` field, clients SHOULD reject unless the `mediaType` field's value matches the type specified by the `Content-Type` header.
+For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negotiation.md).
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
@@ -386,11 +388,20 @@ it SHOULD return a `202`. This indicates that the upload session has begun and t
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers
 and body:
 `/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
+
+Clients SHOULD set the `Content-Type` header to the type of the manifest being pushed.
+All manifests SHOULD include a `mediaType` field declaring the type of the manifest being pushed.
+If a manifest includes a `mediaType` field, clients MUST set the `Content-Type` header to the value specified by the `mediaType` field.
+
 ```
 Content-Type: application/vnd.oci.image.manifest.v1+json
 ```
+Manifest byte stream:
 ```
-<manifest byte stream>
+{
+  "mediaType": "application/vnd.oci.image.manifest.v1+json",
+  ...
+}
 ```
 
 `<name>` is the namespace of the repository, and the `<reference>` MUST be either a) a digest or b) a tag.
