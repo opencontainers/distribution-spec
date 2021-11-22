@@ -10,16 +10,16 @@ be emulated for all extensions.
 
 ## Table
 
-_notice_: All new `./ext/ext-$name.md` docs MUST be added to this table.
+_notice_: All new `./ext/ext-$ns-$name.md` docs MUST be added to this table.
 
-| `$name`                  | Summary                                              |
+| `$ns-$name`                  | Summary                                              |
 |:------------------------:|:----------------------------------------------------:|
 | [ext](./ext.md)          | Extensions discovering extensions on registry server |
 
 ## Name
 
 Extension names MUST be unique. Extensions are  specified by
-`namespace` aligning with the project, followed by the `extension` provided by the project and last by by the `component`. This constitues the URI segments
+`namespace` aligning with the project, followed by the `extension` provided by the project and last by by the `component`. This constitutes the URI segments
 of the extension endpoint. Additional options may be passed as parameters to the endpoint.
 
 ```http
@@ -49,8 +49,8 @@ GET /v2/<name>/_<ns>/<ext>/<component>[?<key>=<value>&...]
 
 ## Filename
 
-Extention definitions SHOULD be placed under `./ext/`. Extension files
-SHOULD follow the `ext-$name.md`. Refer [ext.md](./ext.md) for more details.
+Extension definitions SHOULD be placed under `./ext/`. Extension files
+SHOULD follow the `ext-$ns-$name.md`. Refer [ext.md](./ext.md) for more details.
 
 ## Detail
 

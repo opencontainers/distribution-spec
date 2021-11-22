@@ -2,7 +2,7 @@
 
 ## Summary
 
-This base extension is used to discover and return an array of extensions.
+This base extension namespace is used to discover and return an array of extensions.
 
 ## Reference Explanation
 
@@ -12,13 +12,13 @@ extensions.
 Registry level extensions may be discovered with a standard GET as follows.
 
 ```HTTP
-    GET /v2/_ext/
+    GET /v2/_ext/discover
 ```
 
 Repository level extensions may be discovered with a standard GET as follows.
 
 ```HTTP
-    GET /v2/{name}/_ext/
+    GET /v2/{name}/_ext/discover
 ```
 
 The base extension returns an array of supported extensions with details of the
@@ -31,14 +31,16 @@ Content-Type: application/json
 
 {
     "extensions: [
-        "_<ns>/<ext>/<component>",
+        {
+            "name": "_<ns>/<ext>/<component>"
+        },
     ]    
 }
 ```
 
 ### *Extensions* Property Descriptions
 
-- **`extensions`** *array of strings*
+- **`extensions`** *array of extension objects with properties like `name`*
 
     This REQUIRED property contains a list of supported extension endpoints.
 
