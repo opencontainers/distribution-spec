@@ -47,6 +47,9 @@ can be access under a repository.
 GET /v2/<name>/_<ns>/<ext>/<component>[?<key>=<value>&...]
 ```
 
+### Reserved Namespaces
+As of current, ```_oci``` and ```_ext``` are considered as reserved namespaces and cannot be used by other extensions.
+
 ## Filename
 
 Extension definitions SHOULD be placed under `./ext/`. Extension files
