@@ -28,8 +28,8 @@
 
 The **Open Container Initiative Distribution Specification** (a.k.a. "OCI Distribution Spec") defines an API protocol to facilitate and standardize the distribution of content.
 
-While OCI Image is the most prominent, the specification is designed to be agnostic of content types.
-Concepts such as "manifests" and "digests", are currently defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec").
+The specification is designed to be agnostic of content types.
+OCI Image types are currently the most prominent, which are defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec").
 
 To support other artifact types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts) (a.k.a. "OCI Artifacts").
 
@@ -57,7 +57,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Push**: the act of uploading Blobs and Manifests to a Registry
 - **Pull**: the act of downloading Blobs and Manifests from a Registry
 - **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
-- **Manifest**: a JSON document which defines an Artifact. Manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>
+- **Manifest**: a JSON document which defines an artifact uploaded via the manifests endpoint. A manifest may reference other blobs in a repository via descriptors. Examples of manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>, such as the image manifest or the image index.</sup>
 - **Config**: a blob referenced in the Manifest which contains Artifact metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>
 - **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
@@ -190,10 +190,11 @@ If the blob or manifest is not found in the registry, the response code MUST be 
 
 #### Push
 
-Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first,
-and the manifest last. Strictly speaking, content can be uploaded to the registry in any order, but a registry MAY reject
-a manifest if it references blobs that are not yet uploaded, resulting in a `BLOB_UNKNOWN` error <sup>[code-1](#error-codes)</sup>.
+Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first, and the manifest last.
 A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
+
+A registry MAY reject a manifest of any type uploaded to the manifest endpoint if it references manifests or blobs that do not exist in the registry.
+When a manifest is rejected for this reason, it must result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
 ##### Pushing blobs
 
@@ -557,22 +558,22 @@ The `detail` field is OPTIONAL and MAY contain arbitrary JSON data providing inf
 
 The `code` field MUST be one of the following:
 
-| ID      | Code                    | Description                                    |
-|-------- | ------------------------|------------------------------------------------|
-| code-1  | `BLOB_UNKNOWN`          | blob unknown to registry                       |
-| code-2  | `BLOB_UPLOAD_INVALID`   | blob upload invalid                            |
-| code-3  | `BLOB_UPLOAD_UNKNOWN`   | blob upload unknown to registry                |
-| code-4  | `DIGEST_INVALID`        | provided digest did not match uploaded content |
-| code-5  | `MANIFEST_BLOB_UNKNOWN` | blob unknown to registry                       |
-| code-6  | `MANIFEST_INVALID`      | manifest invalid                               |
-| code-7  | `MANIFEST_UNKNOWN`      | manifest unknown                               |
-| code-8  | `NAME_INVALID`          | invalid repository name                        |
-| code-9  | `NAME_UNKNOWN`          | repository name not known to registry          |
-| code-10 | `SIZE_INVALID`          | provided length did not match content length   |
-| code-12 | `UNAUTHORIZED`          | authentication required                        |
-| code-13 | `DENIED`                | requested access to the resource is denied     |
-| code-14 | `UNSUPPORTED`           | the operation is unsupported                   |
-| code-15 | `TOOMANYREQUESTS`       | too many requests                              |
+| ID      | Code                    | Description                                                |
+|-------- | ------------------------|------------------------------------------------------------|
+| code-1  | `BLOB_UNKNOWN`          | blob unknown to registry                                   |
+| code-2  | `BLOB_UPLOAD_INVALID`   | blob upload invalid                                        |
+| code-3  | `BLOB_UPLOAD_UNKNOWN`   | blob upload unknown to registry                            |
+| code-4  | `DIGEST_INVALID`        | provided digest did not match uploaded content             |
+| code-5  | `MANIFEST_BLOB_UNKNOWN` | manifest references a manifest or blob unknown to registry |
+| code-6  | `MANIFEST_INVALID`      | manifest invalid                                           |
+| code-7  | `MANIFEST_UNKNOWN`      | manifest unknown to registry                               |
+| code-8  | `NAME_INVALID`          | invalid repository name                                    |
+| code-9  | `NAME_UNKNOWN`          | repository name not known to registry                      |
+| code-10 | `SIZE_INVALID`          | provided length did not match content length               |
+| code-12 | `UNAUTHORIZED`          | authentication required                                    |
+| code-13 | `DENIED`                | requested access to the resource is denied                 |
+| code-14 | `UNSUPPORTED`           | the operation is unsupported                               |
+| code-15 | `TOOMANYREQUESTS`       | too many requests                                          |
 
 ### Appendix
 
