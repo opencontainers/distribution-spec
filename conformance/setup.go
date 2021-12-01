@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 	g "github.com/onsi/ginkgo"
 	godigest "github.com/opencontainers/go-digest"
-	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type (
@@ -179,10 +178,10 @@ func init() {
 		// in order to get a unique blob digest, we create a new author
 		// field for the config on each run.
 		randomAuthor := randomString(16)
-		config := imagespec.Image{
+		config := Image{
 			Architecture: "amd64",
 			OS:           "linux",
-			RootFS: imagespec.RootFS{
+			RootFS: RootFS{
 				Type:    "layers",
 				DiffIDs: []godigest.Digest{},
 			},
@@ -216,7 +215,7 @@ func init() {
 	layerBlobDigest = layerBlobDigestRaw.String()
 	layerBlobContentLength = fmt.Sprintf("%d", len(layerBlobData))
 
-	layers := []imagespec.Descriptor{{
+	layers := []Descriptor{{
 		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 		Size:      int64(len(layerBlobData)),
 		Digest:    layerBlobDigestRaw,
@@ -224,11 +223,12 @@ func init() {
 
 	// create a unique manifest for each workflow category
 	for i := 0; i < 4; i++ {
-		manifest := imagespec.Manifest{
-			Config: imagespec.Descriptor{
-				MediaType: "application/vnd.oci.image.config.v1+json",
-				Digest:    godigest.Digest(configs[i].Digest),
-				Size:      int64(len(configs[i].Content)),
+		manifest := Manifest{
+			Config: Descriptor{
+				MediaType:           "application/vnd.oci.image.config.v1+json",
+				Digest:              godigest.Digest(configs[i].Digest),
+				Size:                int64(len(configs[i].Content)),
+				NewUnspecifiedField: configs[i].Content,
 			},
 			Layers: layers,
 		}
@@ -253,13 +253,14 @@ func init() {
 	}
 
 	// used in push test
-	emptyLayerManifest := imagespec.Manifest{
-		Config: imagespec.Descriptor{
-			MediaType: "application/vnd.oci.image.config.v1+json",
-			Digest:    godigest.Digest(configs[1].Digest),
-			Size:      int64(len(configs[1].Content)),
+	emptyLayerManifest := Manifest{
+		Config: Descriptor{
+			MediaType:           "application/vnd.oci.image.config.v1+json",
+			Digest:              godigest.Digest(configs[1].Digest),
+			Size:                int64(len(configs[1].Content)),
+			NewUnspecifiedField: configs[1].Content,
 		},
-		Layers: []imagespec.Descriptor{},
+		Layers: []Descriptor{},
 	}
 	emptyLayerManifest.SchemaVersion = 2
 
