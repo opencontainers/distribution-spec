@@ -118,6 +118,7 @@ var (
 	layerBlobDigest            string
 	layerBlobContentLength     string
 	emptyLayerManifestContent  []byte
+	emptyLayerManifestDigest   string
 	nonexistentManifest        string
 	reportJUnitFilename        string
 	reportHTMLFilename         string
@@ -267,6 +268,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	emptyLayerManifestDigest = godigest.FromBytes(emptyLayerManifestContent).String()
 
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")

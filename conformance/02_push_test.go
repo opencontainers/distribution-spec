@@ -346,8 +346,8 @@ var test02Push = func() {
 			deleteManifests := func() {
 				deleteManifest(client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>",
 					reggie.WithDigest(manifests[1].Digest)))
-				deleteManifest(client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(emptyLayerTestTag)))
+				deleteManifest(client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>",
+					reggie.WithDigest(emptyLayerManifestDigest)))
 			}
 
 			if deleteManifestBeforeBlobs {
