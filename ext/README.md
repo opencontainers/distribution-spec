@@ -52,7 +52,7 @@ As of current, ```_oci``` and ```_ext``` are considered as reserved namespaces a
 
 ## Filename
 
-Extension definitions SHOULD be placed under `./ext/`. Extension files
+Extension definitions SHOULD be placed under `./ext/` in the specification repository. Extension files
 SHOULD follow the `ext-$ns-$name.md`. Refer [ext.md](./ext.md) for more details.
 
 ## Detail
