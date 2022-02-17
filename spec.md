@@ -428,6 +428,10 @@ The `<location>` is a pullable manifest URL.
 
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
+A registry SHOULD enforce some limit on the maximum manifest size that it can accept.
+A registry that enforces this limit SHOULD respond to a request to push a manifest over this limit with a response code `413 Payload Too Large`.
+Client and registry implementations SHOULD expect to be able to support manifest pushes of at least 4 megabytes.
+
 #### Content Discovery
 
 Currently, the only functionality provided by this workflow is the ability to discover tags.
