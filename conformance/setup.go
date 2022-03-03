@@ -228,7 +228,8 @@ func init() {
 				MediaType:           "application/vnd.oci.image.config.v1+json",
 				Digest:              godigest.Digest(configs[i].Digest),
 				Size:                int64(len(configs[i].Content)),
-				NewUnspecifiedField: configs[i].Content,
+				Data:                configs[i].Content,    // must be the config content.
+				NewUnspecifiedField: []byte("hello world"), // content doesn't matter.
 			},
 			Layers: layers,
 		}
@@ -258,7 +259,8 @@ func init() {
 			MediaType:           "application/vnd.oci.image.config.v1+json",
 			Digest:              godigest.Digest(configs[1].Digest),
 			Size:                int64(len(configs[1].Content)),
-			NewUnspecifiedField: configs[1].Content,
+			Data:                configs[1].Content,    // must be the config content.
+			NewUnspecifiedField: []byte("hello world"), // content doesn't matter.
 		},
 		Layers: []Descriptor{},
 	}
