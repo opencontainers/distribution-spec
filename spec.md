@@ -162,6 +162,15 @@ Most clients MAY ignore the value, but if it is used, the client MUST verify the
 
 If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
+##### Immutable tags
+
+Tags with the following suffixes are called immutable tags:
+- `-immutable`
+- `_immutable`
+- `.immutable`
+
+The client SHOULD refuse to pull a manifest with an immutable tag that resolves into a digest that does not match the foreknown digest.
+
 ##### Pulling blobs
 
 To pull a blob, perform a `GET` request to a URL in the following form:
@@ -432,6 +441,11 @@ A registry SHOULD enforce some limit on the maximum manifest size that it can ac
 A registry that enforces this limit SHOULD respond to a request to push a manifest over this limit with a response code `413 Payload Too Large`.
 Client and registry implementations SHOULD expect to be able to support manifest pushes of at least 4 megabytes.
 
+A registry SHOULD support recreating a deleted tag with a different content, except for [immutable tags](#immutable-tags).
+When the tag is immutable and is known to have existed with a different content in the past, the registry SHOULD return response code `409 Conflict`.
+Note that the registry MAY still return `201 Created`, as the registry might not be aware of the full history of the tags.
+The registry capable of returning a response code `409 Conflict` SHOULD set the [extension property `org.opencontainers.distribution-spec/immutable-tags`](#extensions) to `true`.
+
 #### Content Discovery
 
 Currently, the only functionality provided by this workflow is the ability to discover tags.
@@ -520,6 +534,25 @@ If the response is `200 OK`, then the registry implements this specification.
 
 This endpoint MAY be used for authentication/authorization purposes, but this is out of the purview of this specification.
 
+##### Extensions
+To check the implemented extensions, perform a `GET` request to the following endpoint: `/v2/_extensions/list` <sup>[end-12](#endpoints)</sup>.
+
+The registry MAY respond with a `404 Not Found` code if the regisry implements no extension.
+
+Upon success, the registry MUST respond with a `200 OK` response code.
+The body MUST be a JSON structure, and MAY contain the following properties:
+
+| Property                                              | Type    | Description                                                                         |
+| ----------------------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `org.opencontainers.distribution-spec/immutable-tags` | boolean | If `true`, the registry returns `409` for a mutation request of an immutable tag    |
+
+An example:
+```json
+{
+  "org.opencontainers.distribution-spec/immutable-tags": true
+}
+```
+
 #### Endpoints
 
 | ID     | Method         | API Endpoint                                                      | Success     | Failure           |
@@ -531,12 +564,13 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-4b | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                  | `201`/`202` | `404`/`400`       |
 | end-5  | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                       | `202`       | `404`/`416`       |
 | end-6  | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`       | `201`       | `404`/`400`       |
-| end-7  | `PUT`          | `/v2/<name>/manifests/<reference>`                           | `201`       | `404`             |
+| end-7  | `PUT`          | `/v2/<name>/manifests/<reference>`                           | `201`       | `404`/`409`       |
 | end-8a | `GET`          | `/v2/<name>/tags/list`                                       | `200`       | `404`             |
 | end-8b | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`            | `200`       | `404`             |
 | end-9  | `DELETE`       | `/v2/<name>/manifests/<reference>`                           | `202`       | `404`/`400`/`405` |
 | end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                  | `202`       | `404`/`405`       |
 | end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>` | `201`       | `404`             |
+| end-12 | `GET`          | `/v2/_extensions/list`                                       | `200`       | `404`             |
 
 #### Error Codes
 
