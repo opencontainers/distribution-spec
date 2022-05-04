@@ -53,6 +53,7 @@ These headers are OPTIONAL and clients SHOULD NOT depend on them.
 Several terms are used frequently in this document and warrant basic definitions:
 
 - **Registry**: a service that handles the required APIs defined in this specification
+- **Repository**: a namespace within the registry, commonly represented here as `<name>` between the `/v2/` and API call
 - **Client**: a tool that communicates with Registries
 - **Push**: the act of uploading Blobs and Manifests to a Registry
 - **Pull**: the act of downloading Blobs and Manifests from a Registry
@@ -160,7 +161,7 @@ If the digest does differ, it MAY be the case that the hashing algorithms used d
 See [Content Digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> for information on how to detect the hashing algorithm in use.
 Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded blob data.
 
-If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
+If the manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
 ##### Pulling blobs
 
@@ -173,9 +174,9 @@ A GET request to an existing blob URL MUST provide the expected blob, with a res
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 If present, the value of this header MUST be a digest matching that of the response body.
 
-If the blob is not found in the registry, the response code MUST be `404 Not Found`.
+If the blob is not found in the repository, the response code MUST be `404 Not Found`.
 
-##### Checking if content exists in the registry
+##### Checking if content exists in the repository
 
 In order to verify that a repository contains a given manifest or blob, make a `HEAD` request to a URL in the following form:
 
@@ -186,14 +187,14 @@ In order to verify that a repository contains a given manifest or blob, make a `
 A HEAD request to an existing blob or manifest URL MUST return `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 
-If the blob or manifest is not found in the registry, the response code MUST be `404 Not Found`.
+If the blob or manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
 #### Push
 
 Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first, and the manifest last.
 A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
 
-A registry MAY reject a manifest of any type uploaded to the manifest endpoint if it references manifests or blobs that do not exist in the registry.
+A registry MAY reject a manifest of any type uploaded to the manifest endpoint if it references manifests or blobs that do not exist in the repository.
 When a manifest is rejected for this reason, it must result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
 ##### Pushing blobs
