@@ -48,6 +48,11 @@ For relevant details and a history leading up to this specification, please see 
 Because of the origins this specification, the client MAY encounter Docker-specific headers, such as `Docker-Content-Digest`, or `Docker-Distribution-API-Version`.
 These headers are OPTIONAL and clients SHOULD NOT depend on them.
 
+#### Legacy Docker support error codes
+
+The client MAY encounter error codes targeting Docker schema1 manifests, such as `TAG_INVALID`, or `MANIFEST_UNVERIFIED`.
+These error codes are OPTIONAL and clients SHOULD NOT depend on them.
+
 ### Definitions
 
 Several terms are used frequently in this document and warrant basic definitions:
@@ -574,10 +579,10 @@ The `code` field MUST be one of the following:
 | code-8  | `NAME_INVALID`          | invalid repository name                                    |
 | code-9  | `NAME_UNKNOWN`          | repository name not known to registry                      |
 | code-10 | `SIZE_INVALID`          | provided length did not match content length               |
-| code-12 | `UNAUTHORIZED`          | authentication required                                    |
-| code-13 | `DENIED`                | requested access to the resource is denied                 |
-| code-14 | `UNSUPPORTED`           | the operation is unsupported                               |
-| code-15 | `TOOMANYREQUESTS`       | too many requests                                          |
+| code-11 | `UNAUTHORIZED`          | authentication required                                    |
+| code-12 | `DENIED`                | requested access to the resource is denied                 |
+| code-13 | `UNSUPPORTED`           | the operation is unsupported                               |
+| code-14 | `TOOMANYREQUESTS`       | too many requests                                          |
 
 ### Appendix
 
