@@ -193,7 +193,7 @@ var test01Pull = func() {
 		g.Context("Error codes", func() {
 			g.Specify("400 response body should contain OCI-conforming JSON message", func() {
 				SkipIfDisabled(pull)
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference("sha256:totallywrong")).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(invalidManifestContent)
