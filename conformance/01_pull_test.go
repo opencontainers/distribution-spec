@@ -151,7 +151,7 @@ var test01Pull = func() {
 			g.Specify("HEAD request to manifest path (tag) should yield 200 response", func() {
 				SkipIfDisabled(pull)
 				Expect(tag).ToNot(BeEmpty())
-				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>", reggie.WithReference(tag)).
+				req := client.NewRequest(reggie.HEAD, "/v2/<name>/manifests/<reference>", reggie.WithReference(tag)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
