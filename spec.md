@@ -423,6 +423,8 @@ Manifest byte stream:
 
 The uploaded manifest MUST reference any blobs that make up the artifact.
 However, the list of blobs MAY be empty.
+
+The registry MUST store the manifest in the exact byte representation provided by the client.
 Upon a successful upload, the registry MUST return response code `201 Created`, and MUST have the following header:
 
 ```
@@ -430,6 +432,8 @@ Location: <location>
 ```
 
 The `<location>` is a pullable manifest URL.
+The Docker-Content-Digest header returns the canonical digest of the uploaded blob, and MUST be equal to the client provided digest.
+Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
