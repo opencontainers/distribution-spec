@@ -485,12 +485,11 @@ When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
 ##### Listing Referrers
 
-To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<reference>` <sup>[end-99a](#endpoints)</sup>
+To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<reference>` <sup>[end-12a](#endpoints)</sup>
 
 `<name>` is the namespace of the repository.
 Assuming a repository is found, this request MUST return a `200 OK` response code.
 If a query results in no referrers found, an empty manifest list MUST be returned.
-If the list is not empty, the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
 
 Upon success, the response MUST be a json body in the following format (an index / manifest list):
 ```json
@@ -513,7 +512,7 @@ Upon success, the response MUST be a json body in the following format (an index
 ```
 
 In addition to fetching the whole list of referrers, a subset of the referrers can be fetched by providing the `n` query parameter.
-In this case, the path will look like the following: `/v2/<name>/referrers/<reference>?n=<int>` <sup>[end-99b](#endpoints)</sup>
+In this case, the path will look like the following: `/v2/<name>/referrers/<reference>?n=<int>` <sup>[end-12b](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of referrers requested.
 The response to such a request MAY return fewer than `<int>` results, but only when the total number of referrers is less than `<int>`.
