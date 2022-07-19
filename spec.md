@@ -439,7 +439,7 @@ Client and registry implementations SHOULD expect to be able to support manifest
 
 #### Content Discovery
 
-Currently, the only functionality provided by this workflow is the ability to discover tags.
+##### Listing Tags
 
 To fetch the list of tags, perform a `GET` request to a path in the following format: `/v2/<name>/tags/list` <sup>[end-8a](#endpoints)</sup>
 
@@ -482,6 +482,46 @@ That is to say, `<tagname>` will not be included in the results, but up to `<int
 The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
+
+##### Listing Referrers
+
+To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<reference>` <sup>[end-99a](#endpoints)</sup>
+
+`<name>` is the namespace of the repository.
+Assuming a repository is found, this request MUST return a `200 OK` response code.
+If a query results in no referrers found, an empty manifest list MUST be returned.
+If the list is not empty, the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
+
+Upon success, the response MUST be a json body in the following format (an index / manifest list):
+```json
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.index.v1+json",
+  "manifests": [
+    {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "size": 1234,
+      "digest": "sha256:a1a1a1..."
+    },
+    {
+      "mediaType": "application/vnd.oci.artifact.manifest.v1+json",
+      "artifactType": "image/png",
+      "digest": "sha256:a2a2a2..."
+    }
+  ]
+}
+```
+
+In addition to fetching the whole list of referrers, a subset of the referrers can be fetched by providing the `n` query parameter.
+In this case, the path will look like the following: `/v2/<name>/referrers/<reference>?n=<int>` <sup>[end-99b](#endpoints)</sup>
+
+`<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of referrers requested.
+The response to such a request MAY return fewer than `<int>` results, but only when the total number of referrers is less than `<int>`.
+Otherwise, the response MUST include `<int>` results.
+When `n` is zero, this endpoint MUST return an empty manifest list, and MUST NOT include a `Link` header.
+
+A `Link` header MUST be included in the response when additional results are available, and it MUST be
+set to the URL for the next page of results.
 
 #### Content Management
 
@@ -542,6 +582,8 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-9  | `DELETE`       | `/v2/<name>/manifests/<reference>`                           | `202`       | `404`/`400`/`405` |
 | end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                  | `202`       | `404`/`405`       |
 | end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>` | `201`       | `404`             |
+| end-12a | `GET`         | `/v2/<name>/referrers/<reference>`                           | `200`       | `404`             |
+| end-12b | `GET`         | `/v2/<name>/referrers/<reference>?n=<integer>`               | `200`       | `404`             |
 
 #### Error Codes
 
