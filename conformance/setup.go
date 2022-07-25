@@ -238,8 +238,8 @@ func init() {
 		if i > 0 {
 			manifest.Refers = &Descriptor{
 				MediaType: "application/vnd.oci.image.manifest.v1+json",
-				Digest:    godigest.Digest(configs[i-1].Digest),
-				Size:      int64(len(configs[i-1].Content)),
+				Digest:    godigest.Digest(manifests[i-1].Digest),
+				Size:      int64(len(manifests[i-1].Content)),
 			}
 		}
 

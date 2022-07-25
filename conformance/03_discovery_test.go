@@ -57,6 +57,20 @@ var test03ContentDiscovery = func() {
 					BeNumerically("<", 300)))
 			})
 
+			g.Specify("Populate registry with referred-to manifest", func() {
+				SkipIfDisabled(contentDiscovery)
+				RunOnlyIf(runContentDiscoverySetup)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference("test-something-points-to-me")).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(manifests[1].Content)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+			})
+
 			g.Specify("Populate registry with test tags", func() {
 				SkipIfDisabled(contentDiscovery)
 				RunOnlyIf(runContentDiscoverySetup)
@@ -77,20 +91,6 @@ var test03ContentDiscovery = func() {
 				resp, err := client.Do(req)
 				tagList = getTagList(resp)
 				_ = err
-			})
-
-			g.Specify("Populate registry with referred-to manifest", func() {
-				SkipIfDisabled(contentDiscovery)
-				RunOnlyIf(runContentDiscoverySetup)
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference("test-something-points-to-me")).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[1].Content)
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
 			})
 
 			g.Specify("Populate registry with test tags (no push)", func() {
