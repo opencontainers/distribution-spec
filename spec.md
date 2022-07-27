@@ -492,6 +492,7 @@ Assuming a repository is found, this request MUST return a `200 OK` response cod
 If a query results in no referrers found, an empty manifest list MUST be returned.
 
 Upon success, the response MUST be a json body in the following format (an index / manifest list):
+
 ```json
 {
   "schemaVersion": 2,
@@ -500,24 +501,26 @@ Upon success, the response MUST be a json body in the following format (an index
     {
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "size": 1234,
-      "digest": "sha256:a1a1a1..."
+      "digest": "sha256:a1a1a1...",
+      "artifactType": "application/vnd.example.sbom.v1",
+      "annotations": {
+        "org.opencontainers.artifact.created": "2022-01-01T14:42:55Z",
+        "org.example.sbom.format": "json"
+      }
     },
     {
       "mediaType": "application/vnd.oci.artifact.manifest.v1+json",
-      "artifactType": "image/png",
-      "digest": "sha256:a2a2a2..."
+      "size": 1234,
+      "digest": "sha256:a2a2a2...",
+      "artifactType": "application/vnd.example.signature.v1",
+      "annotations": {
+        "org.opencontainers.artifact.created": "2022-01-01T07:21:33Z",
+        "org.example.signature.fingerprint": "abcd"
+      }
     }
   ]
 }
 ```
-
-In addition to fetching the whole list of referrers, a subset of the referrers can be fetched by providing the `n` query parameter.
-In this case, the path will look like the following: `/v2/<name>/referrers/<reference>?n=<int>` <sup>[end-12b](#endpoints)</sup>
-
-`<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of referrers requested.
-The response to such a request MAY return fewer than `<int>` results, but only when the total number of referrers is less than `<int>`.
-Otherwise, the response MUST include `<int>` results.
-When `n` is zero, this endpoint MUST return an empty manifest list, and MUST NOT include a `Link` header.
 
 A `Link` header MUST be included in the response when additional results are available, and it MUST be
 set to the URL for the next page of results.
