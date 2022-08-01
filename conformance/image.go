@@ -20,9 +20,6 @@ type Manifest struct {
 
 	// Layers is an indexed list of layers referenced by the manifest.
 	Layers []Descriptor `json:"layers"`
-
-	// Refers links a manifest to another existing manifest.
-	Refers *Descriptor `json:"refers,omitempty"`
 }
 
 // Descriptor describes the disposition of targeted content.

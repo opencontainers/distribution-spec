@@ -234,15 +234,6 @@ func init() {
 		}
 		manifest.SchemaVersion = 2
 
-		// except for the first one, add "refers" field pointing to the last one
-		if i > 0 {
-			manifest.Refers = &Descriptor{
-				MediaType: "application/vnd.oci.image.manifest.v1+json",
-				Digest:    godigest.Digest(manifests[i-1].Digest),
-				Size:      int64(len(manifests[i-1].Content)),
-			}
-		}
-
 		manifestContent, err := json.MarshalIndent(&manifest, "", "\t")
 		if err != nil {
 			log.Fatal(err)
