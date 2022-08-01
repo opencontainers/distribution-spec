@@ -485,7 +485,7 @@ When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
 ##### Listing Referrers
 
-To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<reference>` <sup>[end-12a](#endpoints)</sup>
+To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<reference>` <sup>[end-12](#endpoints)</sup>
 
 `<name>` is the namespace of the repository.
 Assuming a repository is found, this request MUST return a `200 OK` response code.
@@ -584,8 +584,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-9  | `DELETE`       | `/v2/<name>/manifests/<reference>`                           | `202`       | `404`/`400`/`405` |
 | end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                  | `202`       | `404`/`405`       |
 | end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>` | `201`       | `404`             |
-| end-12a | `GET`         | `/v2/<name>/referrers/<reference>`                           | `200`       | `404`             |
-| end-12b | `GET`         | `/v2/<name>/referrers/<reference>?n=<integer>`               | `200`       | `404`             |
+| end-12 | `GET`          | `/v2/<name>/referrers/<reference>`                           | `200`       | `404`             |
 
 #### Error Codes
 
