@@ -485,7 +485,7 @@ When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
 ##### Listing Referrers
 
-To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<reference>` <sup>[end-12a](#endpoints)</sup>
+To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<reference>` <sup>[end-12](#endpoints)</sup>
 
 `<name>` is the namespace of the repository.
 Assuming a repository is found, this request MUST return a `200 OK` response code.
