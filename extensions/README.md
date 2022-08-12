@@ -87,7 +87,7 @@ in the following table:
 
 ## Pagination
 
-Extensions implementing pagination and SHOULD align with the [pagination](./spec.md#pagination) specification.
+Extensions implementing pagination, to limit the size of a list returned in a response, SHOULD consider aligning with the [pagination pattern described in the content discovery portion](../spec.md#content-discovery) of the specification.
 
 Extension MAY provide enumeration without lexical ordering and in this case, it is not required to support the `last` parameter.
 Clients are NOT RECOMMENDED to construct the `link` and SHOULD treat the URL as opaque.
