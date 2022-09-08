@@ -209,7 +209,7 @@ Pushing an object typically works in the opposite order as a pull: the blobs mak
 A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
 
 A registry MAY reject a manifest of any type uploaded to the manifest endpoint if it references manifests or blobs that do not exist in the registry.
-A registry SHOULD accept a manifest with a `refers` field that references a manifest that does not exist.
+A registry MUST accept an otherwise valid manifest with a `refers` field that references a manifest that does not exist, allowing clients to push a manifest and referrers to that manifest in either order.
 When a manifest is rejected for these reasons, it MUST result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
 ##### Pushing blobs
