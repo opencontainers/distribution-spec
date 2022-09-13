@@ -82,7 +82,7 @@ header.html: .tool/genheader.go specs-go/version.go
 install.tools: .install.gitvalidation
 
 .install.gitvalidation:
-	go get -u github.com/vbatts/git-validation
+	go install github.com/vbatts/git-validation@latest
 
 conformance: conformance-test conformance-binary
 
