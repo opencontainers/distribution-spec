@@ -75,8 +75,8 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Descriptor**: a reference that describes the type, metadata and content address of referenced content. Descriptors are defined under the OCI Image Spec <sup>[apdx-5](#appendix)</sup>.
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable manifest identifier
-- **Refers Field**: an association from one manifest to another, typically used to attach an artifact to an image. The refers field is included in the image and artifact manifests.
-- **Referrers List**: a list of manifests with a refers relationship to specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
+- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image. The subject field is included in the image and artifact manifests.
+- **Referrers List**: a list of manifests with a subject relationship to a specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
 
 ## Notational Conventions
 
@@ -209,7 +209,7 @@ Pushing an object typically works in the opposite order as a pull: the blobs mak
 A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
 
 A registry MAY reject a manifest of any type uploaded to the manifest endpoint if it references manifests or blobs that do not exist in the registry.
-A registry MUST accept an otherwise valid manifest with a `refers` field that references a manifest that does not exist, allowing clients to push a manifest and referrers to that manifest in either order.
+A registry MUST accept an otherwise valid manifest with a `subject` field that references a manifest that does not exist, allowing clients to push a manifest and referrers to that manifest in either order.
 When a manifest is rejected for these reasons, it MUST result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
 ##### Pushing blobs
@@ -452,9 +452,9 @@ A registry SHOULD enforce some limit on the maximum manifest size that it can ac
 A registry that enforces this limit SHOULD respond to a request to push a manifest over this limit with a response code `413 Payload Too Large`.
 Client and registry implementations SHOULD expect to be able to support manifest pushes of at least 4 megabytes.
 
-###### Pushing Manifests with Refers
+###### Pushing Manifests with Subject
 
-When pushing an image or artifact manifest with the `refers` field and the [referrers API](#listing-referrers) returns a 404, the client MUST:
+When pushing an image or artifact manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404, the client MUST:
 
 1. Pull the current referrers list using the [referrers tag schema](#referrers-tag-schema).
 1. If that pull returns a manifest other than the expected image index, the client SHOULD report a failure and skip the remaining steps.
@@ -519,14 +519,14 @@ Registries should see [Enabling the Referrers API](#enabling-the-referrers-api) 
 
 To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>` <sup>[end-12a](#endpoints)</sup>.
 
-`<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest specified in the `refers` field.
+`<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest specified in the `subject` field.
 
 Assuming a repository is found, this request MUST return a `200 OK` response code.
 If the registry supports the referrers API, the registry MUST NOT return a `404 Not Found` to a referrers API requests.
 If the request is invalid, such as a `<digest>` with an invalid syntax, a `400 Bad Request` MUST be returned.
 
 Upon success, the response MUST be a JSON body with an image index containing a list of descriptors.
-Each descriptor is of an image or artifact manifest in the same `<name>` namespace with a `refers` field that specifies the value of `<digest>`.
+Each descriptor is of an image or artifact manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
 The descriptors MUST include an `artifactType` field that is set to the value of `artifactType` for an artifact manifest if present, or the configuration descriptor's `mediaType` for an image manifest.
 The descriptors MUST include annotations from the image or artifact manifest.
 If a query results in no matching referrers, an empty manifest list MUST be returned.
@@ -627,7 +627,7 @@ To delete a manifest, perform a `DELETE` request to a path in the following form
 Upon success, the registry MUST respond with a `202 Accepted` code.
 If the repository does not exist, the response MUST return `404 Not Found`.
 
-When deleting an image or artifact manifest that contains a `refers` field, and the [referrers API](#listing-referrers) returns a 404, clients SHOULD:
+When deleting an image or artifact manifest that contains a `subject` field, and the [referrers API](#listing-referrers) returns a 404, clients SHOULD:
 
 1. Pull the referrers list using the [referrers tag schema](#referrers-tag-schema).
 1. Remove the descriptor entry from the array of manifests that references the deleted manifest.
@@ -651,7 +651,7 @@ This section describes client fallback procedures that MUST be implemented when 
 
 #### Unavailable Referrers API
 
-A client that pushes an image or artifact manifest with a defined `refers` field MUST verify the [referrers API](#listing-referrers) is available or fallback to updating the image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
+A client that pushes an image or artifact manifest with a defined `subject` field MUST verify the [referrers API](#listing-referrers) is available or fallback to updating the image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
 A client querying the [referrers API](#listing-referrers) and receiving a `404 Not Found` MUST fallback to using an image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
 
 ##### Referrers Tag Schema
@@ -661,12 +661,12 @@ A client querying the [referrers API](#listing-referrers) and receiving a `404 N
 ```
 
 - `<alg>`: the digest algorithm (e.g. `sha256` or `sha512`)
-- `<ref>`: the digest from the `refers` field (limit of 64 characters)
+- `<ref>`: the digest from the `subject` field (limit of 64 characters)
 
-For example, a manifest with the `refers` field digest set to `sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` in the `registry.example.org/project` repository would have a descriptor in the referrers list at `registry.example.org/project:sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.
+For example, a manifest with the `subject` field digest set to `sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` in the `registry.example.org/project` repository would have a descriptor in the referrers list at `registry.example.org/project:sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.
 
 This tag should return an image index matching the expected response of the [referrers API](#listing-referrers).
-Maintaining the content of this tag is the responsibility of clients pushing and deleting image and artifact manifests that contain a `refers` field.
+Maintaining the content of this tag is the responsibility of clients pushing and deleting image and artifact manifests that contain a `subject` field.
 
 *Note*: multiple clients could attempt to update the tag simultaneously resulting in race conditions and data loss.
 Protection against race conditions is the responsibility of clients and end users, and can be resolved by using a registry that provides the [referrers API](#listing-referrers).
@@ -681,9 +681,9 @@ The following describes procedures for upgrading to a newer version of the spec 
 The referrers API here is described by [Listing Referrers](#listing-referrers) and [end-12a](#endpoints).
 When registries add support for the referrers API, this API needs to account for manifests that were pushed before the API was available using the [Referrers Tag Schema](#referrers-tag-schema).
 
-1. Registries MUST include preexisting image and artifact manifests that are listed in an image index tagged with the [referrers tag schema](#referrers-tag-schema) and have a valid `refers` field in the referrers API response.
-1. Registries MAY include all preexisting image and artifact manifests with a `refers` field in the referrers API response.
-1. After the referrers API is enabled, Registries MUST include all newly pushed image and artifact manifests with a valid `refers` field in the referrers API response.
+1. Registries MUST include preexisting image and artifact manifests that are listed in an image index tagged with the [referrers tag schema](#referrers-tag-schema) and have a valid `subject` field in the referrers API response.
+1. Registries MAY include all preexisting image and artifact manifests with a `subject` field in the referrers API response.
+1. After the referrers API is enabled, Registries MUST include all newly pushed image and artifact manifests with a valid `subject` field in the referrers API response.
 
 ### API
 
