@@ -19,13 +19,14 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, _ := client.Do(req)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetQueryParam("digest", configs[0].Digest).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", configs[0].ContentLength).
 					SetBody(configs[0].Content)
-				resp, err := client.Do(req)
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
@@ -36,13 +37,14 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, _ := client.Do(req)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetQueryParam("digest", layerBlobDigest).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", layerBlobContentLength).
 					SetBody(layerBlobData)
-				resp, err := client.Do(req)
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
@@ -68,7 +70,8 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
-				resp, _ := client.Do(req)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
 				tag = getTagNameFromResponse(resp)
 
 				// attempt to forcibly overwrite this tag with the unique manifest for this run
