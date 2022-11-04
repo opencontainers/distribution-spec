@@ -248,6 +248,8 @@ In fact, offloading to another server can be a [better strategy](https://www.bac
 Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path).
 For more information, see [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
 
+Optionally, response MAY include a `Accept-Encoding` header to let the client know about supported algorithm(s) so the next request can use compression to transfert content.
+
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
 `<location>?digest=<digest>` <sup>[end-6](#endpoints)</sup>
@@ -264,6 +266,30 @@ Additionally, it SHOULD match exactly the `<location>` obtained from the `POST` 
 It SHOULD NOT be assembled manually by clients except where absolute/relative conversion is necessary.
 
 Here, `<digest>` is the digest of the blob being uploaded, and `<length>` is its size in bytes.
+
+Client MAY compress the blob for transport using any of the supported algorithm, as declared by `Accept-Encoding` header on previous response.
+If doing so, it MUST declare a `Content-Encoding` header. when declared, `Content-Length` header MUST then apply to the compressed payload. 
+Alternatively, client MAY use HTTP chuncked transfert, and set `Transfert-Encding: chunked` header accordingly. 
+
+
+```
+Content-Encoding: <algorithm>
+Content-Length: <length>
+Content-Type: application/octet-stream
+```
+```
+<upload byte stream>
+```
+
+
+```
+Content-Encoding: <algorithm>
+Transfert-Encoding: chunked
+Content-Type: application/octet-stream
+```
+```
+<upload chunked byte stream>
+```
 
 Upon successful completion of the request, the response MUST have code `201 Created` and MUST have the following header:
 
