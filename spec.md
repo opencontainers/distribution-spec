@@ -157,7 +157,7 @@ The `Content-Type` header SHOULD match what the client [pushed as the manifest's
 If the manifest has a `mediaType` field, clients SHOULD reject unless the `mediaType` field's value matches the type specified by the `Content-Type` header.
 For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negotiation.md).
 
-The client SHOULD include an `OCI-Named-Ref` header on each request to indicate which manifest is being pulled.
+The client SHOULD include an `OCI-Ref` header on each request with the full image reference to indicate which manifest is being pulled.
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
@@ -203,7 +203,7 @@ A useful diagram is provided [here](https://github.com/google/go-containerregist
 A registry MAY reject a manifest of any type uploaded to the manifest endpoint if it references manifests or blobs that do not exist in the registry.
 When a manifest is rejected for this reason, it must result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
-The client MAY include an `OCI-Named-Ref` header on each request to indicate which manifest is being pushed.
+The client MAY include an `OCI-Ref` header on each request with the full image reference to indicate which manifest is being pushed.
 
 ##### Pushing blobs
 
