@@ -12,7 +12,7 @@ import (
 var test02Push = func() {
 	g.Context(titlePush, func() {
 
-		var lastResponse *reggie.Response
+		var lastResponse, prevResponse *reggie.Response
 
 		g.Context("Setup", func() {
 			// No setup required at this time for push tests
@@ -175,6 +175,7 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
+				prevResponse = resp
 
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
@@ -184,6 +185,30 @@ var test02Push = func() {
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.Header().Get("Range")).To(Equal(testBlobBChunk1Range))
+				lastResponse = resp
+			})
+
+			g.Specify("Retry previous blob chunk should return 416", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.PATCH, prevResponse.GetRelativeLocation()).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", testBlobBChunk1Length).
+					SetHeader("Content-Range", testBlobBChunk1Range).
+					SetBody(testBlobBChunk1)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable))
+			})
+
+			g.Specify("Get on stale blob upload should return 204 with a range and location", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.GET, prevResponse.GetRelativeLocation())
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusNoContent))
+				Expect(resp.Header().Get("Location")).ToNot(BeEmpty())
+				Expect(resp.Header().Get("Range")).To(Equal(fmt.Sprintf("bytes=%s", testBlobBChunk1Range)))
 				lastResponse = resp
 			})
 

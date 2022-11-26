@@ -348,16 +348,20 @@ It MUST match the following regular expression:
 
 The `<length>` is the content-length, in bytes, of the current chunk.
 
-Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following header:
+Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following headers:
 
 ```
-Location <location>
+Location: <location>
+Range: 0-<end-of-range>
 ```
 
 Each consecutive chunk upload SHOULD use the `<location>` provided in the response to the previous chunk upload.
 
+The `<end-of-range>` value is the position of the last uploaded byte.
+
 Chunks MUST be uploaded in order, with the first byte of a chunk being the last chunk's `<end-of-range>` plus one.
 If a chunk is uploaded out of order, the registry MUST respond with a `416 Requested Range Not Satisfiable` code.
+A GET request may be used to retrieve the current valid offset and upload location.
 
 The final chunk MAY be uploaded using a `PATCH` request or it MAY be uploaded in the closing `PUT` request.
 Regardless of how the final chunk is uploaded, the session MUST be closed with a `PUT` request.
@@ -385,6 +389,22 @@ Location: <blob-location>
 
 Here, `<blob-location>` is a pullable blob URL.
 
+---
+
+To get the current status after a 416 error, issue a `GET` request to a URL `<location>` <sup>[end-13](#endpoints)</sup>.
+
+The `<location>` refers to the URL obtained from any preceding `POST` or `PATCH` request.
+
+The response to an active upload `<location>` MUST be a `204 No Content` response code, and MUST have the following headers:
+
+```
+Location: <location>
+Range: 0-<end-of-range>
+```
+
+The following chunk upload SHOULD use the `<location>` provided in the response.
+
+The `<end-of-range>` value is the position of the last uploaded byte.
 
 ##### Mounting a blob from another repository
 
@@ -716,6 +736,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`       | `404`             |
 | end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                                | `200`       | `404`/`400`       |
 | end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
+| end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
 
 #### Error Codes
 
