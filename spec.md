@@ -528,7 +528,7 @@ If the request is invalid, such as a `<digest>` with an invalid syntax, a `400 B
 Upon success, the response MUST be a JSON body with an image index containing a list of descriptors.
 Each descriptor is of an image or artifact manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
 The descriptors MUST include an `artifactType` field that is set to the value of `artifactType` for an artifact manifest if present, or the configuration descriptor's `mediaType` for an image manifest.
-The descriptors MUST include annotations from the image or artifact manifest.
+The descriptors MAY include annotations from the image or artifact manifest.
 If a query results in no matching referrers, an empty manifest list MUST be returned.
 If a manifest with the digest `<digest>` does not exist, a registry MAY return an empty manifest list.
 After a manifest with the digest `<digest>` is pushed, the registry MUST include previously pushed entries in the referrers list.
