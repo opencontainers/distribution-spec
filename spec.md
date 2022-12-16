@@ -562,6 +562,32 @@ After a manifest with the digest `<digest>` is pushed, the registry MUST include
 }
 ```
 
+In order to distinguish between the referring artifacts having no annotations and a registry not supporting inlined annotations, registries that do not support inlined annotations should set the `org.opencontainers.referrers.annotations.inline` to `"false"` in the referrers response.
+
+```json
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.index.v1+json",
+  "manifests": [
+    {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "size": 1234,
+      "digest": "sha256:a1a1a1...",
+      "artifactType": "application/vnd.example.sbom.v1"
+    },
+    {
+      "mediaType": "application/vnd.oci.artifact.manifest.v1+json",
+      "size": 1234,
+      "digest": "sha256:a2a2a2...",
+      "artifactType": "application/vnd.example.signature.v1"
+    }
+  ],
+  "annotations": {
+    "org.opencontainers.referrers.annotations.inline": "false"
+  }
+}
+```
+
 A `Link` header MUST be included in the response when the descriptor list cannot be returned in a single manifest.
 Each response is an image index with different descriptors in the `manifests` field.
 The `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
