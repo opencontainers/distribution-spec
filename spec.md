@@ -770,5 +770,5 @@ The following is a list of documents referenced in this spec:
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
 | apdx-4 | [OCI Image Spec - config](https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md) | Description of configs, defined by the OCI Image Spec |
 | apdx-5 | [OCI Image Spec - descriptor](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md) | Description of descriptors, defined by the OCI Image Spec |
-| apdx-6 | [OCI Image Spec - index](https://github.com/opencontainers/image-spec/blob/v1.0.1/image-indexmd) | Description of image index, defined by the OCI Image Spec |
+| apdx-6 | [OCI Image Spec - index](https://github.com/opencontainers/image-spec/blob/v1.0.1/image-index.md) | Description of image index, defined by the OCI Image Spec |
 | apdx-7 | [OCI Image Spec - artifact](https://github.com/opencontainers/image-spec/blob/main/artifact.md) | Description of an artifact manifest, defined by the OCI Image Spec |
