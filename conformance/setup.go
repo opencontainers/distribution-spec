@@ -38,6 +38,8 @@ const (
 	push
 	contentDiscovery
 	contentManagement
+	referrers
+	numWorkflows
 
 	BLOB_UNKNOWN = iota
 	BLOB_UPLOAD_INVALID
@@ -74,6 +76,7 @@ const (
 	envVarDeleteManifestBeforeBlobs = "OCI_DELETE_MANIFEST_BEFORE_BLOBS"
 	envVarCrossmountNamespace       = "OCI_CROSSMOUNT_NAMESPACE"
 	envVarAutomaticCrossmount       = "OCI_AUTOMATIC_CROSSMOUNT"
+	envVarReferrers                 = "OCI_REFERRERS"
 
 	emptyLayerTestTag = "emptylayer"
 	testTagName       = "tagtest0"
@@ -82,6 +85,7 @@ const (
 	titlePush              = "Push"
 	titleContentDiscovery  = "Content Discovery"
 	titleContentManagement = "Content Management"
+	titleReferrers         = "Referrers"
 
 	//	layerBase64String is a base64 encoding of a simple tarball, obtained like this:
 	//		$ echo 'you bothered to find out what was in here. Congratulations!' > test.txt
@@ -98,45 +102,65 @@ var (
 		envVarPush:              push,
 		envVarContentDiscovery:  contentDiscovery,
 		envVarContentManagement: contentManagement,
+		envVarReferrers:         referrers,
 	}
 
-	testBlobA                  []byte
-	testBlobALength            string
-	testBlobADigest            string
-	testBlobB                  []byte
-	testBlobBDigest            string
-	testBlobBChunk1            []byte
-	testBlobBChunk1Length      string
-	testBlobBChunk2            []byte
-	testBlobBChunk2Length      string
-	testBlobBChunk1Range       string
-	testBlobBChunk2Range       string
-	client                     *reggie.Client
-	crossmountNamespace        string
-	dummyDigest                string
-	errorCodes                 []string
-	invalidManifestContent     []byte
-	layerBlobData              []byte
-	layerBlobDigest            string
-	layerBlobContentLength     string
-	emptyLayerManifestContent  []byte
-	nonexistentManifest        string
-	reportJUnitFilename        string
-	reportHTMLFilename         string
-	httpWriter                 *httpDebugWriter
-	testsToRun                 int
-	suiteDescription           string
-	runPullSetup               bool
-	runPushSetup               bool
-	runContentDiscoverySetup   bool
-	runContentManagementSetup  bool
-	deleteManifestBeforeBlobs  bool
-	runAutomaticCrossmountTest bool
-	automaticCrossmountEnabled bool
-	configs                    []TestBlob
-	manifests                  []TestBlob
-	seed                       int64
-	Version                    = "unknown"
+	testBlobA                          []byte
+	testBlobALength                    string
+	testBlobADigest                    string
+	testRefBlobA                       []byte
+	testRefBlobALength                 string
+	testRefBlobADigest                 string
+	testRefArtifactTypeA               string
+	testRefArtifactTypeB               string
+	testRefBlobB                       []byte
+	testRefBlobBLength                 string
+	testRefBlobBDigest                 string
+	testBlobB                          []byte
+	testBlobBDigest                    string
+	testBlobBChunk1                    []byte
+	testBlobBChunk1Length              string
+	testBlobBChunk2                    []byte
+	testBlobBChunk2Length              string
+	testBlobBChunk1Range               string
+	testBlobBChunk2Range               string
+	client                             *reggie.Client
+	crossmountNamespace                string
+	dummyDigest                        string
+	errorCodes                         []string
+	invalidManifestContent             []byte
+	layerBlobData                      []byte
+	layerBlobDigest                    string
+	layerBlobContentLength             string
+	emptyLayerManifestContent          []byte
+	nonexistentManifest                string
+	emptyJSONBlob                      []byte
+	emptyJSONDescriptor                Descriptor
+	refsManifestAConfigArtifactContent []byte
+	refsManifestAConfigArtifactDigest  string
+	refsManifestALayerArtifactContent  []byte
+	refsManifestALayerArtifactDigest   string
+	refsManifestBConfigArtifactContent []byte
+	refsManifestBConfigArtifactDigest  string
+	refsManifestBLayerArtifactContent  []byte
+	refsManifestBLayerArtifactDigest   string
+	reportJUnitFilename                string
+	reportHTMLFilename                 string
+	httpWriter                         *httpDebugWriter
+	testsToRun                         int
+	suiteDescription                   string
+	runPullSetup                       bool
+	runPushSetup                       bool
+	runContentDiscoverySetup           bool
+	runContentManagementSetup          bool
+	runReferencesSetup                 bool
+	deleteManifestBeforeBlobs          bool
+	runAutomaticCrossmountTest         bool
+	automaticCrossmountEnabled         bool
+	configs                            []TestBlob
+	manifests                          []TestBlob
+	seed                               int64
+	Version                            = "unknown"
 )
 
 func init() {
@@ -178,7 +202,7 @@ func init() {
 	client.SetCookieJar(nil)
 
 	// create a unique config for each workflow category
-	for i := 0; i < 4; i++ {
+	for i := 0; i < numWorkflows; i++ {
 
 		// in order to get a unique blob digest, we create a new author
 		// field for the config on each run.
@@ -227,7 +251,7 @@ func init() {
 	}}
 
 	// create a unique manifest for each workflow category
-	for i := 0; i < 4; i++ {
+	for i := 0; i < numWorkflows; i++ {
 		manifest := Manifest{
 			Config: Descriptor{
 				MediaType:           "application/vnd.oci.image.config.v1+json",
@@ -286,6 +310,118 @@ func init() {
 
 	setupChunkedBlob(42)
 
+	// used in referrers test (artifacts with Subject field set)
+	emptyJSONBlob = []byte("{}")
+	emptyJSONDescriptor = Descriptor{
+		MediaType: "application/vnd.oci.empty.v1+json",
+		Size:      int64(len(emptyJSONBlob)),
+		Digest:    godigest.FromBytes(emptyJSONBlob),
+	}
+
+	testRefBlobA = []byte("NHL Peanut Butter on my NHL bagel")
+	testRefBlobALength = strconv.Itoa(len(testRefBlobA))
+	testRefBlobADigest = godigest.FromBytes(testRefBlobA).String()
+
+	testRefArtifactTypeA = "application/vnd.nhl.peanut.butter.bagel"
+
+	testRefBlobB = []byte("NBA Strawberry Jam on my NBA croissant")
+	testRefBlobBLength = strconv.Itoa(len(testRefBlobB))
+	testRefBlobBDigest = godigest.FromBytes(testRefBlobB).String()
+
+	testRefArtifactTypeB = "application/vnd.nba.strawberry.jam.croissant"
+
+	// artifact with Subject ref using config.MediaType = artifactType
+	refsManifestAConfigArtifact := Manifest{
+		Config: Descriptor{
+			MediaType: testRefArtifactTypeA,
+			Size:      int64(len(testRefBlobA)),
+			Digest:    godigest.FromBytes(testRefBlobA),
+		},
+		Subject: &Descriptor{
+			Size:   int64(len(manifests[4].Content)),
+			Digest: godigest.FromBytes(manifests[4].Content),
+		},
+		Layers: []Descriptor{
+			emptyJSONDescriptor,
+		},
+	}
+
+	refsManifestAConfigArtifactContent, err = json.MarshalIndent(&refsManifestAConfigArtifact, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestAConfigArtifactDigest = godigest.FromBytes(refsManifestAConfigArtifactContent).String()
+
+	refsManifestBConfigArtifact := Manifest{
+		Config: Descriptor{
+			MediaType: testRefArtifactTypeB,
+			Size:      int64(len(testRefBlobB)),
+			Digest:    godigest.FromBytes(testRefBlobB),
+		},
+		Subject: &Descriptor{
+			Size:   int64(len(manifests[4].Content)),
+			Digest: godigest.FromBytes(manifests[4].Content),
+		},
+		Layers: []Descriptor{
+			emptyJSONDescriptor,
+		},
+	}
+
+	refsManifestBConfigArtifactContent, err = json.MarshalIndent(&refsManifestBConfigArtifact, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestBConfigArtifactDigest = godigest.FromBytes(refsManifestBConfigArtifactContent).String()
+
+	// artifact with Subject ref using ArtifactType, config.MediaType = emptyJSON
+	refsManifestALayerArtifact := Manifest{
+		ArtifactType: testRefArtifactTypeA,
+		Config:       emptyJSONDescriptor,
+		Subject: &Descriptor{
+			Size:   int64(len(manifests[4].Content)),
+			Digest: godigest.FromBytes(manifests[4].Content),
+		},
+		Layers: []Descriptor{
+			Descriptor{
+				MediaType: testRefArtifactTypeA,
+				Size:      int64(len(testRefBlobB)),
+				Digest:    godigest.FromBytes(testRefBlobB),
+			},
+		},
+	}
+
+	refsManifestALayerArtifactContent, err = json.MarshalIndent(&refsManifestALayerArtifact, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestALayerArtifactDigest = godigest.FromBytes(refsManifestALayerArtifactContent).String()
+
+	refsManifestBLayerArtifact := Manifest{
+		ArtifactType: testRefArtifactTypeB,
+		Config:       emptyJSONDescriptor,
+		Subject: &Descriptor{
+			Size:   int64(len(manifests[4].Content)),
+			Digest: godigest.FromBytes(manifests[4].Content),
+		},
+		Layers: []Descriptor{
+			Descriptor{
+				MediaType: testRefArtifactTypeB,
+				Size:      int64(len(testRefBlobB)),
+				Digest:    godigest.FromBytes(testRefBlobB),
+			},
+		},
+	}
+
+	refsManifestBLayerArtifactContent, err = json.MarshalIndent(&refsManifestBLayerArtifact, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestBLayerArtifactDigest = godigest.FromBytes(refsManifestBLayerArtifactContent).String()
+
 	dummyDigest = godigest.FromString("hello world").String()
 
 	errorCodes = []string{
@@ -311,11 +447,13 @@ func init() {
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
 	deleteManifestBeforeBlobs = true
+	runReferencesSetup = true
 
 	if os.Getenv(envVarTagName) != "" &&
 		os.Getenv(envVarManifestDigest) != "" &&
 		os.Getenv(envVarBlobDigest) != "" {
 		runPullSetup = false
+		runReferencesSetup = false
 	}
 
 	if os.Getenv(envVarTagList) != "" {

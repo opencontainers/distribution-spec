@@ -14,12 +14,18 @@ type Manifest struct {
 	// SchemaVersion is the image manifest schema that this image follows
 	SchemaVersion int `json:"schemaVersion"`
 
+	// ArtifactType specifies the IANA media type of artifact when the manifest is used for an artifact.
+	ArtifactType string `json:"artifactType,omitempty"`
+
 	// Config references a configuration object for a container, by digest.
 	// The referenced configuration object is a JSON blob that the runtime uses to set up the container.
 	Config Descriptor `json:"config"`
 
 	// Layers is an indexed list of layers referenced by the manifest.
 	Layers []Descriptor `json:"layers"`
+
+	// Subject is an optional link from the image manifest to another manifest forming an association between the image manifest and the other manifest.
+	Subject *Descriptor `json:"subject,omitempty"`
 }
 
 // Descriptor describes the disposition of targeted content.
@@ -70,4 +76,20 @@ type Image struct {
 
 	// RootFS references the layer content addresses used by the image.
 	RootFS RootFS `json:"rootfs"`
+}
+
+// Index references manifests for various platforms.
+// This structure provides `application/vnd.oci.image.index.v1+json` mediatype when marshalled to JSON.
+type Index struct {
+	// SchemaVersion is the image manifest schema that this image follows
+	SchemaVersion int `json:"schemaVersion"`
+
+	// MediaType specifies the type of this document data structure e.g. `application/vnd.oci.image.index.v1+json`
+	MediaType string `json:"mediaType,omitempty"`
+
+	// Manifests references platform specific manifests.
+	Manifests []Descriptor `json:"manifests"`
+
+	// Annotations contains arbitrary metadata for the image index.
+	Annotations map[string]string `json:"annotations,omitempty"`
 }

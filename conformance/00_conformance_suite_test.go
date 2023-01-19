@@ -14,6 +14,7 @@ func TestConformance(t *testing.T) {
 		test02Push()
 		test03ContentDiscovery()
 		test04ContentManagement()
+		test05Referrers()
 	})
 
 	RegisterFailHandler(g.Fail)
