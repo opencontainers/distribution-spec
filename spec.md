@@ -568,7 +568,7 @@ The `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/
 
 The registry SHOULD support filtering on `artifactType`.
 To fetch the list of referrers with a filter, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>?artifactType=<mediaType>` <sup>[end-12b](#endpoints)</sup>.
-If filtering is requested and applied, the response MUST include an annotation (`org.opencontainers.referrers.filtersApplied`) denoting that an `artifactType` filter was applied.
+If filtering is requested and applied, the response MUST include a header `OCI-Filters-Applied: artifactType` denoting that an `artifactType` filter was applied.
 If multiple filters are applied, the annotation MUST contain a comma separated list of applied filters.
 
 Example request with filtering:
@@ -580,6 +580,7 @@ GET /v2/<name>/referrers/<digest>?artifactType=application/vnd.example.sbom.v1
 Example response with filtering:
 
 ```json
+OCI-Filters-Applied: artifactType
 {
   "schemaVersion": 2,
   "mediaType": "application/vnd.oci.image.index.v1+json",
@@ -595,9 +596,6 @@ Example response with filtering:
       }
     }
   ],
-  "annotations": {
-    "org.opencontainers.referrers.filtersApplied": "artifactType"
-  }
 }
 ```
 
