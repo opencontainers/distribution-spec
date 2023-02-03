@@ -454,9 +454,9 @@ Client and registry implementations SHOULD expect to be able to support manifest
 
 ###### Pushing Manifests with Subject
 
-When processing a request for an image or artifact manfiest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject-Processed: true` to indicate to the client that the registry understands the request's `subject`.
+When processing a request for an image or artifact manfiest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject: <subject digest>` to indicate to the client that the registry processed the request's `subject`.
 
-When pushing an image or artifact manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404 or the `OCI-Subject-Processed: true` header was not set, the client MUST:
+When pushing an image or artifact manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404 or the `OCI-Subject` header was not set, the client MUST:
 
 1. Pull the current referrers list using the [referrers tag schema](#referrers-tag-schema).
 1. If that pull returns a manifest other than the expected image index, the client SHOULD report a failure and skip the remaining steps.
