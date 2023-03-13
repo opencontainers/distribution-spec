@@ -321,6 +321,12 @@ The process remains unchanged for chunked upload, except that the post request M
 Content-Length: 0
 ```
 
+If the registry has a minimum chunk size, the response SHOULD include the following header, where `<size>` is the size in bytes (see the blob `PATCH` definition for usage):
+
+```
+OCI-Chunk-Min-Length: <size>
+```
+
 Please reference the above section for restrictions on the `<location>`.
 
 ---
@@ -347,6 +353,8 @@ It MUST match the following regular expression:
 ```
 
 The `<length>` is the content-length, in bytes, of the current chunk.
+If the registry provides a `OCI-Chunk-Min-Length` header in the `PUT` response, the size of each chunk, except for the final chunk, SHOULD be greater or equal to that value.
+The final chunk MAY have any length.
 
 Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following header:
 
