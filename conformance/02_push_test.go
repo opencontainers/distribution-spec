@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"strconv"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -157,6 +159,16 @@ var test02Push = func() {
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 
+				// rebuild chunked blob if min size is above our chunk size
+				minSizeStr := resp.Header().Get("OCI-Chunk-Min-Length")
+				if minSizeStr != "" {
+					minSize, err := strconv.Atoi(minSizeStr)
+					Expect(err).To(BeNil())
+					if minSize > len(testBlobBChunk1) {
+						setupChunkedBlob(minSize*2 - 2)
+					}
+				}
+
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", testBlobBChunk2Length).
@@ -187,14 +199,27 @@ var test02Push = func() {
 				lastResponse = resp
 			})
 
-			g.Specify("PUT request with final chunk should return 201", func() {
+			g.Specify("PATCH request with second chunk should return 202", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
+				req := client.NewRequest(reggie.PATCH, lastResponse.GetRelativeLocation()).
 					SetHeader("Content-Length", testBlobBChunk2Length).
 					SetHeader("Content-Range", testBlobBChunk2Range).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", testBlobBDigest).
 					SetBody(testBlobBChunk2)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				lastResponse = resp
+			})
+
+			g.Specify("PUT request with digest should return 201", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
+					SetHeader("Content-Length", "0").
+					SetHeader("Content-Type", "application/octet-stream").
+					SetQueryParam("digest", testBlobBDigest)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")

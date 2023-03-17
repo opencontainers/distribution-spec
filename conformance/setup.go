@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	mathrand "math/rand"
 	"os"
 	"strconv"
 
@@ -133,12 +134,14 @@ var (
 	automaticCrossmountEnabled bool
 	configs                    []TestBlob
 	manifests                  []TestBlob
+	seed                       int64
 	Version                    = "unknown"
 )
 
 func init() {
 	var err error
 
+	seed = g.GinkgoRandomSeed()
 	hostname := os.Getenv(envVarRootURL)
 	namespace := os.Getenv(envVarNamespace)
 	username := os.Getenv(envVarUsername)
@@ -274,18 +277,12 @@ func init() {
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
 
-	testBlobA = []byte("NBA Jam on my NBA toast")
+	dig, blob := randomBlob(42, seed+1)
+	testBlobA = blob
 	testBlobALength = strconv.Itoa(len(testBlobA))
-	testBlobADigest = godigest.FromBytes(testBlobA).String()
+	testBlobADigest = dig.String()
 
-	testBlobB = []byte("Hello, how are you today?")
-	testBlobBDigest = godigest.FromBytes(testBlobB).String()
-	testBlobBChunk1 = testBlobB[:3]
-	testBlobBChunk1Length = strconv.Itoa(len(testBlobBChunk1))
-	testBlobBChunk1Range = fmt.Sprintf("0-%d", len(testBlobBChunk1)-1)
-	testBlobBChunk2 = testBlobB[3:]
-	testBlobBChunk2Length = strconv.Itoa(len(testBlobBChunk2))
-	testBlobBChunk2Range = fmt.Sprintf("%d-%d", len(testBlobBChunk1), len(testBlobB)-1)
+	setupChunkedBlob(42)
 
 	dummyDigest = godigest.FromString("hello world").String()
 
@@ -403,4 +400,28 @@ func randomString(n int) string {
 		ret[i] = letters[num.Int64()]
 	}
 	return string(ret)
+}
+
+// randomBlob outputs a reproducible random blob (based on the seed) for testing
+func randomBlob(size int, seed int64) (godigest.Digest, []byte) {
+	r := mathrand.New(mathrand.NewSource(seed))
+	b := make([]byte, size)
+	if n, err := r.Read(b); err != nil {
+		panic(err)
+	} else if n != size {
+		panic("unable to read enough bytes")
+	}
+	return godigest.FromBytes(b), b
+}
+
+func setupChunkedBlob(size int) {
+	dig, blob := randomBlob(size, seed+2)
+	testBlobB = blob
+	testBlobBDigest = dig.String()
+	testBlobBChunk1 = testBlobB[:size/2+1]
+	testBlobBChunk1Length = strconv.Itoa(len(testBlobBChunk1))
+	testBlobBChunk1Range = fmt.Sprintf("0-%d", len(testBlobBChunk1)-1)
+	testBlobBChunk2 = testBlobB[size/2+1:]
+	testBlobBChunk2Length = strconv.Itoa(len(testBlobBChunk2))
+	testBlobBChunk2Range = fmt.Sprintf("%d-%d", len(testBlobBChunk1), len(testBlobB)-1)
 }
