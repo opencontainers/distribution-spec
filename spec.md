@@ -23,7 +23,7 @@
 - [API](#api)
 	- [Endpoints](#endpoints)
 	- [Error Codes](#error-codes)
-    - [Warnings](#warnings)
+	- [Warnings](#warnings)
 - [Appendix](#appendix)
 
 
