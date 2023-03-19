@@ -23,6 +23,7 @@
 - [API](#api)
 	- [Endpoints](#endpoints)
 	- [Error Codes](#error-codes)
+	- [Warnings](#warnings)
 - [Appendix](#appendix)
 
 
@@ -765,6 +766,26 @@ The `code` field MUST be one of the following:
 | code-12 | `DENIED`                | requested access to the resource is denied                 |
 | code-13 | `UNSUPPORTED`           | the operation is unsupported                               |
 | code-14 | `TOOMANYREQUESTS`       | too many requests                                          |
+
+#### Warnings
+
+Registry implementations MAY include informational warnings in `Warning` headers, as described in [RFC 7234](https://www.rfc-editor.org/rfc/rfc7234#section-5.5).
+
+If included, `Warning` headers MUST specify a `warn-code` of `299` and a `warn-agent` of `-`, and MUST NOT specify a `warn-date` value.
+
+A registry MUST NOT send more than 4096 bytes of warning data from all headers combined.
+
+Example warning headers:
+
+```
+Warning: 299 - "Your auth token will expire in 30 seconds."
+Warning: 299 - "This registry endpoint is deprecated and will be removed soon."
+Warning: 299 - "This image is deprecated and will be removed soon."
+```
+
+If a client receives `Warning` response headers, it SHOULD report the warnings to the user in an unobtrusive way.
+Clients SHOULD deduplicate warnings from multiple associated responses.
+In accordance with RFC 7234, clients MUST NOT take any automated action based on the presence or contents of warnings, only report them to the user.
 
 ### Appendix
 
