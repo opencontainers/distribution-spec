@@ -36,8 +36,6 @@ The **Open Container Initiative Distribution Specification** (a.k.a. "OCI Distri
 The specification is designed to be agnostic of content types.
 OCI Image types are currently the most prominent, which are defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec").
 
-To support other content types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts) (a.k.a. "OCI Artifacts").
-
 ### Historical Context
 
 The spec is based on the specification for the Docker Registry HTTP API V2 protocol <sup>[apdx-1](#appendix)</sup>.
@@ -67,10 +65,9 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Push**: the act of uploading blobs and manifests to a registry
 - **Pull**: the act of downloading blobs and manifests from a registry
 - **Blob**: the binary form of content that is stored by a registry, addressable by a digest
-- **Manifest**: a JSON document uploaded via the manifests endpoint. A manifest may reference other manifests and blobs in a repository via descriptors. Examples of manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>, such as the image manifest, image index, and artifact manifest.</sup>
+- **Manifest**: a JSON document uploaded via the manifests endpoint. A manifest may reference other manifests and blobs in a repository via descriptors. Examples of manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>, such as the image manifest and image index (and legacy manifests).</sup>
 - **Image Index**: a manifest containing a list of manifests, defined under the OCI Image Spec <sup>[apdx-6](#appendix)</sup>.
 - **Image Manifest**: a manifest containing a config descriptor and an indexed list of layers, commonly used for container images, defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>.
-- **Artifact Manifest**: a manifest containing a collection of blobs, defined under the OCI Image Spec <sup>[apdx-7](#appendix)</sup>.
 - **Config**: a blob referenced in the image manifest which contains metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>.
 - **Object**: one conceptual piece of content stored as blobs with an accompanying manifest. (This was previously described as an "artifact", and has been renamed to avoid confusion with the "artifact manifest".)
 - **Descriptor**: a reference that describes the type, metadata and content address of referenced content. Descriptors are defined under the OCI Image Spec <sup>[apdx-5](#appendix)</sup>.
@@ -465,15 +462,15 @@ Client and registry implementations SHOULD expect to be able to support manifest
 
 When processing a request for an image or artifact manfiest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject: <subject digest>` to indicate to the client that the registry processed the request's `subject`.
 
-When pushing an image or artifact manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404 or the `OCI-Subject` header was not set, the client MUST:
+When pushing a manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404 or the `OCI-Subject` header was not set, the client MUST:
 
 1. Pull the current referrers list using the [referrers tag schema](#referrers-tag-schema).
 1. If that pull returns a manifest other than the expected image index, the client SHOULD report a failure and skip the remaining steps.
 1. If the tag returns a 404, the client MUST begin with an empty image index.
 1. Verify the descriptor for the manifest is not already in the referrers list (duplicate entries SHOULD NOT be created).
-1. Append a descriptor for the pushed image or artifact manifest to the manifests in the referrers list.
-   The value of the `artifactType` MUST be set in the descriptor to value of the `artifactType` in the artifact manifest, or the config descriptor `mediaType` in the image manifest.
-   All annotations from the image or artifact manifest MUST be copied to this descriptor.
+1. Append a descriptor for the pushed manifest to the manifests in the referrers list.
+   The value of the `artifactType` MUST be set to the config descriptor `mediaType` in the image manifest.
+   All annotations from the image manifest MUST be copied to this descriptor.
 1. Push the updated referrers list using the same [referrers tag schema](#referrers-tag-schema).
    The client MAY use conditional HTTP requests to prevent overwriting a referrers list that has changed since it was first pulled.
 
@@ -537,9 +534,9 @@ If the registry supports the referrers API, the registry MUST NOT return a `404 
 If the request is invalid, such as a `<digest>` with an invalid syntax, a `400 Bad Request` MUST be returned.
 
 Upon success, the response MUST be a JSON body with an image index containing a list of descriptors.
-Each descriptor is of an image or artifact manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
-The descriptors MUST include an `artifactType` field that is set to the value of `artifactType` for an artifact manifest if present, or the configuration descriptor's `mediaType` for an image manifest.
-The descriptors MUST include annotations from the image or artifact manifest.
+Each descriptor is of an image manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
+The descriptors MUST include an `artifactType` field that is set to the value the configuration descriptor's `mediaType` for an image manifest.
+The descriptors MUST include annotations from the image manifest.
 If a query results in no matching referrers, an empty manifest list MUST be returned.
 If a manifest with the digest `<digest>` does not exist, a registry MAY return an empty manifest list.
 After a manifest with the digest `<digest>` is pushed, the registry MUST include previously pushed entries in the referrers list.
@@ -560,7 +557,7 @@ After a manifest with the digest `<digest>` is pushed, the registry MUST include
       }
     },
     {
-      "mediaType": "application/vnd.oci.artifact.manifest.v1+json",
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
       "size": 1234,
       "digest": "sha256:a2a2a2...",
       "artifactType": "application/vnd.example.signature.v1",
@@ -636,7 +633,7 @@ To delete a manifest, perform a `DELETE` request to a path in the following form
 Upon success, the registry MUST respond with a `202 Accepted` code.
 If the repository does not exist, the response MUST return `404 Not Found`.
 
-When deleting an image or artifact manifest that contains a `subject` field, and the [referrers API](#listing-referrers) returns a 404, clients SHOULD:
+When deleting an image manifest that contains a `subject` field, and the [referrers API](#listing-referrers) returns a 404, clients SHOULD:
 
 1. Pull the referrers list using the [referrers tag schema](#referrers-tag-schema).
 1. Remove the descriptor entry from the array of manifests that references the deleted manifest.
@@ -660,7 +657,7 @@ This section describes client fallback procedures that MUST be implemented when 
 
 #### Unavailable Referrers API
 
-A client that pushes an image or artifact manifest with a defined `subject` field MUST verify the [referrers API](#listing-referrers) is available or fallback to updating the image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
+A client that pushes an image manifest with a defined `subject` field MUST verify the [referrers API](#listing-referrers) is available or fallback to updating the image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
 A client querying the [referrers API](#listing-referrers) and receiving a `404 Not Found` MUST fallback to using an image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
 
 ##### Referrers Tag Schema
@@ -800,4 +797,3 @@ The following is a list of documents referenced in this spec:
 | apdx-4 | [OCI Image Spec - config](https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md) | Description of configs, defined by the OCI Image Spec |
 | apdx-5 | [OCI Image Spec - descriptor](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md) | Description of descriptors, defined by the OCI Image Spec |
 | apdx-6 | [OCI Image Spec - index](https://github.com/opencontainers/image-spec/blob/v1.0.1/image-index.md) | Description of image index, defined by the OCI Image Spec |
-| apdx-7 | [OCI Image Spec - artifact](https://github.com/opencontainers/image-spec/blob/main/artifact.md) | Description of an artifact manifest, defined by the OCI Image Spec |
