@@ -167,7 +167,8 @@ func init() {
 		reggie.WithUsernamePassword(username, password),
 		reggie.WithDebug(true),
 		reggie.WithUserAgent("distribution-spec-conformance-tests"),
-		reggie.WithAuthScope(authScope))
+		reggie.WithAuthScope(authScope),
+		reggie.WithInsecureSkipTLSVerify(true))
 	if err != nil {
 		panic(err)
 	}
