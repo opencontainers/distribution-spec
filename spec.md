@@ -182,7 +182,7 @@ To pull a blob, perform a `GET` request to a URL in the following form:
 
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
-A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
+A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK` or `307 Temporary Redirect`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 If present, the value of this header MUST be a digest matching that of the response body.
 
