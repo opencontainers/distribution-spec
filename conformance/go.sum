@@ -1,7 +1,7 @@
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 h1:DklsrG3dyBCFEj5IhUbnKptjxatkF07cF2ak3yi77so=
 github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2/go.mod h1:WaHUgvxTVq04UNunO+XhnAqY/wQc+bxr74GqbsZ/Jqw=
-github.com/bloodorangeio/reggie v0.6.0 h1:sOiNemNzgXKWPkKt9gPdqfp74eBEYA1u/K2Vfgg0jKk=
-github.com/bloodorangeio/reggie v0.6.0/go.mod h1:Jkvg7UBdlXVNOlvXU6hgysdtG1XNVCB3B4/k7+PtlfM=
+github.com/bloodorangeio/reggie v0.6.1 h1:rSpfPN8oU9kflRI7aQVjImjhY5meRsXDIXnJQrr11zs=
+github.com/bloodorangeio/reggie v0.6.1/go.mod h1:Jkvg7UBdlXVNOlvXU6hgysdtG1XNVCB3B4/k7+PtlfM=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
