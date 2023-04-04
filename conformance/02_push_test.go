@@ -277,7 +277,7 @@ var test02Push = func() {
 					Equal(http.StatusCreated),
 					Equal(http.StatusAccepted),
 				))
-				Expect(resp.GetRelativeLocation()).To(ContainSubstring(crossmountNamespace))
+				Expect(resp.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)))
 
 				lastResponse = resp
 			})
@@ -296,8 +296,7 @@ var test02Push = func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusAccepted)
 
-				loc := lastResponse.GetRelativeLocation()
-				Expect(loc).To(ContainSubstring("/blobs/uploads/"))
+				Expect(lastResponse.GetRelativeLocation()).To(HavePrefix(fmt.Sprintf("/v2/%s/blobs/uploads/", crossmountNamespace)))
 			})
 
 			g.Specify("Cross-mounting without from, and automatic content discovery enabled should return a 201", func() {
