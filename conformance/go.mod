@@ -3,7 +3,7 @@ module github.com/opencontainers/distribution-spec/conformance
 go 1.17
 
 require (
-	github.com/bloodorangeio/reggie v0.6.0
+	github.com/bloodorangeio/reggie v0.6.1
 	github.com/google/uuid v1.3.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.16.0
