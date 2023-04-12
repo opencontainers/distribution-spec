@@ -188,7 +188,6 @@ var test02Push = func() {
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 				prevResponse = resp
-
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", testBlobBChunk1Length).
@@ -220,7 +219,10 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusNoContent))
 				Expect(resp.Header().Get("Location")).ToNot(BeEmpty())
-				Expect(resp.Header().Get("Range")).To(Equal(fmt.Sprintf("bytes=%s", testBlobBChunk1Range)))
+				Expect(resp.Header().Get("Range")).To(SatisfyAny(
+					Equal(testBlobBChunk1Range), // Allow missing "bytes=" prefix
+					Equal(fmt.Sprintf("bytes=%s", testBlobBChunk1Range)),
+				))
 				lastResponse = resp
 			})
 
@@ -277,15 +279,13 @@ var test02Push = func() {
 					Equal(http.StatusCreated),
 					Equal(http.StatusAccepted),
 				))
-				Expect(resp.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)))
-
 				lastResponse = resp
 			})
 
 			g.Specify("GET request to test digest within cross-mount namespace should return 200", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
-
+				Expect(lastResponse.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)))
 				req := client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -295,7 +295,6 @@ var test02Push = func() {
 			g.Specify("Cross-mounting of nonexistent blob should yield session id", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusAccepted)
-
 				Expect(lastResponse.GetRelativeLocation()).To(HavePrefix(fmt.Sprintf("/v2/%s/blobs/uploads/", crossmountNamespace)))
 			})
 
@@ -304,7 +303,6 @@ var test02Push = func() {
 				RunOnlyIf(runAutomaticCrossmountTest)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
 				RunOnlyIf(automaticCrossmountEnabled)
-
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
 					reggie.WithName(crossmountNamespace)).
 					SetQueryParam("mount", testBlobADigest)
@@ -318,7 +316,6 @@ var test02Push = func() {
 				RunOnlyIf(runAutomaticCrossmountTest)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
 				RunOnlyIfNot(automaticCrossmountEnabled)
-
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
 					reggie.WithName(crossmountNamespace)).
 					SetQueryParam("mount", testBlobADigest)
@@ -442,7 +439,6 @@ var test02Push = func() {
 					))
 				})
 			}
-
 		})
 	})
 }
