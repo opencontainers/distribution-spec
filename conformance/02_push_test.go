@@ -219,7 +219,7 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusNoContent))
 				Expect(resp.Header().Get("Location")).ToNot(BeEmpty())
-				Expect(resp.Header().Get("Range")).To(Equal(fmt.Sprintf("bytes=%s", testBlobBChunk1Range)))
+				Expect(resp.Header().Get("Range")).To(Equal(testBlobBChunk1Range))
 				lastResponse = resp
 			})
 
