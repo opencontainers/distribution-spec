@@ -489,7 +489,8 @@ When pushing a manifest with the `subject` field and the [referrers API](#listin
 1. If the tag returns a 404, the client MUST begin with an empty image index.
 1. Verify the descriptor for the manifest is not already in the referrers list (duplicate entries SHOULD NOT be created).
 1. Append a descriptor for the pushed manifest to the manifests in the referrers list.
-   The value of the `artifactType` MUST be set to the config descriptor `mediaType` in the image manifest.
+   The value of the `artifactType` MUST be set to the `artifactType` value in the image manifest, if present.
+   If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
    All annotations from the image manifest MUST be copied to this descriptor.
 1. Push the updated referrers list using the same [referrers tag schema](#referrers-tag-schema).
    The client MAY use conditional HTTP requests to prevent overwriting a referrers list that has changed since it was first pulled.
@@ -555,7 +556,8 @@ If the request is invalid, such as a `<digest>` with an invalid syntax, a `400 B
 
 Upon success, the response MUST be a JSON body with an image index containing a list of descriptors.
 Each descriptor is of an image manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
-The descriptors MUST include an `artifactType` field that is set to the value the configuration descriptor's `mediaType` for an image manifest.
+The descriptors MUST include an `artifactType` field that is set to the value of the `artifactType` in the image manifest, if present.
+If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
 The descriptors MUST include annotations from the image manifest.
 If a query results in no matching referrers, an empty manifest list MUST be returned.
 If a manifest with the digest `<digest>` does not exist, a registry MAY return an empty manifest list.
