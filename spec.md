@@ -328,7 +328,7 @@ OCI-Chunk-Min-Length: <size>
 Please reference the above section for restrictions on the `<location>`.
 
 ---
-To upload a chunk, issue a `PATCH` request to a URL path in the following format, and with the following headers and body:
+To upload a chunk, issue a `PATCH` request to a URL path in the following format, and with the following headers and body. `Content-Length` can be omitted if HTTP chunked transfer encoding is used:
 
 URL path: `<location>` <sup>[end-5](#endpoints)</sup>
 ```
