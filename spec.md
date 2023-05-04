@@ -69,11 +69,11 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Image Index**: a manifest containing a list of manifests, defined under the OCI Image Spec <sup>[apdx-6](#appendix)</sup>.
 - **Image Manifest**: a manifest containing a config descriptor and an indexed list of layers, commonly used for container images, defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>.
 - **Config**: a blob referenced in the image manifest which contains metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>.
-- **Object**: one conceptual piece of content stored as blobs with an accompanying manifest. (This was previously described as an "artifact", and has been renamed to avoid confusion with the "artifact manifest".)
+- **Object**: one conceptual piece of content stored as blobs with an accompanying manifest. (This was previously described as an "artifact")
 - **Descriptor**: a reference that describes the type, metadata and content address of referenced content. Descriptors are defined under the OCI Image Spec <sup>[apdx-5](#appendix)</sup>.
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable manifest identifier
-- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image. The subject field is included in the image and artifact manifests.
+- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image. 
 - **Referrers List**: a list of manifests with a subject relationship to a specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
 
 ## Notational Conventions
@@ -480,7 +480,7 @@ Client and registry implementations SHOULD expect to be able to support manifest
 
 ###### Pushing Manifests with Subject
 
-When processing a request for an image or artifact manfiest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject: <subject digest>` to indicate to the client that the registry processed the request's `subject`.
+When processing a request for an image manifest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject: <subject digest>` to indicate to the client that the registry processed the request's `subject`.
 
 When pushing a manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404 or the `OCI-Subject` header was not set, the client MUST:
 
@@ -694,7 +694,7 @@ A client querying the [referrers API](#listing-referrers) and receiving a `404 N
 For example, a manifest with the `subject` field digest set to `sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` in the `registry.example.org/project` repository would have a descriptor in the referrers list at `registry.example.org/project:sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.
 
 This tag should return an image index matching the expected response of the [referrers API](#listing-referrers).
-Maintaining the content of this tag is the responsibility of clients pushing and deleting image and artifact manifests that contain a `subject` field.
+Maintaining the content of this tag is the responsibility of clients pushing and deleting image manifests that contain a `subject` field.
 
 *Note*: multiple clients could attempt to update the tag simultaneously resulting in race conditions and data loss.
 Protection against race conditions is the responsibility of clients and end users, and can be resolved by using a registry that provides the [referrers API](#listing-referrers).
@@ -709,9 +709,9 @@ The following describes procedures for upgrading to a newer version of the spec 
 The referrers API here is described by [Listing Referrers](#listing-referrers) and [end-12a](#endpoints).
 When registries add support for the referrers API, this API needs to account for manifests that were pushed before the API was available using the [Referrers Tag Schema](#referrers-tag-schema).
 
-1. Registries MUST include preexisting image and artifact manifests that are listed in an image index tagged with the [referrers tag schema](#referrers-tag-schema) and have a valid `subject` field in the referrers API response.
-1. Registries MAY include all preexisting image and artifact manifests with a `subject` field in the referrers API response.
-1. After the referrers API is enabled, Registries MUST include all newly pushed image and artifact manifests with a valid `subject` field in the referrers API response.
+1. Registries MUST include preexisting image manifests that are listed in an image index tagged with the [referrers tag schema](#referrers-tag-schema) and have a valid `subject` field in the referrers API response.
+1. Registries MAY include all preexisting image manifests with a `subject` field in the referrers API response.
+1. After the referrers API is enabled, Registries MUST include all newly pushed image manifests with a valid `subject` field in the referrers API response.
 
 ### API
 
