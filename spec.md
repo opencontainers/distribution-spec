@@ -69,11 +69,11 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Image Index**: a manifest containing a list of manifests, defined under the OCI Image Spec <sup>[apdx-6](#appendix)</sup>.
 - **Image Manifest**: a manifest containing a config descriptor and an indexed list of layers, commonly used for container images, defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>.
 - **Config**: a blob referenced in the image manifest which contains metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>.
-- **Object**: one conceptual piece of content stored as blobs with an accompanying manifest. (This was previously described as an "artifact", and has been renamed to avoid confusion with the "artifactType" of manifests which implement the [referrers API](#listing-referrers))
+- **Object**: one conceptual piece of content stored as blobs with an accompanying manifest. (This was previously described as an "artifact")
 - **Descriptor**: a reference that describes the type, metadata and content address of referenced content. Descriptors are defined under the OCI Image Spec <sup>[apdx-5](#appendix)</sup>.
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable manifest identifier
-- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image. The subject field is included in the image manifest.
+- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image. 
 - **Referrers List**: a list of manifests with a subject relationship to a specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
 
 ## Notational Conventions
