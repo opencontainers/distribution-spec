@@ -64,7 +64,7 @@ As of current, `_oci` and `_catalog` are considered as reserved namespaces and c
 
 ### Versioning
 
-Data payloads being exchanged from extensions SHOULD handle versioned data structures this with `Accepts` and `Content-type` HTTP headers (LINK TO RFC).
+Data payloads being exchanged from extensions SHOULD handle versioned data structures this with [`Accept`](https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2) and [`Content-Type`](https://datatracker.ietf.org/doc/html/rfc7231#section-3.1.1.5) HTTP headers.
 
 If an extension has fundamentally changed enough, then it SHOULD be introduced as a new `<component>` and/or `<component>/<module>`.
 Whether or not there is versioning built into those names is up to the extension maintainer.
