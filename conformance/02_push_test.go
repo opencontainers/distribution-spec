@@ -15,6 +15,7 @@ var test02Push = func() {
 	g.Context(titlePush, func() {
 
 		var lastResponse, prevResponse *reggie.Response
+		var emptyLayerManifestRef string
 
 		g.Context("Setup", func() {
 			// No setup required at this time for push tests
@@ -358,6 +359,7 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				if resp.StatusCode() == http.StatusCreated {
 					location := resp.Header().Get("Location")
+					emptyLayerManifestRef = location
 					Expect(location).ToNot(BeEmpty())
 					Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
 				} else {
@@ -390,6 +392,18 @@ var test02Push = func() {
 						),
 						Equal(http.StatusMethodNotAllowed),
 					))
+					if emptyLayerManifestRef != "" {
+						req = client.NewRequest(reggie.DELETE, emptyLayerManifestRef)
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						))
+					}
 				})
 			}
 
@@ -437,6 +451,18 @@ var test02Push = func() {
 						),
 						Equal(http.StatusMethodNotAllowed),
 					))
+					if emptyLayerManifestRef != "" {
+						req = client.NewRequest(reggie.DELETE, emptyLayerManifestRef)
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						))
+					}
 				})
 			}
 		})
