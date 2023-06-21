@@ -61,7 +61,7 @@ The Distribution Specification Project is including, herein, a process and API f
 and testing extensions to the Distribution API.
 
 We invite contributions, comments, and reviews to these extensions.
-These extensions will only move forward with significant support from registies, registry clients, and users.
+These extensions will only move forward with significant support from registries, registry clients, and users.
 
 Please see [here](https://github.com/opencontainers/distribution-spec/blob/main/extensions/README.md) for more details.
 
