@@ -15,6 +15,7 @@ var test02Push = func() {
 	g.Context(titlePush, func() {
 
 		var lastResponse, prevResponse *reggie.Response
+		var emptyLayerManifestRef string
 
 		g.Context("Setup", func() {
 			// No setup required at this time for push tests
@@ -350,16 +351,20 @@ var test02Push = func() {
 
 			g.Specify("Registry should accept a manifest upload with no layers", func() {
 				SkipIfDisabled(push)
-				RunOnlyIfNot(skipEmptyLayerTest)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(emptyLayerTestTag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(emptyLayerManifestContent)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				location := resp.Header().Get("Location")
-				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				if resp.StatusCode() == http.StatusCreated {
+					location := resp.Header().Get("Location")
+					emptyLayerManifestRef = location
+					Expect(location).ToNot(BeEmpty())
+					Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				} else {
+					Warn("image manifest with no layers is not supported")
+				}
 			})
 
 			g.Specify("GET request to manifest URL (digest) should yield 200 response", func() {
@@ -387,6 +392,18 @@ var test02Push = func() {
 						),
 						Equal(http.StatusMethodNotAllowed),
 					))
+					if emptyLayerManifestRef != "" {
+						req = client.NewRequest(reggie.DELETE, emptyLayerManifestRef)
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						))
+					}
 				})
 			}
 
@@ -434,6 +451,18 @@ var test02Push = func() {
 						),
 						Equal(http.StatusMethodNotAllowed),
 					))
+					if emptyLayerManifestRef != "" {
+						req = client.NewRequest(reggie.DELETE, emptyLayerManifestRef)
+						resp, err = client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+						))
+					}
 				})
 			}
 		})

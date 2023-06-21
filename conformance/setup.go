@@ -10,11 +10,13 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/bloodorangeio/reggie"
 	"github.com/google/uuid"
 	g "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/formatter"
 	godigest "github.com/opencontainers/go-digest"
 )
 
@@ -128,7 +130,6 @@ var (
 	runPushSetup               bool
 	runContentDiscoverySetup   bool
 	runContentManagementSetup  bool
-	skipEmptyLayerTest         bool
 	deleteManifestBeforeBlobs  bool
 	runAutomaticCrossmountTest bool
 	automaticCrossmountEnabled bool
@@ -309,7 +310,6 @@ func init() {
 	runPushSetup = true
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
-	skipEmptyLayerTest = false
 	deleteManifestBeforeBlobs = true
 
 	if os.Getenv(envVarTagName) != "" &&
@@ -322,7 +322,6 @@ func init() {
 		runContentDiscoverySetup = false
 	}
 
-	skipEmptyLayerTest, _ = strconv.ParseBool(os.Getenv(envVarPushEmptyLayer))
 	if v, ok := os.LookupEnv(envVarDeleteManifestBeforeBlobs); ok {
 		deleteManifestBeforeBlobs, _ = strconv.ParseBool(v)
 	}
@@ -352,6 +351,14 @@ func RunOnlyIfNot(v bool) {
 	if v {
 		g.Skip("you have skipped this test.")
 	}
+}
+
+func Warn(message string) {
+	// print message
+	fmt.Fprint(os.Stderr, formatter.Fi(2, "\n{{magenta}}WARNING: %s\n{{/}}", message))
+	// print file:line
+	_, file, line, _ := runtime.Caller(1)
+	fmt.Fprint(os.Stderr, formatter.Fi(2, "\n%s:%d\n", file, line))
 }
 
 func generateSkipReport() string {
