@@ -233,8 +233,8 @@ var test02Push = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
-				Expect(location).ToNot(BeEmpty())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(location).ToNot(BeEmpty())
 				lastResponse = resp
 			})
 
@@ -246,9 +246,9 @@ var test02Push = func() {
 					SetQueryParam("digest", testBlobBDigest)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
-				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
 			})
 		})
 
