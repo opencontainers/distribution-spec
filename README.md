@@ -63,9 +63,7 @@ and testing extensions to the Distribution API.
 We invite contributions, comments, and reviews to these extensions.
 These extensions will only move forward with significant support from registies, registry clients, and users.
 
-Disclaimer: Unless stated otherwise, extension prototypes are subject to change. Extensions
-should NOT be considered as final or approved official extensions to the OCI Distribution API until they
-have been included in an OCI Distribution Specification.
+Please see [here](https://github.com/opencontainers/distribution-spec/blob/main/extensions/README.md) for more details.
 
 ## Extensions API - (status: WIP)
 
