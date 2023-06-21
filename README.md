@@ -89,9 +89,8 @@ You can subscribe and join the mailing list on [Google Groups](https://groups.go
 
 OCI discussion happens in the following chat rooms, which are all bridged together:
 
-- #general channel on [OCI Slack](https://chat.opencontainers.org/)
+- #general channel on [OCI Slack](https://opencontainers.org/community/overview/#chat)
 - #opencontainers:matrix.org
-- #opencontainers on freenode.net
 
 ## Markdown style
 
