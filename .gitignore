@@ -5,3 +5,5 @@ header.html
 tags
 go.mod
 go.sum
+junit.xml
+report.html

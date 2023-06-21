@@ -8,16 +8,44 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        go: ['1.18', '1.19', '1.20']
+
     steps:
       - name: checkout source code
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
+
       - name: setup go environment
-        uses: actions/setup-go@v1
+        uses: actions/setup-go@v3
         with:
-          go-version: '1.16.5'
+          go-version: ${{ matrix.go }}
+
       - name: run tests
+        id: tests
         run: |
           export PATH="$(go env GOPATH)/bin:${PATH}"
           make install.tools
           make .gitvalidation
           make docs conformance
+
+          set +e
+          make conformance-ci
+          CONFORMANCE_RC="$?"
+          set -e
+          if [[ -f report.html ]]; then
+            echo "Found report.html."
+            echo "has-report=true" >> $GITHUB_OUTPUT
+          fi
+          echo "Conformance return code: ${CONFORMANCE_RC}"
+          exit ${CONFORMANCE_RC}
+
+      - name: Upload OCI conformance results as build artifact
+        if: always() && steps.tests.outputs.has-report == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: oci-conformance-results-${{ matrix.go }}
+          path: |
+            ./report.html
+            ./junit.xml

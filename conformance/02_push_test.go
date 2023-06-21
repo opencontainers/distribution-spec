@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"strconv"
+
 	"github.com/bloodorangeio/reggie"
 	g "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,7 +14,7 @@ import (
 var test02Push = func() {
 	g.Context(titlePush, func() {
 
-		var lastResponse *reggie.Response
+		var lastResponse, prevResponse *reggie.Response
 
 		g.Context("Setup", func() {
 			// No setup required at this time for push tests
@@ -157,6 +159,16 @@ var test02Push = func() {
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 
+				// rebuild chunked blob if min size is above our chunk size
+				minSizeStr := resp.Header().Get("OCI-Chunk-Min-Length")
+				if minSizeStr != "" {
+					minSize, err := strconv.Atoi(minSizeStr)
+					Expect(err).To(BeNil())
+					if minSize > len(testBlobBChunk1) {
+						setupChunkedBlob(minSize*2 - 2)
+					}
+				}
+
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", testBlobBChunk2Length).
@@ -175,7 +187,7 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
-
+				prevResponse = resp
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", testBlobBChunk1Length).
@@ -184,17 +196,54 @@ var test02Push = func() {
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.Header().Get("Range")).To(Equal(testBlobBChunk1Range))
 				lastResponse = resp
 			})
 
-			g.Specify("PUT request with final chunk should return 201", func() {
+			g.Specify("Retry previous blob chunk should return 416", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
+				req := client.NewRequest(reggie.PATCH, prevResponse.GetRelativeLocation()).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", testBlobBChunk1Length).
+					SetHeader("Content-Range", testBlobBChunk1Range).
+					SetBody(testBlobBChunk1)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusRequestedRangeNotSatisfiable))
+			})
+
+			g.Specify("Get on stale blob upload should return 204 with a range and location", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.GET, prevResponse.GetRelativeLocation())
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusNoContent))
+				Expect(resp.Header().Get("Location")).ToNot(BeEmpty())
+				Expect(resp.Header().Get("Range")).To(Equal(testBlobBChunk1Range))
+				lastResponse = resp
+			})
+
+			g.Specify("PATCH request with second chunk should return 202", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.PATCH, lastResponse.GetRelativeLocation()).
 					SetHeader("Content-Length", testBlobBChunk2Length).
 					SetHeader("Content-Range", testBlobBChunk2Range).
 					SetHeader("Content-Type", "application/octet-stream").
-					SetQueryParam("digest", testBlobBDigest).
 					SetBody(testBlobBChunk2)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				lastResponse = resp
+			})
+
+			g.Specify("PUT request with digest should return 201", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
+					SetHeader("Content-Length", "0").
+					SetHeader("Content-Type", "application/octet-stream").
+					SetQueryParam("digest", testBlobBDigest)
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
@@ -227,15 +276,13 @@ var test02Push = func() {
 					Equal(http.StatusCreated),
 					Equal(http.StatusAccepted),
 				))
-				Expect(resp.GetRelativeLocation()).To(ContainSubstring(crossmountNamespace))
-
 				lastResponse = resp
 			})
 
 			g.Specify("GET request to test digest within cross-mount namespace should return 200", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
-
+				Expect(lastResponse.GetRelativeLocation()).To(Equal(fmt.Sprintf("/v2/%s/blobs/%s", crossmountNamespace, testBlobADigest)))
 				req := client.NewRequest(reggie.GET, lastResponse.GetRelativeLocation())
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
@@ -245,9 +292,7 @@ var test02Push = func() {
 			g.Specify("Cross-mounting of nonexistent blob should yield session id", func() {
 				SkipIfDisabled(push)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusAccepted)
-
-				loc := lastResponse.GetRelativeLocation()
-				Expect(loc).To(ContainSubstring("/blobs/uploads/"))
+				Expect(lastResponse.GetRelativeLocation()).To(HavePrefix(fmt.Sprintf("/v2/%s/blobs/uploads/", crossmountNamespace)))
 			})
 
 			g.Specify("Cross-mounting without from, and automatic content discovery enabled should return a 201", func() {
@@ -255,7 +300,6 @@ var test02Push = func() {
 				RunOnlyIf(runAutomaticCrossmountTest)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
 				RunOnlyIf(automaticCrossmountEnabled)
-
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
 					reggie.WithName(crossmountNamespace)).
 					SetQueryParam("mount", testBlobADigest)
@@ -269,7 +313,6 @@ var test02Push = func() {
 				RunOnlyIf(runAutomaticCrossmountTest)
 				RunOnlyIf(lastResponse.StatusCode() == http.StatusCreated)
 				RunOnlyIfNot(automaticCrossmountEnabled)
-
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
 					reggie.WithName(crossmountNamespace)).
 					SetQueryParam("mount", testBlobADigest)
@@ -393,7 +436,6 @@ var test02Push = func() {
 					))
 				})
 			}
-
 		})
 	})
 }

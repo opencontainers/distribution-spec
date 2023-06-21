@@ -16,9 +16,14 @@
 		2. [Push](#push)
 		3. [Content Discovery](#content-discovery)
 		4. [Content Management](#content-management)
+- [Backwards Compatibility](#backwards-compatibility)
+  - [Unavailable Referrers API](#unavailable-referrers-api)
+- [Upgrade Procedures](#upgrade-procedures)
+  - [Enabling the Referrers API](#enabling-the-referrers-api)
 - [API](#api)
 	- [Endpoints](#endpoints)
 	- [Error Codes](#error-codes)
+	- [Warnings](#warnings)
 - [Appendix](#appendix)
 
 
@@ -30,8 +35,6 @@ The **Open Container Initiative Distribution Specification** (a.k.a. "OCI Distri
 
 The specification is designed to be agnostic of content types.
 OCI Image types are currently the most prominent, which are defined in the [Open Container Initiative Image Format Specification](https://github.com/opencontainers/image-spec) (a.k.a. "OCI Image Spec").
-
-To support other artifact types, please see the [Open Container Initiative Artifact Authors Guide](https://github.com/opencontainers/artifacts) (a.k.a. "OCI Artifacts").
 
 ### Historical Context
 
@@ -59,14 +62,19 @@ Several terms are used frequently in this document and warrant basic definitions
 
 - **Registry**: a service that handles the required APIs defined in this specification
 - **Client**: a tool that communicates with Registries
-- **Push**: the act of uploading Blobs and Manifests to a Registry
-- **Pull**: the act of downloading Blobs and Manifests from a Registry
-- **Blob**: the binary form of content that is stored by a Registry, addressable by a Digest
-- **Manifest**: a JSON document which defines an artifact uploaded via the manifests endpoint. A manifest may reference other blobs in a repository via descriptors. Examples of manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>, such as the image manifest or the image index.</sup>
-- **Config**: a blob referenced in the Manifest which contains Artifact metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>
-- **Artifact**: one conceptual piece of content stored as Blobs with an accompanying Manifest containing a Config
+- **Push**: the act of uploading blobs and manifests to a registry
+- **Pull**: the act of downloading blobs and manifests from a registry
+- **Blob**: the binary form of content that is stored by a registry, addressable by a digest
+- **Manifest**: a JSON document uploaded via the manifests endpoint. A manifest may reference other manifests and blobs in a repository via descriptors. Examples of manifests are defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>, such as the image manifest and image index (and legacy manifests).</sup>
+- **Image Index**: a manifest containing a list of manifests, defined under the OCI Image Spec <sup>[apdx-6](#appendix)</sup>.
+- **Image Manifest**: a manifest containing a config descriptor and an indexed list of layers, commonly used for container images, defined under the OCI Image Spec <sup>[apdx-2](#appendix)</sup>.
+- **Config**: a blob referenced in the image manifest which contains metadata. Config is defined under the OCI Image Spec <sup>[apdx-4](#appendix)</sup>.
+- **Object**: one conceptual piece of content stored as blobs with an accompanying manifest. (This was previously described as an "artifact")
+- **Descriptor**: a reference that describes the type, metadata and content address of referenced content. Descriptors are defined under the OCI Image Spec <sup>[apdx-5](#appendix)</sup>.
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
-- **Tag**: a custom, human-readable Manifest identifier
+- **Tag**: a custom, human-readable manifest identifier
+- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image. 
+- **Referrers List**: a list of manifests with a subject relationship to a specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
 
 ## Notational Conventions
 
@@ -74,7 +82,7 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ## Use Cases
 
-### Artifact Verification
+### Content Verification
 
 A container engine would like to run verified image named "library/ubuntu", with the tag "latest".
 The engine contacts the registry, requesting the manifest for "library/ubuntu:latest".
@@ -83,15 +91,15 @@ After each layer is downloaded, the engine verifies the digest of the layer, ens
 
 ### Resumable Push
 
-Company X's build servers lose connectivity to a distribution endpoint before completing an artifact layer transfer.
-After connectivity returns, the build server attempts to re-upload the artifact.
+Company X's build servers lose connectivity to a distribution endpoint before completing a blob transfer.
+After connectivity returns, the build server attempts to re-upload the blob.
 The registry notifies the build server that the upload has already been partially attempted.
-The build server responds by only sending the remaining data to complete the artifact file.
+The build server responds by only sending the remaining data to complete the blob transfer.
 
 ### Resumable Pull
 
 Company X is having more connectivity problems but this time in their deployment datacenter.
-When downloading an artifact, the connection is interrupted before completion.
+When downloading a blob, the connection is interrupted before completion.
 The client keeps the partial data and uses http `Range` requests to avoid downloading repeated data.
 
 ### Layer Upload De-duplication
@@ -131,9 +139,9 @@ In order to test a registry's conformance against these workflow categories, ple
 
 #### Pull
 
-The process of pulling an artifact centers around retrieving two components: the manifest and one or more blobs.
+The process of pulling an object centers around retrieving two components: the manifest and one or more blobs.
 
-Typically, the first step in pulling an artifact is to retrieve the manifest. However, you MAY retrieve content from the registry in any order.
+Typically, the first step in pulling an object is to retrieve the manifest. However, you MAY retrieve content from the registry in any order.
 
 ##### Pulling manifests
 
@@ -195,11 +203,12 @@ If the blob or manifest is not found in the registry, the response code MUST be 
 
 #### Push
 
-Pushing an artifact typically works in the opposite order as a pull: the blobs making up the artifact are uploaded first, and the manifest last.
+Pushing an object typically works in the opposite order as a pull: the blobs making up the object are uploaded first, and the manifest last.
 A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
 
 A registry MAY reject a manifest of any type uploaded to the manifest endpoint if it references manifests or blobs that do not exist in the registry.
-When a manifest is rejected for this reason, it must result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
+A registry MUST accept an otherwise valid manifest with a `subject` field that references a manifest that does not exist, allowing clients to push a manifest and referrers to that manifest in either order.
+When a manifest is rejected for these reasons, it MUST result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
 ##### Pushing blobs
 
@@ -310,6 +319,12 @@ The process remains unchanged for chunked upload, except that the post request M
 Content-Length: 0
 ```
 
+If the registry has a minimum chunk size, the response SHOULD include the following header, where `<size>` is the size in bytes (see the blob `PATCH` definition for usage):
+
+```
+OCI-Chunk-Min-Length: <size>
+```
+
 Please reference the above section for restrictions on the `<location>`.
 
 ---
@@ -336,17 +351,23 @@ It MUST match the following regular expression:
 ```
 
 The `<length>` is the content-length, in bytes, of the current chunk.
+If the registry provides a `OCI-Chunk-Min-Length` header in the `PUT` response, the size of each chunk, except for the final chunk, SHOULD be greater or equal to that value.
+The final chunk MAY have any length.
 
-Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following header:
+Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following headers:
 
 ```
-Location <location>
+Location: <location>
+Range: 0-<end-of-range>
 ```
 
 Each consecutive chunk upload SHOULD use the `<location>` provided in the response to the previous chunk upload.
 
+The `<end-of-range>` value is the position of the last uploaded byte.
+
 Chunks MUST be uploaded in order, with the first byte of a chunk being the last chunk's `<end-of-range>` plus one.
 If a chunk is uploaded out of order, the registry MUST respond with a `416 Requested Range Not Satisfiable` code.
+A GET request may be used to retrieve the current valid offset and upload location.
 
 The final chunk MAY be uploaded using a `PATCH` request or it MAY be uploaded in the closing `PUT` request.
 Regardless of how the final chunk is uploaded, the session MUST be closed with a `PUT` request.
@@ -374,6 +395,22 @@ Location: <blob-location>
 
 Here, `<blob-location>` is a pullable blob URL.
 
+---
+
+To get the current status after a 416 error, issue a `GET` request to a URL `<location>` <sup>[end-13](#endpoints)</sup>.
+
+The `<location>` refers to the URL obtained from any preceding `POST` or `PATCH` request.
+
+The response to an active upload `<location>` MUST be a `204 No Content` response code, and MUST have the following headers:
+
+```
+Location: <location>
+Range: 0-<end-of-range>
+```
+
+The following chunk upload SHOULD use the `<location>` provided in the response.
+
+The `<end-of-range>` value is the position of the last uploaded byte.
 
 ##### Mounting a blob from another repository
 
@@ -421,8 +458,10 @@ Manifest byte stream:
 
 `<name>` is the namespace of the repository, and the `<reference>` MUST be either a) a digest or b) a tag.
 
-The uploaded manifest MUST reference any blobs that make up the artifact.
+The uploaded manifest MUST reference any blobs that make up the object.
 However, the list of blobs MAY be empty.
+
+The registry MUST store the manifest in the exact byte representation provided by the client.
 Upon a successful upload, the registry MUST return response code `201 Created`, and MUST have the following header:
 
 ```
@@ -430,6 +469,8 @@ Location: <location>
 ```
 
 The `<location>` is a pullable manifest URL.
+The Docker-Content-Digest header returns the canonical digest of the uploaded blob, and MUST be equal to the client provided digest.
+Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
@@ -437,9 +478,26 @@ A registry SHOULD enforce some limit on the maximum manifest size that it can ac
 A registry that enforces this limit SHOULD respond to a request to push a manifest over this limit with a response code `413 Payload Too Large`.
 Client and registry implementations SHOULD expect to be able to support manifest pushes of at least 4 megabytes.
 
+###### Pushing Manifests with Subject
+
+When processing a request for an image manifest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject: <subject digest>` to indicate to the client that the registry processed the request's `subject`.
+
+When pushing a manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404 or the `OCI-Subject` header was not set, the client MUST:
+
+1. Pull the current referrers list using the [referrers tag schema](#referrers-tag-schema).
+1. If that pull returns a manifest other than the expected image index, the client SHOULD report a failure and skip the remaining steps.
+1. If the tag returns a 404, the client MUST begin with an empty image index.
+1. Verify the descriptor for the manifest is not already in the referrers list (duplicate entries SHOULD NOT be created).
+1. Append a descriptor for the pushed manifest to the manifests in the referrers list.
+   The value of the `artifactType` MUST be set to the `artifactType` value in the image manifest, if present.
+   If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
+   All annotations from the image manifest MUST be copied to this descriptor.
+1. Push the updated referrers list using the same [referrers tag schema](#referrers-tag-schema).
+   The client MAY use conditional HTTP requests to prevent overwriting a referrers list that has changed since it was first pulled.
+
 #### Content Discovery
 
-Currently, the only functionality provided by this workflow is the ability to discover tags.
+##### Listing Tags
 
 To fetch the list of tags, perform a `GET` request to a path in the following format: `/v2/<name>/tags/list` <sup>[end-8a](#endpoints)</sup>
 
@@ -483,6 +541,98 @@ The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
+##### Listing Referrers
+
+*Note: this feature was added in distibution-spec 1.1.
+Registries should see [Enabling the Referrers API](#enabling-the-referrers-api) before enabling this.*
+
+To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>` <sup>[end-12a](#endpoints)</sup>.
+
+`<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest specified in the `subject` field.
+
+Assuming a repository is found, this request MUST return a `200 OK` response code.
+If the registry supports the referrers API, the registry MUST NOT return a `404 Not Found` to a referrers API requests.
+If the request is invalid, such as a `<digest>` with an invalid syntax, a `400 Bad Request` MUST be returned.
+
+Upon success, the response MUST be a JSON body with an image index containing a list of descriptors.
+Each descriptor is of an image manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
+The descriptors MUST include an `artifactType` field that is set to the value of the `artifactType` in the image manifest, if present.
+If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
+The descriptors MUST include annotations from the image manifest.
+If a query results in no matching referrers, an empty manifest list MUST be returned.
+If a manifest with the digest `<digest>` does not exist, a registry MAY return an empty manifest list.
+After a manifest with the digest `<digest>` is pushed, the registry MUST include previously pushed entries in the referrers list.
+
+```json
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.index.v1+json",
+  "manifests": [
+    {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "size": 1234,
+      "digest": "sha256:a1a1a1...",
+      "artifactType": "application/vnd.example.sbom.v1",
+      "annotations": {
+        "org.opencontainers.artifact.created": "2022-01-01T14:42:55Z",
+        "org.example.sbom.format": "json"
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "size": 1234,
+      "digest": "sha256:a2a2a2...",
+      "artifactType": "application/vnd.example.signature.v1",
+      "annotations": {
+        "org.opencontainers.artifact.created": "2022-01-01T07:21:33Z",
+        "org.example.signature.fingerprint": "abcd"
+      }
+    }
+  ]
+}
+```
+
+A `Link` header MUST be included in the response when the descriptor list cannot be returned in a single manifest.
+Each response is an image index with different descriptors in the `manifests` field.
+The `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
+
+The registry SHOULD support filtering on `artifactType`.
+To fetch the list of referrers with a filter, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>?artifactType=<mediaType>` <sup>[end-12b](#endpoints)</sup>.
+If filtering is requested and applied, the response MUST include a header `OCI-Filters-Applied: artifactType` denoting that an `artifactType` filter was applied.
+If multiple filters are applied, the header MUST contain a comma separated list of applied filters.
+
+Example request with filtering:
+
+```
+GET /v2/<name>/referrers/<digest>?artifactType=application/vnd.example.sbom.v1
+```
+
+Example response with filtering:
+
+```json
+OCI-Filters-Applied: artifactType
+{
+  "schemaVersion": 2,
+  "mediaType": "application/vnd.oci.image.index.v1+json",
+  "manifests": [
+    {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "size": 1234,
+      "digest": "sha256:a1a1a1...",
+      "artifactType": "application/vnd.example.sbom.v1",
+      "annotations": {
+        "org.opencontainers.artifact.created": "2022-01-01T14:42:55Z",
+        "org.example.sbom.format": "json"
+      }
+    }
+  ],
+}
+```
+
+If the [referrers API](#listing-referrers) returns a 404, the client MUST fallback to pulling the [referrers tag schema](#referrers-tag-schema).
+The response SHOULD be an image index with the same content that would be expected from the referrers API.
+If the response to the [referrers API](#listing-referrers) is a 404, and the tag schema does not return a valid image index, the client SHOULD assume there are no referrers to the manifest.
+
 #### Content Management
 
 Content management refers to the deletion of blobs, tags, and manifests.
@@ -505,6 +655,15 @@ To delete a manifest, perform a `DELETE` request to a path in the following form
 Upon success, the registry MUST respond with a `202 Accepted` code.
 If the repository does not exist, the response MUST return `404 Not Found`.
 
+When deleting an image manifest that contains a `subject` field, and the [referrers API](#listing-referrers) returns a 404, clients SHOULD:
+
+1. Pull the referrers list using the [referrers tag schema](#referrers-tag-schema).
+1. Remove the descriptor entry from the array of manifests that references the deleted manifest.
+1. Push the updated referrers list using the same [referrers tag schema](#referrers-tag-schema).
+   The client MAY use conditional HTTP requests to prevent overwriting an referrers list that has changed since it was first pulled.
+
+When deleting a manifest that has an associated [referrers tag schema](#referrers-tag-schema), clients MAY also delete the referrers tag when it returns a valid image index.
+
 ##### Deleting Blobs
 
 To delete a blob, perform a `DELETE` request to a path in the following format: `/v2/<name>/blobs/<digest>` <sup>[end-10](#endpoints)</sup>
@@ -512,6 +671,47 @@ To delete a blob, perform a `DELETE` request to a path in the following format: 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the blob to be deleted.
 Upon success, the registry MUST respond with code `202 Accepted`.
 If the blob is not found, a `404 Not Found` code MUST be returned.
+
+### Backwards Compatibility
+
+Client implementations MUST support registries that implement partial or older versions of the OCI Distribution Spec.
+This section describes client fallback procedures that MUST be implemented when a new/optional API is not available from a registry.
+
+#### Unavailable Referrers API
+
+A client that pushes an image manifest with a defined `subject` field MUST verify the [referrers API](#listing-referrers) is available or fallback to updating the image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
+A client querying the [referrers API](#listing-referrers) and receiving a `404 Not Found` MUST fallback to using an image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
+
+##### Referrers Tag Schema
+
+```text
+<alg>-<ref>
+```
+
+- `<alg>`: the digest algorithm (e.g. `sha256` or `sha512`)
+- `<ref>`: the digest from the `subject` field (limit of 64 characters)
+
+For example, a manifest with the `subject` field digest set to `sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` in the `registry.example.org/project` repository would have a descriptor in the referrers list at `registry.example.org/project:sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.
+
+This tag should return an image index matching the expected response of the [referrers API](#listing-referrers).
+Maintaining the content of this tag is the responsibility of clients pushing and deleting image manifests that contain a `subject` field.
+
+*Note*: multiple clients could attempt to update the tag simultaneously resulting in race conditions and data loss.
+Protection against race conditions is the responsibility of clients and end users, and can be resolved by using a registry that provides the [referrers API](#listing-referrers).
+Clients MAY use a conditional HTTP push for registries that support ETag conditions to avoid conflicts with other clients.
+
+### Upgrade Procedures
+
+The following describes procedures for upgrading to a newer version of the spec and the process to enable new APIs.
+
+#### Enabling the Referrers API
+
+The referrers API here is described by [Listing Referrers](#listing-referrers) and [end-12a](#endpoints).
+When registries add support for the referrers API, this API needs to account for manifests that were pushed before the API was available using the [Referrers Tag Schema](#referrers-tag-schema).
+
+1. Registries MUST include preexisting image manifests that are listed in an image index tagged with the [referrers tag schema](#referrers-tag-schema) and have a valid `subject` field in the referrers API response.
+1. Registries MAY include all preexisting image manifests with a `subject` field in the referrers API response.
+1. After the referrers API is enabled, Registries MUST include all newly pushed image manifests with a valid `subject` field in the referrers API response.
 
 ### API
 
@@ -527,21 +727,24 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 
 #### Endpoints
 
-| ID     | Method         | API Endpoint                                                      | Success     | Failure           |
-| ------ | -------------- | ------------------------------------------------------------ | ----------- | ----------------- |
-| end-1  | `GET`          | `/v2/`                                                       | `200`       | `404`/`401`       |
-| end-2  | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                  | `200`       | `404`             |
-| end-3  | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                           | `200`       | `404`             |
-| end-4a | `POST`         | `/v2/<name>/blobs/uploads/`                                  | `202`       | `404`             |
-| end-4b | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                  | `201`/`202` | `404`/`400`       |
-| end-5  | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                       | `202`       | `404`/`416`       |
-| end-6  | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`       | `201`       | `404`/`400`       |
-| end-7  | `PUT`          | `/v2/<name>/manifests/<reference>`                           | `201`       | `404`             |
-| end-8a | `GET`          | `/v2/<name>/tags/list`                                       | `200`       | `404`             |
-| end-8b | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`            | `200`       | `404`             |
-| end-9  | `DELETE`       | `/v2/<name>/manifests/<reference>`                           | `202`       | `404`/`400`/`405` |
-| end-10 | `DELETE`       | `/v2/<name>/blobs/<digest>`                                  | `202`       | `404`/`405`       |
-| end-11 | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>` | `201`       | `404`             |
+| ID      | Method         | API Endpoint                                                   | Success     | Failure           |
+| ------- | -------------- | -------------------------------------------------------------- | ----------- | ----------------- |
+| end-1   | `GET`          | `/v2/`                                                         | `200`       | `404`/`401`       |
+| end-2   | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                    | `200`       | `404`             |
+| end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                             | `200`       | `404`             |
+| end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                    | `202`       | `404`             |
+| end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
+| end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
+| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`       |
+| end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`             |
+| end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
+| end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`              | `200`       | `404`             |
+| end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
+| end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`405`       |
+| end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`       | `404`             |
+| end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                                | `200`       | `404`/`400`       |
+| end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
+| end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
 
 #### Error Codes
 
@@ -584,6 +787,26 @@ The `code` field MUST be one of the following:
 | code-13 | `UNSUPPORTED`           | the operation is unsupported                               |
 | code-14 | `TOOMANYREQUESTS`       | too many requests                                          |
 
+#### Warnings
+
+Registry implementations MAY include informational warnings in `Warning` headers, as described in [RFC 7234](https://www.rfc-editor.org/rfc/rfc7234#section-5.5).
+
+If included, `Warning` headers MUST specify a `warn-code` of `299` and a `warn-agent` of `-`, and MUST NOT specify a `warn-date` value.
+
+A registry MUST NOT send more than 4096 bytes of warning data from all headers combined.
+
+Example warning headers:
+
+```
+Warning: 299 - "Your auth token will expire in 30 seconds."
+Warning: 299 - "This registry endpoint is deprecated and will be removed soon."
+Warning: 299 - "This image is deprecated and will be removed soon."
+```
+
+If a client receives `Warning` response headers, it SHOULD report the warnings to the user in an unobtrusive way.
+Clients SHOULD deduplicate warnings from multiple associated responses.
+In accordance with RFC 7234, clients MUST NOT take any automated action based on the presence or contents of warnings, only report them to the user.
+
 ### Appendix
 
 The following is a list of documents referenced in this spec:
@@ -592,6 +815,8 @@ The following is a list of documents referenced in this spec:
 | ------ | ----- | ----------- |
 | apdx-1 | [Docker Registry HTTP API V2](https://github.com/docker/distribution/blob/5cb406d511b7b9163bff9b6439072e4892e5ae3b/docs/spec/api.md) | The original document upon which this spec was based |
 | apdx-1 | [Details](https://github.com/opencontainers/distribution-spec/blob/ef28f81727c3b5e98ab941ae050098ea664c0960/detail.md) | Historical document describing original API endpoints and requests in detail |
-| apdx-2 | [OCI Image Spec - manifests](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of manifests, defined by the OCI Image Spec |
+| apdx-2 | [OCI Image Spec - image](https://github.com/opencontainers/image-spec/blob/v1.0.1/manifest.md) | Description of an image manifest, defined by the OCI Image Spec |
 | apdx-3 | [OCI Image Spec - digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) | Description of digests, defined by the OCI Image Spec |
 | apdx-4 | [OCI Image Spec - config](https://github.com/opencontainers/image-spec/blob/v1.0.1/config.md) | Description of configs, defined by the OCI Image Spec |
+| apdx-5 | [OCI Image Spec - descriptor](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md) | Description of descriptors, defined by the OCI Image Spec |
+| apdx-6 | [OCI Image Spec - index](https://github.com/opencontainers/image-spec/blob/v1.0.1/image-index.md) | Description of image index, defined by the OCI Image Spec |
