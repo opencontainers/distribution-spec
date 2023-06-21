@@ -57,7 +57,7 @@ The [GitHub milestones](https://github.com/opencontainers/distribution-spec/mile
 
 # Extensions
 
-The Distribution Specification Project is including, herein, a process and API for prototyping
+The Distribution Specification Project is includes a process and API for prototyping
 and testing extensions to the Distribution API.
 
 We invite contributions, comments, and reviews to these extensions.
