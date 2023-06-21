@@ -64,12 +64,6 @@ We invite contributions, comments, and reviews to these extensions.
 These extensions will only move forward with significant support from registies, registry clients, and users.
 
 Please see [here](https://github.com/opencontainers/distribution-spec/blob/main/extensions/README.md) for more details.
-
-## Extensions API - (status: WIP)
-
-The Distribution maintainers recognize that an API may be necessary, or at least potentially advantageous, for specifying
-extensions to the Distribution API. Thus, we propose to add an [Extensions API for Distribution](EXTENSIONS.md).
-
 # Contributing
 
 Development happens on GitHub for the spec.
