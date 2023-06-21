@@ -64,6 +64,7 @@ We invite contributions, comments, and reviews to these extensions.
 These extensions will only move forward with significant support from registies, registry clients, and users.
 
 Please see [here](https://github.com/opencontainers/distribution-spec/blob/main/extensions/README.md) for more details.
+
 # Contributing
 
 Development happens on GitHub for the spec.
