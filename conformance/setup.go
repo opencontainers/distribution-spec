@@ -310,7 +310,7 @@ func init() {
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
 	skipEmptyLayerTest = false
-	deleteManifestBeforeBlobs = false
+	deleteManifestBeforeBlobs = true
 
 	if os.Getenv(envVarTagName) != "" &&
 		os.Getenv(envVarManifestDigest) != "" &&
@@ -323,7 +323,9 @@ func init() {
 	}
 
 	skipEmptyLayerTest, _ = strconv.ParseBool(os.Getenv(envVarPushEmptyLayer))
-	deleteManifestBeforeBlobs, _ = strconv.ParseBool(os.Getenv(envVarDeleteManifestBeforeBlobs))
+	if v, ok := os.LookupEnv(envVarDeleteManifestBeforeBlobs); ok {
+		deleteManifestBeforeBlobs, _ = strconv.ParseBool(v)
+	}
 	automaticCrossmountVal := ""
 	automaticCrossmountVal, runAutomaticCrossmountTest = os.LookupEnv(envVarAutomaticCrossmount)
 	automaticCrossmountEnabled, _ = strconv.ParseBool(automaticCrossmountVal)
