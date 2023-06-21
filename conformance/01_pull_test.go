@@ -19,13 +19,14 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, _ := client.Do(req)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetQueryParam("digest", configs[0].Digest).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", configs[0].ContentLength).
 					SetBody(configs[0].Content)
-				resp, err := client.Do(req)
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
@@ -36,13 +37,14 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, _ := client.Do(req)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
 				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
 					SetQueryParam("digest", layerBlobDigest).
 					SetHeader("Content-Type", "application/octet-stream").
 					SetHeader("Content-Length", layerBlobContentLength).
 					SetBody(layerBlobData)
-				resp, err := client.Do(req)
+				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAll(
 					BeNumerically(">=", 200),
@@ -68,7 +70,8 @@ var test01Pull = func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
-				resp, _ := client.Do(req)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
 				tag = getTagNameFromResponse(resp)
 
 				// attempt to forcibly overwrite this tag with the unique manifest for this run
@@ -193,7 +196,7 @@ var test01Pull = func() {
 		g.Context("Error codes", func() {
 			g.Specify("400 response body should contain OCI-conforming JSON message", func() {
 				SkipIfDisabled(pull)
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference("sha256:totallywrong")).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
 					SetBody(invalidManifestContent)

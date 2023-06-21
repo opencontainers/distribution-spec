@@ -20,9 +20,7 @@ The _optional_ and _base_ layers of all OCI projects are tracked in the [OCI Sco
 
 ## Distributing OCI Images and other content
 
-The OCI Distribution Spec is closely related to the [OCI Image Format Specification] project,
-the [OCI Runtime Specification] project,
-and the [OCI Artifacts] project.
+The OCI Distribution Spec is closely related to the [OCI Image Format Specification] project and the [OCI Runtime Specification] project.
 
 The [OCI Image Format Specification] strictly defines the requirements for an OCI Image (container image), which consists of
 a manifest, an optional image index, a set of filesystem layers, and a configuration.
@@ -36,14 +34,9 @@ The [OCI Distribution Specification] (this project) is also designed generically
 any type of content. The format of uploaded manifests, for example, need not necessarily adhere to the OCI Image Format Specification
 so long as it references the blobs which comprise a given artifact.
 
-The [OCI Artifacts] project is an effort to provide guidance on how to
-properly define and distribute content using the OCI Distribution Specification for artifacts which are not container filesystem bundles,
-in a way that is mostly compatible with the existing schemas defined in the OCI Image Format Specification.
-
 [OCI Image Format Specification]: https://github.com/opencontainers/image-spec
 [OCI Runtime Specification]: https://github.com/opencontainers/runtime-spec
 [OCI Distribution Specification]: https://github.com/opencontainers/distribution-spec
-[OCI Artifacts]: https://github.com/opencontainers/artifacts
 
 ## FAQ
 
@@ -54,6 +47,16 @@ For general questions about OCI, please see the [FAQ on the OCI site](https://ww
 ## Roadmap
 
 The [GitHub milestones](https://github.com/opencontainers/distribution-spec/milestones) lay out the path to the future improvements.
+
+# Extensions
+
+The Distribution Specification Project includes a process and API for prototyping
+and testing extensions to the Distribution API.
+
+We invite contributions, comments, and reviews to these extensions.
+These extensions will only move forward with significant support from registries, registry clients, and users.
+
+Please see [here](https://github.com/opencontainers/distribution-spec/blob/main/extensions/README.md) for more details.
 
 # Contributing
 

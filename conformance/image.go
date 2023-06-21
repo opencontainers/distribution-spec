@@ -35,6 +35,9 @@ type Descriptor struct {
 	// Size specifies the size in bytes of the blob.
 	Size int64 `json:"size"`
 
+	// Data specifies the data of the object described by the descriptor.
+	Data []byte `json:"data"`
+
 	// NewUnspecifiedField is not covered by image-spec.
 	// Registry implementations should still successfully store and serve
 	// manifests containing this data.
