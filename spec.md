@@ -73,7 +73,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Descriptor**: a reference that describes the type, metadata and content address of referenced content. Descriptors are defined under the OCI Image Spec <sup>[apdx-5](#appendix)</sup>.
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
 - **Tag**: a custom, human-readable manifest identifier
-- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image. 
+- **Subject**: an association from one manifest to another, typically used to attach an artifact to an image.
 - **Referrers List**: a list of manifests with a subject relationship to a specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
 
 ## Notational Conventions
@@ -153,7 +153,7 @@ To pull a manifest, perform a `GET` request to a URL in the following form:
 The `<reference>` MUST NOT be in any other format.
 Throughout this document, `<name>` MUST match the following regular expression:
 
-`[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*`
+`[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+(\.|_|__|-+)[a-z0-9]+)*)*`
 
 Throughout this document, `<reference>` as a tag MUST be at most 128 characters in length and MUST match the following regular expression:
 
