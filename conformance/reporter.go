@@ -526,6 +526,12 @@ func (reporter *HTMLReporter) save(snapshot *specSnapshot) {
 }
 
 func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
+	if err := reporter.writeReport(summary); err != nil {
+		log.Printf("WARNING: cannot write HTML summary report: %v", err)
+	}
+}
+
+func (reporter *HTMLReporter) writeReport(summary *types.SuiteSummary) error {
 	reporter.endTime = time.Now()
 	reporter.EndTimeString = reporter.endTime.Format("Jan 2 15:04:05.000 -0700 MST")
 	reporter.RunTime = reporter.endTime.Sub(reporter.startTime).String()
@@ -539,26 +545,27 @@ func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 
 	t, err := template.New("report").Parse(htmlTemplate)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("cannot parse report template: %v", err)
 	}
 
 	htmlReportFilenameAbsPath, err := filepath.Abs(reporter.htmlReportFilename)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	htmlReportFile, err := os.Create(htmlReportFilenameAbsPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer htmlReportFile.Close()
 
 	err = t.ExecuteTemplate(htmlReportFile, "report", &reporter)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Printf("HTML report was created: %s", htmlReportFilenameAbsPath)
+	return nil
 }
 
 //unused by HTML reporter
