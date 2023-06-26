@@ -136,7 +136,7 @@ var (
 	emptyLayerManifestDigest           string
 	nonexistentManifest                string
 	emptyJSONBlob                      []byte
-	emptyJSONDescriptor                Descriptor
+	emptyJSONDescriptor                descriptor
 	refsManifestAConfigArtifactContent []byte
 	refsManifestAConfigArtifactDigest  string
 	refsManifestALayerArtifactContent  []byte
@@ -208,10 +208,10 @@ func init() {
 		// in order to get a unique blob digest, we create a new author
 		// field for the config on each run.
 		randomAuthor := randomString(16)
-		config := Image{
+		config := image{
 			Architecture: "amd64",
 			OS:           "linux",
-			RootFS: RootFS{
+			RootFS: rootFS{
 				Type:    "layers",
 				DiffIDs: []godigest.Digest{},
 			},
@@ -245,7 +245,7 @@ func init() {
 	layerBlobDigest = layerBlobDigestRaw.String()
 	layerBlobContentLength = fmt.Sprintf("%d", len(layerBlobData))
 
-	layers := []Descriptor{{
+	layers := []descriptor{{
 		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 		Size:      int64(len(layerBlobData)),
 		Digest:    layerBlobDigestRaw,
@@ -253,8 +253,8 @@ func init() {
 
 	// create a unique manifest for each workflow category
 	for i := 0; i < numWorkflows; i++ {
-		manifest := Manifest{
-			Config: Descriptor{
+		manifest := manifest{
+			Config: descriptor{
 				MediaType:           "application/vnd.oci.image.config.v1+json",
 				Digest:              godigest.Digest(configs[i].Digest),
 				Size:                int64(len(configs[i].Content)),
@@ -284,15 +284,15 @@ func init() {
 	}
 
 	// used in push test
-	emptyLayerManifest := Manifest{
-		Config: Descriptor{
+	emptyLayerManifest := manifest{
+		Config: descriptor{
 			MediaType:           "application/vnd.oci.image.config.v1+json",
 			Digest:              godigest.Digest(configs[1].Digest),
 			Size:                int64(len(configs[1].Content)),
 			Data:                configs[1].Content,    // must be the config content.
 			NewUnspecifiedField: []byte("hello world"), // content doesn't matter.
 		},
-		Layers: []Descriptor{},
+		Layers: []descriptor{},
 	}
 	emptyLayerManifest.SchemaVersion = 2
 
@@ -314,7 +314,7 @@ func init() {
 
 	// used in referrers test (artifacts with Subject field set)
 	emptyJSONBlob = []byte("{}")
-	emptyJSONDescriptor = Descriptor{
+	emptyJSONDescriptor = descriptor{
 		MediaType: "application/vnd.oci.empty.v1+json",
 		Size:      int64(len(emptyJSONBlob)),
 		Digest:    godigest.FromBytes(emptyJSONBlob),
@@ -333,17 +333,17 @@ func init() {
 	testRefArtifactTypeB = "application/vnd.nba.strawberry.jam.croissant"
 
 	// artifact with Subject ref using config.MediaType = artifactType
-	refsManifestAConfigArtifact := Manifest{
-		Config: Descriptor{
+	refsManifestAConfigArtifact := manifest{
+		Config: descriptor{
 			MediaType: testRefArtifactTypeA,
 			Size:      int64(len(testRefBlobA)),
 			Digest:    godigest.FromBytes(testRefBlobA),
 		},
-		Subject: &Descriptor{
+		Subject: &descriptor{
 			Size:   int64(len(manifests[4].Content)),
 			Digest: godigest.FromBytes(manifests[4].Content),
 		},
-		Layers: []Descriptor{
+		Layers: []descriptor{
 			emptyJSONDescriptor,
 		},
 	}
@@ -355,17 +355,17 @@ func init() {
 
 	refsManifestAConfigArtifactDigest = godigest.FromBytes(refsManifestAConfigArtifactContent).String()
 
-	refsManifestBConfigArtifact := Manifest{
-		Config: Descriptor{
+	refsManifestBConfigArtifact := manifest{
+		Config: descriptor{
 			MediaType: testRefArtifactTypeB,
 			Size:      int64(len(testRefBlobB)),
 			Digest:    godigest.FromBytes(testRefBlobB),
 		},
-		Subject: &Descriptor{
+		Subject: &descriptor{
 			Size:   int64(len(manifests[4].Content)),
 			Digest: godigest.FromBytes(manifests[4].Content),
 		},
-		Layers: []Descriptor{
+		Layers: []descriptor{
 			emptyJSONDescriptor,
 		},
 	}
@@ -378,15 +378,15 @@ func init() {
 	refsManifestBConfigArtifactDigest = godigest.FromBytes(refsManifestBConfigArtifactContent).String()
 
 	// artifact with Subject ref using ArtifactType, config.MediaType = emptyJSON
-	refsManifestALayerArtifact := Manifest{
+	refsManifestALayerArtifact := manifest{
 		ArtifactType: testRefArtifactTypeA,
 		Config:       emptyJSONDescriptor,
-		Subject: &Descriptor{
+		Subject: &descriptor{
 			Size:   int64(len(manifests[4].Content)),
 			Digest: godigest.FromBytes(manifests[4].Content),
 		},
-		Layers: []Descriptor{
-			Descriptor{
+		Layers: []descriptor{
+			descriptor{
 				MediaType: testRefArtifactTypeA,
 				Size:      int64(len(testRefBlobB)),
 				Digest:    godigest.FromBytes(testRefBlobB),
@@ -401,15 +401,15 @@ func init() {
 
 	refsManifestALayerArtifactDigest = godigest.FromBytes(refsManifestALayerArtifactContent).String()
 
-	refsManifestBLayerArtifact := Manifest{
+	refsManifestBLayerArtifact := manifest{
 		ArtifactType: testRefArtifactTypeB,
 		Config:       emptyJSONDescriptor,
-		Subject: &Descriptor{
+		Subject: &descriptor{
 			Size:   int64(len(manifests[4].Content)),
 			Digest: godigest.FromBytes(manifests[4].Content),
 		},
-		Layers: []Descriptor{
-			Descriptor{
+		Layers: []descriptor{
+			descriptor{
 				MediaType: testRefArtifactTypeB,
 				Size:      int64(len(testRefBlobB)),
 				Digest:    godigest.FromBytes(testRefBlobB),

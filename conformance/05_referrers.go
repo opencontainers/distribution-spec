@@ -192,7 +192,7 @@ var test05Referrers = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 
-				var index Index
+				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
 				Expect(len(index.Manifests)).To(BeZero())
@@ -209,7 +209,7 @@ var test05Referrers = func() {
 					Expect(h).To(Equal(configs[4].Digest))
 				}
 
-				var index Index
+				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
 				Expect(len(index.Manifests)).To(Equal(4))
@@ -228,7 +228,7 @@ var test05Referrers = func() {
 					Expect(h).To(Equal(configs[4].Digest))
 				}
 
-				var index Index
+				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
 
