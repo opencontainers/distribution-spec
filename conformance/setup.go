@@ -38,7 +38,6 @@ const (
 	push
 	contentDiscovery
 	contentManagement
-	referrers
 	numWorkflows
 
 	BLOB_UNKNOWN = iota
@@ -76,7 +75,6 @@ const (
 	envVarDeleteManifestBeforeBlobs = "OCI_DELETE_MANIFEST_BEFORE_BLOBS"
 	envVarCrossmountNamespace       = "OCI_CROSSMOUNT_NAMESPACE"
 	envVarAutomaticCrossmount       = "OCI_AUTOMATIC_CROSSMOUNT"
-	envVarReferrers                 = "OCI_REFERRERS"
 
 	emptyLayerTestTag = "emptylayer"
 	testTagName       = "tagtest0"
@@ -85,7 +83,6 @@ const (
 	titlePush              = "Push"
 	titleContentDiscovery  = "Content Discovery"
 	titleContentManagement = "Content Management"
-	titleReferrers         = "Referrers"
 
 	//	layerBase64String is a base64 encoding of a simple tarball, obtained like this:
 	//		$ echo 'you bothered to find out what was in here. Congratulations!' > test.txt
@@ -102,7 +99,6 @@ var (
 		envVarPush:              push,
 		envVarContentDiscovery:  contentDiscovery,
 		envVarContentManagement: contentManagement,
-		envVarReferrers:         referrers,
 	}
 
 	testBlobA                          []byte
@@ -154,7 +150,6 @@ var (
 	runPushSetup                       bool
 	runContentDiscoverySetup           bool
 	runContentManagementSetup          bool
-	runReferencesSetup                 bool
 	deleteManifestBeforeBlobs          bool
 	runAutomaticCrossmountTest         bool
 	automaticCrossmountEnabled         bool
@@ -386,7 +381,7 @@ func init() {
 			Digest: godigest.FromBytes(manifests[4].Content),
 		},
 		Layers: []descriptor{
-			descriptor{
+			{
 				MediaType: testRefArtifactTypeA,
 				Size:      int64(len(testRefBlobB)),
 				Digest:    godigest.FromBytes(testRefBlobB),
@@ -409,7 +404,7 @@ func init() {
 			Digest: godigest.FromBytes(manifests[4].Content),
 		},
 		Layers: []descriptor{
-			descriptor{
+			{
 				MediaType: testRefArtifactTypeB,
 				Size:      int64(len(testRefBlobB)),
 				Digest:    godigest.FromBytes(testRefBlobB),
@@ -449,13 +444,11 @@ func init() {
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
 	deleteManifestBeforeBlobs = true
-	runReferencesSetup = true
 
 	if os.Getenv(envVarTagName) != "" &&
 		os.Getenv(envVarManifestDigest) != "" &&
 		os.Getenv(envVarBlobDigest) != "" {
 		runPullSetup = false
-		runReferencesSetup = false
 	}
 
 	if os.Getenv(envVarTagList) != "" {
