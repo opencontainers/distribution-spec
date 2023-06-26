@@ -9,8 +9,8 @@ import (
 // conformance tests, and to add new unspecified fields, to test registry
 // conformance in handling unknown fields.
 
-// Manifest provides `application/vnd.oci.image.manifest.v1+json` mediatype structure when marshalled to JSON.
-type Manifest struct {
+// manifest provides `application/vnd.oci.image.manifest.v1+json` mediatype structure when marshalled to JSON.
+type manifest struct {
 	// SchemaVersion is the image manifest schema that this image follows
 	SchemaVersion int `json:"schemaVersion"`
 
@@ -19,19 +19,19 @@ type Manifest struct {
 
 	// Config references a configuration object for a container, by digest.
 	// The referenced configuration object is a JSON blob that the runtime uses to set up the container.
-	Config Descriptor `json:"config"`
+	Config descriptor `json:"config"`
 
 	// Layers is an indexed list of layers referenced by the manifest.
-	Layers []Descriptor `json:"layers"`
+	Layers []descriptor `json:"layers"`
 
 	// Subject is an optional link from the image manifest to another manifest forming an association between the image manifest and the other manifest.
-	Subject *Descriptor `json:"subject,omitempty"`
+	Subject *descriptor `json:"subject,omitempty"`
 }
 
-// Descriptor describes the disposition of targeted content.
+// descriptor describes the disposition of targeted content.
 // This structure provides `application/vnd.oci.descriptor.v1+json` mediatype
 // when marshalled to JSON.
-type Descriptor struct {
+type descriptor struct {
 	// MediaType is the media type of the object this schema refers to.
 	MediaType string `json:"mediaType,omitempty"`
 
@@ -50,8 +50,8 @@ type Descriptor struct {
 	NewUnspecifiedField []byte `json:"newUnspecifiedField"`
 }
 
-// RootFS describes a layer content addresses
-type RootFS struct {
+// rootFS describes a layer content addresses
+type rootFS struct {
 	// Type is the type of the rootfs.
 	Type string `json:"type"`
 
@@ -59,9 +59,9 @@ type RootFS struct {
 	DiffIDs []digest.Digest `json:"diff_ids"`
 }
 
-// Image is the JSON structure which describes some basic information about the image.
+// image is the JSON structure which describes some basic information about the image.
 // This provides the `application/vnd.oci.image.config.v1+json` mediatype when marshalled to JSON.
-type Image struct {
+type image struct {
 	// Author defines the name and/or email address of the person or entity which created and is responsible for maintaining the image.
 	Author string `json:"author,omitempty"`
 
@@ -75,12 +75,12 @@ type Image struct {
 	OS string `json:"os"`
 
 	// RootFS references the layer content addresses used by the image.
-	RootFS RootFS `json:"rootfs"`
+	RootFS rootFS `json:"rootfs"`
 }
 
-// Index references manifests for various platforms.
+// index references manifests for various platforms.
 // This structure provides `application/vnd.oci.image.index.v1+json` mediatype when marshalled to JSON.
-type Index struct {
+type index struct {
 	// SchemaVersion is the image manifest schema that this image follows
 	SchemaVersion int `json:"schemaVersion"`
 
@@ -88,7 +88,7 @@ type Index struct {
 	MediaType string `json:"mediaType,omitempty"`
 
 	// Manifests references platform specific manifests.
-	Manifests []Descriptor `json:"manifests"`
+	Manifests []descriptor `json:"manifests"`
 
 	// Annotations contains arbitrary metadata for the image index.
 	Annotations map[string]string `json:"annotations,omitempty"`
