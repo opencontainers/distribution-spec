@@ -393,7 +393,7 @@ var test02Push = func() {
 						Equal(http.StatusMethodNotAllowed),
 					))
 					if emptyLayerManifestRef != "" {
-						req = client.NewRequest(reggie.DELETE, emptyLayerManifestRef)
+						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
 						resp, err = client.Do(req)
 						Expect(err).To(BeNil())
 						Expect(resp.StatusCode()).To(SatisfyAny(
@@ -452,7 +452,7 @@ var test02Push = func() {
 						Equal(http.StatusMethodNotAllowed),
 					))
 					if emptyLayerManifestRef != "" {
-						req = client.NewRequest(reggie.DELETE, emptyLayerManifestRef)
+						req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>", reggie.WithReference(emptyLayerManifestDigest))
 						resp, err = client.Do(req)
 						Expect(err).To(BeNil())
 						Expect(resp.StatusCode()).To(SatisfyAny(
