@@ -133,6 +133,7 @@ var (
 	layerBlobDigest                    string
 	layerBlobContentLength             string
 	emptyLayerManifestContent          []byte
+	emptyLayerManifestDigest           string
 	nonexistentManifest                string
 	emptyJSONBlob                      []byte
 	emptyJSONDescriptor                Descriptor
@@ -299,6 +300,7 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	emptyLayerManifestDigest = string(godigest.FromBytes(emptyLayerManifestContent))
 
 	nonexistentManifest = ".INVALID_MANIFEST_NAME"
 	invalidManifestContent = []byte("blablabla")
