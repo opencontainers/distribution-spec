@@ -31,7 +31,7 @@ jobs:
           make docs conformance
 
           set +e
-          make conformance-ci
+          make registry-ci conformance-ci
           CONFORMANCE_RC="$?"
           set -e
           if [[ -f report.html ]]; then

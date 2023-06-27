@@ -91,16 +91,18 @@ conformance-test:
 
 conformance-binary: $(OUTPUT_DIRNAME)/conformance.test
 
-TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.0-rc3
-conformance-ci:
+TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.0-rc5@sha256:740c4a4d99bf720761fd6407a227177cfeb3b1c0d4a230e16ceea960dc91dd11
+registry-ci:
 	docker rm -f oci-conformance && \
 		echo '{"distSpecVersion":"1.1.0-dev","storage":{"rootDirectory":"/tmp/zot","gc":false,"dedupe":false},"http":{"address":"0.0.0.0","port":"5000"},"log":{"level":"debug"}}' > $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json
 		docker run -d \
 			-v $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json:/etc/zot/config.json \
 			--name=oci-conformance \
 			-p 5000:5000 \
-			$(TEST_REGISTRY_CONTAINER) && \
-		export OCI_ROOT_URL="http://localhost:5000" && \
+			$(TEST_REGISTRY_CONTAINER)
+
+conformance-ci:
+	export OCI_ROOT_URL="http://localhost:5000" && \
 		export OCI_NAMESPACE="myorg/myrepo" && \
 		export OCI_TEST_PULL=1 && \
 		export OCI_TEST_PUSH=1 && \
