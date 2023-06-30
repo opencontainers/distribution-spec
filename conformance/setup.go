@@ -109,6 +109,7 @@ var (
 	testRefBlobADigest                 string
 	testRefArtifactTypeA               string
 	testRefArtifactTypeB               string
+	testRefArtifactTypeIndex           string
 	testRefBlobB                       []byte
 	testRefBlobBLength                 string
 	testRefBlobBDigest                 string
@@ -141,6 +142,8 @@ var (
 	refsManifestBConfigArtifactDigest  string
 	refsManifestBLayerArtifactContent  []byte
 	refsManifestBLayerArtifactDigest   string
+	refsIndexArtifactContent           []byte
+	refsIndexArtifactDigest            string
 	reportJUnitFilename                string
 	reportHTMLFilename                 string
 	httpWriter                         *httpDebugWriter
@@ -418,6 +421,35 @@ func init() {
 	}
 
 	refsManifestBLayerArtifactDigest = godigest.FromBytes(refsManifestBLayerArtifactContent).String()
+
+	testRefArtifactTypeIndex = "application/vnd.food.stand"
+	refsIndexArtifact := index{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.index.v1+json",
+		ArtifactType:  testRefArtifactTypeIndex,
+		Manifests: []descriptor{
+			{
+				MediaType: "application/vnd.oci.image.manifest.v1+json",
+				Size:      int64(len(refsManifestAConfigArtifactContent)),
+				Digest:    godigest.FromBytes(refsManifestAConfigArtifactContent),
+			},
+			{
+				MediaType: "application/vnd.oci.image.manifest.v1+json",
+				Size:      int64(len(refsManifestALayerArtifactContent)),
+				Digest:    godigest.FromBytes(refsManifestALayerArtifactContent),
+			},
+		},
+		Subject: &descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      int64(len(manifests[4].Content)),
+			Digest:    godigest.FromBytes(manifests[4].Content),
+		},
+	}
+	refsIndexArtifactContent, err = json.MarshalIndent(&refsIndexArtifact, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	refsIndexArtifactDigest = godigest.FromBytes(refsIndexArtifactContent).String()
 
 	dummyDigest = godigest.FromString("hello world").String()
 
