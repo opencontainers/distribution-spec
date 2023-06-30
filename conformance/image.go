@@ -14,6 +14,9 @@ type manifest struct {
 	// SchemaVersion is the image manifest schema that this image follows
 	SchemaVersion int `json:"schemaVersion"`
 
+	// MediaType specifies the type of this document data structure e.g. `application/vnd.oci.image.manifest.v1+json`
+	MediaType string `json:"mediaType,omitempty"`
+
 	// ArtifactType specifies the IANA media type of artifact when the manifest is used for an artifact.
 	ArtifactType string `json:"artifactType,omitempty"`
 

@@ -249,6 +249,8 @@ func init() {
 	// create a unique manifest for each workflow category
 	for i := 0; i < numWorkflows; i++ {
 		manifest := manifest{
+			SchemaVersion: 2,
+			MediaType:     "application/vnd.oci.image.manifest.v1+json",
 			Config: descriptor{
 				MediaType:           "application/vnd.oci.image.config.v1+json",
 				Digest:              godigest.Digest(configs[i].Digest),
@@ -258,7 +260,6 @@ func init() {
 			},
 			Layers: layers,
 		}
-		manifest.SchemaVersion = 2
 
 		manifestContent, err := json.MarshalIndent(&manifest, "", "\t")
 		if err != nil {
@@ -280,6 +281,7 @@ func init() {
 
 	// used in push test
 	emptyLayerManifest := manifest{
+		SchemaVersion: 2,
 		Config: descriptor{
 			MediaType:           "application/vnd.oci.image.config.v1+json",
 			Digest:              godigest.Digest(configs[1].Digest),
@@ -289,7 +291,6 @@ func init() {
 		},
 		Layers: []descriptor{},
 	}
-	emptyLayerManifest.SchemaVersion = 2
 
 	emptyLayerManifestContent, err = json.MarshalIndent(&emptyLayerManifest, "", "\t")
 	if err != nil {
@@ -329,14 +330,17 @@ func init() {
 
 	// artifact with Subject ref using config.MediaType = artifactType
 	refsManifestAConfigArtifact := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
 		Config: descriptor{
 			MediaType: testRefArtifactTypeA,
 			Size:      int64(len(testRefBlobA)),
 			Digest:    godigest.FromBytes(testRefBlobA),
 		},
 		Subject: &descriptor{
-			Size:   int64(len(manifests[4].Content)),
-			Digest: godigest.FromBytes(manifests[4].Content),
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Size:      int64(len(manifests[4].Content)),
+			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
 		Layers: []descriptor{
 			emptyJSONDescriptor,
@@ -351,14 +355,17 @@ func init() {
 	refsManifestAConfigArtifactDigest = godigest.FromBytes(refsManifestAConfigArtifactContent).String()
 
 	refsManifestBConfigArtifact := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
 		Config: descriptor{
 			MediaType: testRefArtifactTypeB,
 			Size:      int64(len(testRefBlobB)),
 			Digest:    godigest.FromBytes(testRefBlobB),
 		},
 		Subject: &descriptor{
-			Size:   int64(len(manifests[4].Content)),
-			Digest: godigest.FromBytes(manifests[4].Content),
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Size:      int64(len(manifests[4].Content)),
+			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
 		Layers: []descriptor{
 			emptyJSONDescriptor,
@@ -374,11 +381,14 @@ func init() {
 
 	// artifact with Subject ref using ArtifactType, config.MediaType = emptyJSON
 	refsManifestALayerArtifact := manifest{
-		ArtifactType: testRefArtifactTypeA,
-		Config:       emptyJSONDescriptor,
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		ArtifactType:  testRefArtifactTypeA,
+		Config:        emptyJSONDescriptor,
 		Subject: &descriptor{
-			Size:   int64(len(manifests[4].Content)),
-			Digest: godigest.FromBytes(manifests[4].Content),
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Size:      int64(len(manifests[4].Content)),
+			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
 		Layers: []descriptor{
 			{
@@ -397,11 +407,14 @@ func init() {
 	refsManifestALayerArtifactDigest = godigest.FromBytes(refsManifestALayerArtifactContent).String()
 
 	refsManifestBLayerArtifact := manifest{
-		ArtifactType: testRefArtifactTypeB,
-		Config:       emptyJSONDescriptor,
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		ArtifactType:  testRefArtifactTypeB,
+		Config:        emptyJSONDescriptor,
 		Subject: &descriptor{
-			Size:   int64(len(manifests[4].Content)),
-			Digest: godigest.FromBytes(manifests[4].Content),
+			MediaType: "application/vnd.oci.image.config.v1+json",
+			Size:      int64(len(manifests[4].Content)),
+			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
 		Layers: []descriptor{
 			{
