@@ -15,8 +15,8 @@ import (
 
 	"github.com/bloodorangeio/reggie"
 	"github.com/google/uuid"
-	g "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/formatter"
+	g "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/formatter"
 	godigest "github.com/opencontainers/go-digest"
 )
 

@@ -13,14 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/types"
+	"github.com/onsi/ginkgo/v2/types"
 )
 
 const (
-	flowIndex            = 2
-	categoryIndex        = 3
-	specIndex            = 4
+	suiteIndex           = 1
+	categoryIndex        = 2
 	setupString          = "Setup"
 	htmlTemplate  string = `<html>
   <head>
@@ -208,17 +206,17 @@ const (
         <td class="bullet-left">Summary</td>
         <td>
           <div class="quick-summary">
-            {{- if gt .SuiteSummary.NumberOfPassedSpecs 0 -}}
+            {{- if gt .NumPassed 0 -}}
               <span class="darkgreen">
-              {{- if .AllPassed -}}All {{ end -}}{{ .SuiteSummary.NumberOfPassedSpecs }} passed</span>
+              {{- if .AllPassed -}}All {{ end -}}{{ .NumPassed }} passed</span>
             {{- end -}}
-            {{- if gt .SuiteSummary.NumberOfFailedSpecs 0 -}}
+            {{- if gt .NumFailed 0 -}}
               <span class="darkred">
-              {{- if .AllFailed -}}All {{ end -}}{{ .SuiteSummary.NumberOfFailedSpecs }} failed</span>
+              {{- if .AllFailed -}}All {{ end -}}{{ .NumFailed }} failed</span>
             {{- end -}}
-            {{- if gt .SuiteSummary.NumberOfSkippedSpecs 0 -}}
+            {{- if gt .NumSkipped 0 -}}
               <span class="darkgrey">
-              {{- if .AllSkipped -}}All {{ end -}}{{ .SuiteSummary.NumberOfSkippedSpecs }} skipped</span>
+              {{- if .AllSkipped -}}All {{ end -}}{{ .NumSkipped }} skipped</span>
             {{- end -}}
             <div class="meter">
               <div class="meter-green"></div>
@@ -271,35 +269,46 @@ const (
                   {{$category := .M}}
                   {{range $k, $categoryKey := .Keys}}
                     {{$s := index $category $categoryKey}}
-                    {{if eq $s.State 4}}
+                    {{if eq $s.State.String "failed"}}
                       <div class="result red">
                         <div id="output-box-{{$s.ID}}-button" class="toggle" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
                         <h4 style="display: inline;" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">{{$s.Title}}</h4>
                         <br>
                         <div>
                           <div id="output-box-{{$s.ID}}" style="display: none;">
-                            <pre class="pre-box">{{$s.CapturedOutput}}</pre>
+                            <pre class="pre-box">{{$s.CombinedOutput}}</pre>
                           </div>
                         </div>
-                        <pre class="fail-message">{{$s.Failure.Message}}</pre>
+                        <pre class="fail-message">{{$s.FailureMessage}}</pre>
                         <br>
                       </div>
-                    {{else if eq $s.State 3}}
+                    {{else if eq $s.State.String "passed"}}
                       <div class="result green">
                         <div id="output-box-{{$s.ID}}-button" class="toggle" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
                         <h4 style="display: inline;" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">{{$s.Title}}</h4>
                         <br>
                         <div id="output-box-{{$s.ID}}" style="display: none;">
-                          <pre class="pre-box">{{$s.CapturedOutput}}</pre>
+                          <pre class="pre-box">{{$s.CombinedOutput}}</pre>
                         </div>
                       </div>
-                    {{else if eq $s.State 2}}
+                    {{else if eq $s.State.String "skipped"}}
                       <div class="result grey">
                         <div id="output-box-{{$s.ID}}-button" class="toggle" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
                         <h4 style="display: inline;" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">{{$s.Title}}</h4>
                         <br>
                         <div id="output-box-{{$s.ID}}" style="display: none;">
-                          <pre class="pre-box">{{$s.Failure.Message}}</pre>
+                          <pre class="pre-box">{{$s.FailureMessage}}</pre>
+                        </div>
+                      </div>
+                    {{else}}
+                      <div class="result grey">
+                        <div id="output-box-{{$s.ID}}-button" class="toggle" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">+</div>
+                        <h4 style="display: inline;" onclick="javascript:toggleOutput('output-box-{{$s.ID}}')">{{$s.Title}}</h4>
+                        <br>
+                        <div id="output-box-{{$s.ID}}" style="display: none;">
+                          <p>Unhandled state: {{ $s.State.String }}</p>
+                          <pre class="pre-box">{{$s.CombinedOutput}}</pre>
+                          <pre class="pre-box">{{$s.FailureMessage}}</pre>
                         </div>
                       </div>
                     {{end}}
@@ -342,7 +351,7 @@ type (
 	}
 
 	specSnapshot struct {
-		types.SpecSummary
+		types.SpecReport
 		ID       int
 		Title    string
 		Category string
@@ -367,10 +376,14 @@ type (
 		Suite                suite
 		SpecSummaryMap       summaryMap
 		EnvironmentVariables []string
-		SuiteSummary         *types.SuiteSummary
+		Report               types.Report
 		debugLogger          *httpDebugWriter
 		debugIndex           int
 		enabledMap           map[string]bool
+		NumTotal             int
+		NumPassed            int
+		NumFailed            int
+		NumSkipped           int
 		PercentPassed        int
 		PercentFailed        int
 		PercentSkipped       int
@@ -404,18 +417,6 @@ func (sm *summaryMap) containsKey(key string) bool {
 		}
 	}
 	return containsKey
-}
-
-func newSpecSnapshot(sum *types.SpecSummary, id int) *specSnapshot {
-	var isSetup bool
-	suite := sum.ComponentTexts[flowIndex]
-	title := sum.ComponentTexts[specIndex]
-	category := sum.ComponentTexts[categoryIndex]
-	if category == setupString {
-		isSetup = true
-	}
-	return &specSnapshot{SpecSummary: *sum, Title: title, ID: id, IsSetup: isSetup, Category: category,
-		Suite: suite}
 }
 
 func newHTTPDebugWriter(debug bool) *httpDebugWriter {
@@ -479,6 +480,40 @@ func newHTMLReporter(htmlReportFilename string) (h *HTMLReporter) {
 		}
 	}
 
+	varsToCheck := []string{
+		envVarRootURL,
+		envVarNamespace,
+		envVarUsername,
+		envVarPassword,
+		envVarDebug,
+		envVarPull,
+		envVarPush,
+		envVarContentDiscovery,
+		envVarContentManagement,
+		envVarPushEmptyLayer,
+		envVarBlobDigest,
+		envVarManifestDigest,
+		envVarTagName,
+		envVarTagList,
+		envVarHideSkippedWorkflows,
+		envVarAuthScope,
+		envVarCrossmountNamespace,
+	}
+	envVars := []string{}
+	for _, v := range varsToCheck {
+		var replacement string
+		if envVar := os.Getenv(v); envVar != "" {
+			replacement = envVar
+			if strings.Contains(v, "PASSWORD") || strings.Contains(v, "USERNAME") {
+				replacement = "*****"
+			}
+		} else {
+			continue
+		}
+		envVars = append(envVars,
+			fmt.Sprintf("%s=%s", v, replacement))
+	}
+
 	return &HTMLReporter{
 		htmlReportFilename: htmlReportFilename,
 		debugLogger:        httpWriter,
@@ -488,25 +523,24 @@ func newHTMLReporter(htmlReportFilename string) (h *HTMLReporter) {
 			M:    make(map[string]*workflow),
 			Keys: []string{},
 		},
+		EnvironmentVariables: envVars,
+		startTime:            time.Now(),
+		StartTimeString:      time.Now().Format("Jan 2 15:04:05.000 -0700 MST"),
+		Version:              Version,
 	}
 }
 
-func (reporter *HTMLReporter) SpecDidComplete(specSummary *types.SpecSummary) {
+func (reporter *HTMLReporter) afterReport(r types.SpecReport) {
 	b := new(bytes.Buffer)
 	for _, co := range httpWriter.CapturedOutput[reporter.debugIndex:] {
 		fmt.Fprintf(b, "%s\n", co)
 	}
-	specSummary.CapturedOutput = b.String()
-
-	snapshot := newSpecSnapshot(specSummary, reporter.Suite.Size)
-	reporter.save(snapshot)
+	r.CapturedStdOutErr = b.String()
 	reporter.debugIndex = len(reporter.debugLogger.CapturedOutput)
-}
 
-func (reporter *HTMLReporter) save(snapshot *specSnapshot) {
+	ct := r.ContainerHierarchyTexts
+	suiteName, categoryName, titleText := ct[suiteIndex], ct[categoryIndex], r.LeafNodeText
 	suite := &reporter.Suite
-	ct := snapshot.ComponentTexts
-	suiteName, categoryName, specTitle := ct[flowIndex], ct[categoryIndex], ct[specIndex]
 	//make the map of categories
 	if _, ok := suite.M[suiteName]; !ok {
 		suite.M[suiteName] = &workflow{M: make(map[string]*category), Keys: []string{},
@@ -520,28 +554,34 @@ func (reporter *HTMLReporter) save(snapshot *specSnapshot) {
 		z.Keys = append(z.Keys, categoryName)
 	}
 	z := suite.M[suiteName].M[categoryName]
-	z.Keys = append(z.Keys, specTitle)
-	suite.M[suiteName].M[categoryName].M[specTitle] = *snapshot
+	z.Keys = append(z.Keys, titleText)
+
+	suite.M[suiteName].M[categoryName].M[titleText] = specSnapshot{
+		SpecReport: r,
+		Suite:      suiteName,
+		Category:   categoryName,
+		Title:      titleText,
+		ID:         suite.Size,
+		IsSetup:    (categoryName == setupString),
+	}
 	suite.Size++
 }
 
-func (reporter *HTMLReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
-	if err := reporter.writeReport(summary); err != nil {
-		log.Printf("WARNING: cannot write HTML summary report: %v", err)
-	}
-}
-
-func (reporter *HTMLReporter) writeReport(summary *types.SuiteSummary) error {
+func (reporter *HTMLReporter) endSuite(report types.Report) error {
+	reporter.Report = report
 	reporter.endTime = time.Now()
 	reporter.EndTimeString = reporter.endTime.Format("Jan 2 15:04:05.000 -0700 MST")
 	reporter.RunTime = reporter.endTime.Sub(reporter.startTime).String()
-	reporter.PercentPassed = getPercent(summary.NumberOfPassedSpecs, summary.NumberOfTotalSpecs)
-	reporter.PercentSkipped = getPercent(summary.NumberOfSkippedSpecs, summary.NumberOfTotalSpecs)
-	reporter.PercentFailed = getPercent(summary.NumberOfFailedSpecs, summary.NumberOfTotalSpecs)
-	reporter.SuiteSummary = summary
-	reporter.AllPassed = summary.NumberOfPassedSpecs == summary.NumberOfTotalSpecs
-	reporter.AllFailed = summary.NumberOfFailedSpecs == summary.NumberOfTotalSpecs
-	reporter.AllSkipped = summary.NumberOfSkippedSpecs == summary.NumberOfTotalSpecs
+	reporter.NumTotal = len(report.SpecReports)
+	reporter.NumPassed = report.SpecReports.CountWithState(types.SpecStatePassed)
+	reporter.NumSkipped = report.SpecReports.CountWithState(types.SpecStateSkipped)
+	reporter.NumFailed = report.SpecReports.CountWithState(types.SpecStateFailed)
+	reporter.PercentPassed = getPercent(reporter.NumPassed, reporter.NumTotal)
+	reporter.PercentSkipped = getPercent(reporter.NumSkipped, reporter.NumTotal)
+	reporter.PercentFailed = getPercent(reporter.NumFailed, reporter.NumTotal)
+	reporter.AllPassed = reporter.NumPassed == reporter.NumTotal
+	reporter.AllSkipped = reporter.NumSkipped == reporter.NumTotal
+	reporter.AllFailed = reporter.NumFailed == reporter.NumTotal
 
 	t, err := template.New("report").Parse(htmlTemplate)
 	if err != nil {
@@ -564,58 +604,8 @@ func (reporter *HTMLReporter) writeReport(summary *types.SuiteSummary) error {
 		return err
 	}
 
-	fmt.Printf("HTML report was created: %s", htmlReportFilenameAbsPath)
+	fmt.Printf("\nHTML report was created: %s", htmlReportFilenameAbsPath)
 	return nil
-}
-
-//unused by HTML reporter
-func (reporter *HTMLReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
-	varsToCheck := []string{
-		envVarRootURL,
-		envVarNamespace,
-		envVarUsername,
-		envVarPassword,
-		envVarDebug,
-		envVarPull,
-		envVarPush,
-		envVarContentDiscovery,
-		envVarContentManagement,
-		envVarPushEmptyLayer,
-		envVarBlobDigest,
-		envVarManifestDigest,
-		envVarTagName,
-		envVarTagList,
-		envVarHideSkippedWorkflows,
-		envVarAuthScope,
-		envVarCrossmountNamespace,
-	}
-	for _, v := range varsToCheck {
-		var replacement string
-		if envVar := os.Getenv(v); envVar != "" {
-			replacement = envVar
-			if strings.Contains(v, "PASSWORD") || strings.Contains(v, "USERNAME") {
-				replacement = "*****"
-			}
-		} else {
-			continue
-		}
-		reporter.EnvironmentVariables = append(reporter.EnvironmentVariables,
-			fmt.Sprintf("%s=%s", v, replacement))
-	}
-
-	reporter.startTime = time.Now()
-	reporter.StartTimeString = reporter.startTime.Format("Jan 2 15:04:05.000 -0700 MST")
-
-	reporter.Version = Version
-}
-
-func (reporter *HTMLReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
-}
-
-func (reporter *HTMLReporter) SpecWillRun(specSummary *types.SpecSummary) {
-}
-
-func (reporter *HTMLReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
 }
 
 func getPercent(i, of int) int {

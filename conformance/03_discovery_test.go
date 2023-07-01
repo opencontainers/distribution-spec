@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/bloodorangeio/reggie"
-	g "github.com/onsi/ginkgo"
+	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	godigest "github.com/opencontainers/go-digest"
 )
