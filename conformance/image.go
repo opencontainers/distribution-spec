@@ -33,7 +33,7 @@ type manifest struct {
 // when marshalled to JSON.
 type descriptor struct {
 	// MediaType is the media type of the object this schema refers to.
-	MediaType string `json:"mediaType,omitempty"`
+	MediaType string `json:"mediaType"`
 
 	// Digest is the digest of the targeted content.
 	Digest digest.Digest `json:"digest"`
@@ -42,7 +42,7 @@ type descriptor struct {
 	Size int64 `json:"size"`
 
 	// Data specifies the data of the object described by the descriptor.
-	Data []byte `json:"data"`
+	Data []byte `json:"data,omitempty"`
 
 	// NewUnspecifiedField is not covered by image-spec.
 	// Registry implementations should still successfully store and serve
