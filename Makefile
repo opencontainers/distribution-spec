@@ -23,7 +23,7 @@ ifeq "$(strip $(PANDOC))" ''
 	endif
 endif
 
-GOLANGCILINT_CONTAINER ?= ghcr.io/opencontainers/golangci-lint:v1.42.1@sha256:9a2c9bc1c62d50b4a326d2982caa60c995d42184a16ed9d9378b38e540da0c8f
+GOLANGCILINT_CONTAINER ?= ghcr.io/opencontainers/golangci-lint:v1.52.1@sha256:d3d3d56f9706ebe843c1b06686c385877ba65b33f39507cdbeb22f482adce65a
 ifeq "$(strip $(GOLANGCILINT))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		GOLANGCILINT = $(DOCKER) run \
