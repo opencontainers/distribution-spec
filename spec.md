@@ -482,16 +482,16 @@ Client and registry implementations SHOULD expect to be able to support manifest
 
 When processing a request for an image manifest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject: <subject digest>` to indicate to the client that the registry processed the request's `subject`.
 
-When pushing a manifest with the `subject` field and the [referrers API](#listing-referrers) returns a 404 or the `OCI-Subject` header was not set, the client MUST:
+When pushing a manifest with the `subject` field and the `OCI-Subject` header was not set, the client MUST:
 
 1. Pull the current referrers list using the [referrers tag schema](#referrers-tag-schema).
 1. If that pull returns a manifest other than the expected image index, the client SHOULD report a failure and skip the remaining steps.
 1. If the tag returns a 404, the client MUST begin with an empty image index.
 1. Verify the descriptor for the manifest is not already in the referrers list (duplicate entries SHOULD NOT be created).
 1. Append a descriptor for the pushed manifest to the manifests in the referrers list.
-   The value of the `artifactType` MUST be set to the `artifactType` value in the image manifest, if present.
-   If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
-   All annotations from the image manifest MUST be copied to this descriptor.
+   The value of the `artifactType` MUST be set to the `artifactType` value in the pushed manifest, if present.
+   If the `artifactType` is empty or missing in a pushed image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
+   All annotations from the pushed manifest MUST be copied to this descriptor.
 1. Push the updated referrers list using the same [referrers tag schema](#referrers-tag-schema).
    The client MAY use conditional HTTP requests to prevent overwriting a referrers list that has changed since it was first pulled.
 
