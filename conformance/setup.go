@@ -393,8 +393,8 @@ func init() {
 		Layers: []descriptor{
 			{
 				MediaType: testRefArtifactTypeA,
-				Size:      int64(len(testRefBlobB)),
-				Digest:    godigest.FromBytes(testRefBlobB),
+				Size:      int64(len(testRefBlobA)),
+				Digest:    godigest.FromBytes(testRefBlobA),
 			},
 		},
 	}
