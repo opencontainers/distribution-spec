@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/bloodorangeio/reggie"
-	g "github.com/onsi/ginkgo"
+	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	godigest "github.com/opencontainers/go-digest"
 )
@@ -335,7 +335,7 @@ var test03ContentDiscovery = func() {
 				// also check resp header "OCI-Filters-Applied: artifactType" denoting that an artifactType filter was applied
 				if resp.Header().Get("OCI-Filters-Applied") != "" {
 					Expect(len(index.Manifests)).To(Equal(2))
-					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(testRefArtifactTypeA))
+					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(artifactTypeFilter))
 				} else {
 					Expect(len(index.Manifests)).To(Equal(5))
 					Warn("filtering by artifact-type is not implemented")

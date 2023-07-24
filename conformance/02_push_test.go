@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/bloodorangeio/reggie"
-	g "github.com/onsi/ginkgo"
+	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -41,6 +41,7 @@ var test02Push = func() {
 
 			g.Specify("PUT request to session URL with digest should yield 201 response", func() {
 				SkipIfDisabled(push)
+				Expect(lastResponse).ToNot(BeNil())
 				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
 					SetQueryParam("digest", testBlobADigest).
 					SetHeader("Content-Type", "application/octet-stream").
@@ -83,6 +84,7 @@ var test02Push = func() {
 
 			g.Specify("GET request to blob URL from prior request should yield 200 or 404 based on response code", func() {
 				SkipIfDisabled(push)
+				Expect(lastResponse).ToNot(BeNil())
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())

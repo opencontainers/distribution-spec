@@ -14,6 +14,9 @@ type manifest struct {
 	// SchemaVersion is the image manifest schema that this image follows
 	SchemaVersion int `json:"schemaVersion"`
 
+	// MediaType specifies the type of this document data structure e.g. `application/vnd.oci.image.manifest.v1+json`
+	MediaType string `json:"mediaType,omitempty"`
+
 	// ArtifactType specifies the IANA media type of artifact when the manifest is used for an artifact.
 	ArtifactType string `json:"artifactType,omitempty"`
 
@@ -36,7 +39,7 @@ type manifest struct {
 // when marshalled to JSON.
 type descriptor struct {
 	// MediaType is the media type of the object this schema refers to.
-	MediaType string `json:"mediaType,omitempty"`
+	MediaType string `json:"mediaType"`
 
 	// Digest is the digest of the targeted content.
 	Digest digest.Digest `json:"digest"`
@@ -45,7 +48,7 @@ type descriptor struct {
 	Size int64 `json:"size"`
 
 	// Data specifies the data of the object described by the descriptor.
-	Data []byte `json:"data"`
+	Data []byte `json:"data,omitempty"`
 
 	// NewUnspecifiedField is not covered by image-spec.
 	// Registry implementations should still successfully store and serve

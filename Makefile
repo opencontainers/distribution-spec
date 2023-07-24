@@ -23,7 +23,7 @@ ifeq "$(strip $(PANDOC))" ''
 	endif
 endif
 
-GOLANGCILINT_CONTAINER ?= ghcr.io/opencontainers/golangci-lint:v1.42.1@sha256:9a2c9bc1c62d50b4a326d2982caa60c995d42184a16ed9d9378b38e540da0c8f
+GOLANGCILINT_CONTAINER ?= ghcr.io/opencontainers/golangci-lint:v1.52.1@sha256:d3d3d56f9706ebe843c1b06686c385877ba65b33f39507cdbeb22f482adce65a
 ifeq "$(strip $(GOLANGCILINT))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		GOLANGCILINT = $(DOCKER) run \
@@ -91,7 +91,7 @@ conformance-test:
 
 conformance-binary: $(OUTPUT_DIRNAME)/conformance.test
 
-TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.0-rc5@sha256:740c4a4d99bf720761fd6407a227177cfeb3b1c0d4a230e16ceea960dc91dd11
+TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.0-rc6@sha256:bf95a94849cd9c6f596fb10e5a2d03b74267e7886d1ba0b3dab33337d9e46e5c
 registry-ci:
 	docker rm -f oci-conformance && \
 		echo '{"distSpecVersion":"1.1.0-dev","storage":{"rootDirectory":"/tmp/zot","gc":false,"dedupe":false},"http":{"address":"0.0.0.0","port":"5000"},"log":{"level":"debug"}}' > $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json
