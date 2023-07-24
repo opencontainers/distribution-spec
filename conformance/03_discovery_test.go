@@ -323,7 +323,7 @@ var test03ContentDiscovery = func() {
 				// also check resp header "OCI-Filters-Applied: artifactType" denoting that an artifactType filter was applied
 				if resp.Header().Get("OCI-Filters-Applied") != "" {
 					Expect(len(index.Manifests)).To(Equal(2))
-					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(testRefArtifactTypeA))
+					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(artifactTypeFilter))
 				} else {
 					Expect(len(index.Manifests)).To(Equal(4))
 					Warn("filtering by artifact-type is not implemented")
