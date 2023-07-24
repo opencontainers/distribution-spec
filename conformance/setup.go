@@ -341,7 +341,7 @@ func init() {
 			Digest:    godigest.FromBytes(testRefBlobA),
 		},
 		Subject: &descriptor{
-			MediaType: "application/vnd.oci.image.config.v1+json",
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Size:      int64(len(manifests[4].Content)),
 			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
@@ -366,7 +366,7 @@ func init() {
 			Digest:    godigest.FromBytes(testRefBlobB),
 		},
 		Subject: &descriptor{
-			MediaType: "application/vnd.oci.image.config.v1+json",
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Size:      int64(len(manifests[4].Content)),
 			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
@@ -389,7 +389,7 @@ func init() {
 		ArtifactType:  testRefArtifactTypeA,
 		Config:        emptyJSONDescriptor,
 		Subject: &descriptor{
-			MediaType: "application/vnd.oci.image.config.v1+json",
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Size:      int64(len(manifests[4].Content)),
 			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
@@ -415,7 +415,7 @@ func init() {
 		ArtifactType:  testRefArtifactTypeB,
 		Config:        emptyJSONDescriptor,
 		Subject: &descriptor{
-			MediaType: "application/vnd.oci.image.config.v1+json",
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Size:      int64(len(manifests[4].Content)),
 			Digest:    godigest.FromBytes(manifests[4].Content),
 		},
