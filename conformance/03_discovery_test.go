@@ -145,6 +145,18 @@ var test03ContentDiscovery = func() {
 					BeNumerically("<", 300)))
 				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
 
+				// Populate registry with test index manifest
+				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(refsIndexArtifactDigest)).
+					SetHeader("Content-Type", "application/vnd.oci.image.index.v1+json").
+					SetBody(refsIndexArtifactContent)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(SatisfyAll(
+					BeNumerically(">=", 200),
+					BeNumerically("<", 300)))
+				Expect(resp.Header().Get("OCI-Subject")).To(Equal(manifests[4].Digest))
+
 				// Populate registry with test blob
 				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
 				resp, err = client.Do(req)
@@ -300,7 +312,7 @@ var test03ContentDiscovery = func() {
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
 				Expect(err).To(BeNil())
-				Expect(len(index.Manifests)).To(Equal(4))
+				Expect(len(index.Manifests)).To(Equal(5))
 				Expect(index.Manifests[0].Digest).ToNot(Equal(index.Manifests[1].Digest))
 			})
 
@@ -325,7 +337,7 @@ var test03ContentDiscovery = func() {
 					Expect(len(index.Manifests)).To(Equal(2))
 					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(artifactTypeFilter))
 				} else {
-					Expect(len(index.Manifests)).To(Equal(4))
+					Expect(len(index.Manifests)).To(Equal(5))
 					Warn("filtering by artifact-type is not implemented")
 				}
 			})
@@ -414,6 +426,9 @@ var test03ContentDiscovery = func() {
 
 				if deleteManifestBeforeBlobs {
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
+						reggie.WithReference(refsIndexArtifactDigest))
+					deleteReq(req)
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestAConfigArtifactDigest))
 					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
@@ -445,6 +460,9 @@ var test03ContentDiscovery = func() {
 
 				if !deleteManifestBeforeBlobs {
 					// Delete manifest created in setup
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
+						reggie.WithReference(refsIndexArtifactDigest))
+					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestAConfigArtifactDigest))
 					deleteReq(req)
