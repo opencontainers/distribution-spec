@@ -1,5 +1,6 @@
 EPOCH_TEST_COMMIT	:= 91d6d8466e68f1efff7977b63ad6f48e72245e05
 CURRENT_COMMIT	:= $(shell git log --format="%H" -n 1)
+CONFORMANCE_VERSION ?= $(CURRENT_COMMIT)
 
 DOCKER	?= $(shell command -v docker 2>/dev/null)
 PANDOC	?= $(shell command -v pandoc 2>/dev/null)
@@ -94,12 +95,14 @@ conformance-binary: $(OUTPUT_DIRNAME)/conformance.test
 TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.0-rc6@sha256:bf95a94849cd9c6f596fb10e5a2d03b74267e7886d1ba0b3dab33337d9e46e5c
 registry-ci:
 	docker rm -f oci-conformance && \
+		mkdir -p $(OUTPUT_DIRNAME) && \
 		echo '{"distSpecVersion":"1.1.0-dev","storage":{"rootDirectory":"/tmp/zot","gc":false,"dedupe":false},"http":{"address":"0.0.0.0","port":"5000"},"log":{"level":"debug"}}' > $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json
 		docker run -d \
 			-v $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json:/etc/zot/config.json \
 			--name=oci-conformance \
 			-p 5000:5000 \
-			$(TEST_REGISTRY_CONTAINER)
+			$(TEST_REGISTRY_CONTAINER) && \
+		sleep 5
 
 conformance-ci:
 	export OCI_ROOT_URL="http://localhost:5000" && \
@@ -108,10 +111,9 @@ conformance-ci:
 		export OCI_TEST_PUSH=1 && \
 		export OCI_TEST_CONTENT_DISCOVERY=1 && \
 		export OCI_TEST_CONTENT_MANAGEMENT=1 && \
-		sleep 5 && \
 		$(shell pwd)/$(OUTPUT_DIRNAME)/conformance.test
 
 $(OUTPUT_DIRNAME)/conformance.test:
 	cd conformance && \
 		CGO_ENABLED=0 go test -c -o $(shell pwd)/$(OUTPUT_DIRNAME)/conformance.test \
-			--ldflags="-X github.com/opencontainers/distribution-spec/conformance.Version=$(CURRENT_COMMIT)"
+			--ldflags="-X github.com/opencontainers/distribution-spec/conformance.Version=$(CONFORMANCE_VERSION)"
