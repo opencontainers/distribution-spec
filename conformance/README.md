@@ -229,6 +229,8 @@ jobs:
     steps:
       - name: Run OCI Distribution Spec conformance tests
         uses: opencontainers/distribution-spec@main
+        # you can also run against a specific tag or commit instead
+        # uses: opencontainers/distribution-spec@v1.1.0 
         env:
           OCI_ROOT_URL: https://myreg.io
           OCI_NAMESPACE: mytestorg/mytestrepo
@@ -241,14 +243,6 @@ jobs:
           OCI_HIDE_SKIPPED_WORKFLOWS: 0
           OCI_DEBUG: 0
           OCI_DELETE_MANIFEST_BEFORE_BLOBS: 0
-      - run: mkdir -p .out/ && mv {report.html,junit.xml} .out/
-        if: always()
-      - name: Upload test results zip as build artifact
-        uses: actions/upload-artifact@v1
-        with:
-          name: oci-test-results-${{ github.sha }}
-          path: .out/
-        if: always()
 ```
 
 You can also add a badge pointing to list of runs for this action using the following markdown:

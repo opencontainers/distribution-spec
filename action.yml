@@ -7,5 +7,64 @@ branding:
 inputs: {}
 outputs: {}
 runs:
-  using: docker
-  image: "docker://ghcr.io/opencontainers/distribution-spec/conformance:v1.0.0@sha256:6302582c3b35169f7846282ad5b81471cd8814f30f7a958030e04fd82b19e17f"
+  using: composite
+  steps:
+    - name: Check required env vars for OCI distribution-spec conformance
+      shell: bash
+      id: check-conformance
+      run: |
+        set -x
+        required_env_vars=(
+          "OCI_ROOT_URL"
+          "OCI_NAMESPACE"
+        )
+        for v in ${required_env_vars[@]}; do
+          if [[ "${!v}" == "" ]]; then
+            echo "Error: the following environment variable is required: ${v}"
+            exit 1
+          fi
+        done
+
+    - name: Build OCI distribution-spec conformance binary
+      shell: bash
+      id: build-conformance
+      run: |
+        set -x
+
+        # Enter the directory containing the checkout of this action which is surpisingly hard to do (but we did it... #OCI)
+        cd "$(dirname $(find $(find ~/work/_actions -name distribution-spec -print -quit) -name Makefile -print -quit))"
+        
+        # The .git folder is not present, but the dirname is the requested action ref, so use this as the conformance version
+        conformance_version="$(basename "${PWD}")"
+        echo "conformance-version=${conformance_version}" >> $GITHUB_OUTPUT
+
+        # Build the conformance binary
+        CONFORMANCE_VERSION="${conformance_version}" OUTPUT_DIRNAME=bin make conformance-binary
+
+        # Add bin to the PATH so we can just run "conformance.test"
+        echo "${PWD}/bin" >> $GITHUB_PATH
+
+    - name: Run OCI distribution-spec conformance binary
+      shell: bash
+      id: run-conformance
+      run: |
+        set -x
+        set +e
+        conformance.test
+        conformance_rc="$?"
+        set -e
+        if [[ -f report.html ]]; then
+          echo "Found report.html."
+          echo "has-report=true" >> $GITHUB_OUTPUT
+        fi
+        echo "Conformance return code: ${conformance_rc}"
+        exit ${conformance_rc}
+
+    - name: Upload OCI distribution-spec conformance results as build artifact
+      if: always() && steps.run-conformance.outputs.has-report == 'true'
+      uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+      with:
+        name: oci-distribution-spec-conformance-results-${{ steps.build-conformance.outputs.conformance-version }}
+        path: |
+          report.html
+          junit.xml
