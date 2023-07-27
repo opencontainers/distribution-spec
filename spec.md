@@ -555,6 +555,7 @@ If the registry supports the referrers API, the registry MUST NOT return a `404 
 If the request is invalid, such as a `<digest>` with an invalid syntax, a `400 Bad Request` MUST be returned.
 
 Upon success, the response MUST be a JSON body with an image index containing a list of descriptors.
+The `Content-Type` header MUST be set to `application/vnd.oci.image.index.v1+json`.
 Each descriptor is of an image manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
 The descriptors MUST include an `artifactType` field that is set to the value of the `artifactType` in the image manifest, if present.
 If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
