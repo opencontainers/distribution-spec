@@ -175,6 +175,10 @@ If the digest does differ, it MAY be the case that the hashing algorithms used d
 See [Content Digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> for information on how to detect the hashing algorithm in use.
 Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded blob data.
 
+Clients that will request the [Referrers Listing](#listing-referrers) for this manifest MAY include the `OCI-Referrers: request` header.
+A registry that implements the [Referrers Listing](#listing-referrers) and receives the `OCI-Referrers: request` header MAY include the `OCI-Referrers: absent` header in the response of manifests which do not have any referrers.
+Clients MAY skip requests to the [Referrers Listing](#listing-referrers) for manifests that include the `OCI-Referrers: absent` header.
+
 If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
 ##### Pulling blobs
