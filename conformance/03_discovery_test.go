@@ -437,13 +437,13 @@ var test03ContentDiscovery = func() {
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestALayerArtifactDigest))
 					deleteReq(req)
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[4].Digest))
-					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestBConfigArtifactDigest))
 					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestBLayerArtifactDigest))
+					deleteReq(req)
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[4].Digest))
 					deleteReq(req)
 				}
 
@@ -472,13 +472,13 @@ var test03ContentDiscovery = func() {
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestALayerArtifactDigest))
 					deleteReq(req)
-					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[4].Digest))
-					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestBConfigArtifactDigest))
 					deleteReq(req)
 					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
 						reggie.WithReference(refsManifestBLayerArtifactDigest))
+					deleteReq(req)
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[4].Digest))
 					deleteReq(req)
 				}
 			})
