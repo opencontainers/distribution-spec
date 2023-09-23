@@ -531,6 +531,8 @@ In this case, the path will look like the following: `/v2/<name>/tags/list?n=<in
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested.
 The response to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository is less than `<int>`.
 Otherwise, the response MUST include `<int>` results.
+A `Link` header MAY be included in the response when additional tags are available.
+If included, the `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
 When `n` is zero, this endpoint MUST return an empty list, and MUST NOT include a `Link` header.
 Without the `last` query parameter (described next), the list returned will start at the beginning of the list and include `<int>` results.
 As above, the tags MUST be in lexical order.
@@ -545,6 +547,10 @@ That is to say, `<tagname>` will not be included in the results, but up to `<int
 The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
+
+The registry SHOULD support at least `n=1000` tags in a single response.
+The client SHOULD avoid requesting more than `n=1000` tags in a single request.
+If the registry is unable to return all tags requested by the client, the registry MUST return a `413 Content Too Large` with `TAG_LIMIT_EXCEEDED` error <sup>[code-15](#error-codes)</sup> and include the header `OCI-Tag-Limit: <limit>`, where `<limit>` is the maximum tags per request supported by the registry.
 
 ##### Listing Referrers
 
@@ -750,8 +756,8 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
 | end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`       |
 | end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`             |
-| end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
-| end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
+| end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`/`413`       |
+| end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`/`413`       |
 | end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
 | end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`405`       |
 | end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`       | `404`             |
@@ -799,6 +805,7 @@ The `code` field MUST be one of the following:
 | code-12 | `DENIED`                | requested access to the resource is denied                 |
 | code-13 | `UNSUPPORTED`           | the operation is unsupported                               |
 | code-14 | `TOOMANYREQUESTS`       | too many requests                                          |
+| code-15 | `TAG_LIMIT_EXCEEDED`    | too many tags were requested                               |
 
 #### Warnings
 
