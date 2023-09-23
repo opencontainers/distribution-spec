@@ -529,8 +529,10 @@ In addition to fetching the whole list of tags, a subset of the tags can be fetc
 In this case, the path will look like the following: `/v2/<name>/tags/list?n=<int>` <sup>[end-8b](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested.
-The response to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository is less than `<int>`.
+The response to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository is less than `<int>` or a `Link` header is provided.
 Otherwise, the response MUST include `<int>` results.
+A `Link` header MAY be included in the response when additional tags are available.
+If included, the `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
 When `n` is zero, this endpoint MUST return an empty list, and MUST NOT include a `Link` header.
 Without the `last` query parameter (described next), the list returned will start at the beginning of the list and include `<int>` results.
 As above, the tags MUST be in lexical order.
@@ -545,6 +547,11 @@ That is to say, `<tagname>` will not be included in the results, but up to `<int
 The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
+
+*Implementers note:*
+Previous versions of this specification did not include the `Link` header.
+Clients depending on the number of tags returned matching `n` may prematurely stop pagination on registries using the `Link` header.
+When available, clients should prefer the `Link` header over using the `last` parameter for pagination.
 
 ##### Listing Referrers
 
