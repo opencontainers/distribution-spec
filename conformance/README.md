@@ -39,9 +39,19 @@ Lastly, run the tests:
 ./conformance.test
 ```
 
-This will produce `junit.xml` and `report.html` with the results.
-
 Note: for some registries, you may need to create `OCI_NAMESPACE` ahead of time.
+
+This will produce `junit.xml` and `report.html` in the current directory with the results. To choose an alternative directory:
+
+```
+export OCI_REPORT_DIR=/alternative/directory
+```
+
+To disable writing of the result files:
+
+```
+export OCI_REPORT_DIR=none
+```
 
 #### Testing registry workflows
 
@@ -230,7 +240,7 @@ jobs:
       - name: Run OCI Distribution Spec conformance tests
         uses: opencontainers/distribution-spec@main
         # you can also run against a specific tag or commit instead
-        # uses: opencontainers/distribution-spec@v1.1.0 
+        # uses: opencontainers/distribution-spec@v1.1.0
         env:
           OCI_ROOT_URL: https://myreg.io
           OCI_NAMESPACE: mytestorg/mytestrepo
