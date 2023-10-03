@@ -441,7 +441,7 @@ This indicates that the upload session has begun and that the client MAY proceed
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers and body: `/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
 
-Clients SHOULD set the `Content-Type` header to the type of the manifest being pushed.
+Clients MUST set the `Content-Type` header to the type of the manifest being pushed.
 All manifests SHOULD include a `mediaType` field declaring the type of the manifest being pushed.
 If a manifest includes a `mediaType` field, clients MUST set the `Content-Type` header to the value specified by the `mediaType` field.
 
