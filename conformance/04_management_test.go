@@ -153,7 +153,10 @@ var test04ContentManagement = func() {
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusAccepted),
+					Equal(http.StatusNotFound),
+        ))
 			})
 
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {

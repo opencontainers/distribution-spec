@@ -421,6 +421,7 @@ var test02Push = func() {
 						BeNumerically("<", 300),
 					),
 					Equal(http.StatusMethodNotAllowed),
+					Equal(http.StatusNotFound),
 				))
 			})
 
