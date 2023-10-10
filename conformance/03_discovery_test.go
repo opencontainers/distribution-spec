@@ -247,6 +247,7 @@ var test03ContentDiscovery = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				tagList = getTagList(resp)
 				numTags = len(tagList)
 			})
 
