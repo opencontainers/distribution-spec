@@ -48,7 +48,7 @@ For relevant details and a history leading up to this specification, please see 
 
 #### Legacy Docker support HTTP headers
 
-Because of the origins this specification, the client MAY encounter Docker-specific headers, such as `Docker-Content-Digest`, or `Docker-Distribution-API-Version`.
+Because of the origins of this specification, the client MAY encounter Docker-specific headers, such as `Docker-Content-Digest`, or `Docker-Distribution-API-Version`.
 These headers are OPTIONAL and clients SHOULD NOT depend on them.
 
 #### Legacy Docker support error codes
