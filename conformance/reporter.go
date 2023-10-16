@@ -568,6 +568,10 @@ func (reporter *HTMLReporter) afterReport(r types.SpecReport) {
 }
 
 func (reporter *HTMLReporter) endSuite(report types.Report) error {
+	if reporter.htmlReportFilename == "" {
+		// Reporting is disabled.
+		return nil
+	}
 	reporter.Report = report
 	reporter.endTime = time.Now()
 	reporter.EndTimeString = reporter.endTime.Format("Jan 2 15:04:05.000 -0700 MST")

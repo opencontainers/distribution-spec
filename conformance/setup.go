@@ -10,6 +10,7 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 
@@ -75,6 +76,7 @@ const (
 	envVarDeleteManifestBeforeBlobs = "OCI_DELETE_MANIFEST_BEFORE_BLOBS"
 	envVarCrossmountNamespace       = "OCI_CROSSMOUNT_NAMESPACE"
 	envVarAutomaticCrossmount       = "OCI_AUTOMATIC_CROSSMOUNT"
+	envVarReportDir                 = "OCI_REPORT_DIR"
 
 	emptyLayerTestTag = "emptylayer"
 	testTagName       = "tagtest0"
@@ -510,8 +512,10 @@ func init() {
 	automaticCrossmountVal, runAutomaticCrossmountTest = os.LookupEnv(envVarAutomaticCrossmount)
 	automaticCrossmountEnabled, _ = strconv.ParseBool(automaticCrossmountVal)
 
-	reportJUnitFilename = "junit.xml"
-	reportHTMLFilename = "report.html"
+	if dir := os.Getenv(envVarReportDir); dir != "none" {
+		reportJUnitFilename = filepath.Join(dir, "junit.xml")
+		reportHTMLFilename = filepath.Join(dir, "report.html")
+	}
 	suiteDescription = "OCI Distribution Conformance Tests"
 }
 
