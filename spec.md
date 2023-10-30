@@ -325,6 +325,13 @@ If the registry has a minimum chunk size, the response SHOULD include the follow
 OCI-Chunk-Min-Length: <size>
 ```
 
+
+If the registry has a maximum chunk size, the response SHOULD include the following header, where `<size>` is the size in bytes (see the blob `PATCH` definition for usage):
+
+```
+OCI-Chunk-Max-Length: <size>
+```
+
 Please reference the above section for restrictions on the `<location>`.
 
 ---
@@ -353,6 +360,7 @@ It MUST match the following regular expression:
 The `<length>` is the content-length, in bytes, of the current chunk.
 If the registry provides a `OCI-Chunk-Min-Length` header in the `PUT` response, the size of each chunk, except for the final chunk, SHOULD be greater or equal to that value.
 The final chunk MAY have any length.
+If the registry provides a `OCI-Chunk-Max-Length` header in the `POST` response, the size of each chunk SHOULD be less or equal to that value.
 
 Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following headers:
 
