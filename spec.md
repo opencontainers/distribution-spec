@@ -198,6 +198,7 @@ In order to verify that a repository contains a given manifest or blob, make a `
 
 A HEAD request to an existing blob or manifest URL MUST return `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
+A successful response SHOULD contain the size in bytes of the uploaded blob in the header `Content-Length`.
 
 If the blob or manifest is not found in the registry, the response code MUST be `404 Not Found`.
 
