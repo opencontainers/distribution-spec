@@ -415,6 +415,7 @@ var test03ContentDiscovery = func() {
 					references := []string{
 						refsIndexArtifactDigest,
 						manifests[2].Digest,
+						manifests[4].Digest,
 						refsManifestAConfigArtifactDigest,
 						refsManifestAConfigArtifactDigest,
 						refsManifestALayerArtifactDigest,
