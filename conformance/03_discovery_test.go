@@ -417,7 +417,6 @@ var test03ContentDiscovery = func() {
 						manifests[2].Digest,
 						manifests[4].Digest,
 						refsManifestAConfigArtifactDigest,
-						refsManifestAConfigArtifactDigest,
 						refsManifestALayerArtifactDigest,
 						testTagName,
 						refsManifestBConfigArtifactDigest,
