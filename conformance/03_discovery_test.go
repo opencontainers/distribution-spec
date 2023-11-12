@@ -316,6 +316,10 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(len(index.Manifests)).To(Equal(5))
 				Expect(index.Manifests[0].Digest).ToNot(Equal(index.Manifests[1].Digest))
+				for i := 0; i < len(index.Manifests); i++ {
+					Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
+					Expect(index.Manifests[i].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[index.Manifests[i].Digest.String()]))
+				}
 			})
 
 			g.Specify("GET request to existing blob with filter should yield 200", func() {
@@ -339,8 +343,16 @@ var test03ContentDiscovery = func() {
 				if resp.Header().Get("OCI-Filters-Applied") != "" {
 					Expect(len(index.Manifests)).To(Equal(2))
 					Expect(resp.Header().Get("OCI-Filters-Applied")).To(Equal(artifactTypeFilter))
+					for i := 0; i < len(index.Manifests); i++ {
+						Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
+						Expect(index.Manifests[i].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[index.Manifests[i].Digest.String()]))
+					}
 				} else {
 					Expect(len(index.Manifests)).To(Equal(5))
+					for i := 0; i < len(index.Manifests); i++ {
+						Expect(len(index.Manifests[i].Annotations)).To(Equal(1))
+						Expect(index.Manifests[i].Annotations[testAnnotationKey]).To(Equal(testAnnotationValues[index.Manifests[i].Digest.String()]))
+					}
 					Warn("filtering by artifact-type is not implemented")
 				}
 			})
