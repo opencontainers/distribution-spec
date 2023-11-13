@@ -247,6 +247,7 @@ var test03ContentDiscovery = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+				tagList = getTagList(resp)
 				numTags = len(tagList)
 			})
 
@@ -351,16 +352,29 @@ var test03ContentDiscovery = func() {
 				g.Specify("Delete created manifest & associated tags", func() {
 					SkipIfDisabled(contentDiscovery)
 					RunOnlyIf(runContentDiscoverySetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[2].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
+					references := []string{
+						refsIndexArtifactDigest,
+						manifests[2].Digest,
+						manifests[4].Digest,
+						refsManifestAConfigArtifactDigest,
+						refsManifestALayerArtifactDigest,
+						testTagName,
+						refsManifestBConfigArtifactDigest,
+						refsManifestBLayerArtifactDigest,
+					}
+					for _, ref := range references {
+						req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(ref))
+						resp, err := client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+							Equal(http.StatusNotFound),
+						))
+					}
 				})
 			}
 
@@ -398,16 +412,29 @@ var test03ContentDiscovery = func() {
 				g.Specify("Delete created manifest & associated tags", func() {
 					SkipIfDisabled(contentDiscovery)
 					RunOnlyIf(runContentDiscoverySetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[2].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
+					references := []string{
+						refsIndexArtifactDigest,
+						manifests[2].Digest,
+						manifests[4].Digest,
+						refsManifestAConfigArtifactDigest,
+						refsManifestALayerArtifactDigest,
+						testTagName,
+						refsManifestBConfigArtifactDigest,
+						refsManifestBLayerArtifactDigest,
+					}
+					for _, ref := range references {
+						req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(ref))
+						resp, err := client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAny(
+							SatisfyAll(
+								BeNumerically(">=", 200),
+								BeNumerically("<", 300),
+							),
+							Equal(http.StatusMethodNotAllowed),
+							Equal(http.StatusNotFound),
+						))
+					}
 				})
 			}
 
@@ -424,6 +451,7 @@ var test03ContentDiscovery = func() {
 							BeNumerically("<", 300),
 						),
 						Equal(http.StatusMethodNotAllowed),
+						Equal(http.StatusNotFound),
 					))
 				}
 
