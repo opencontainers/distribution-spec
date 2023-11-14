@@ -566,8 +566,6 @@ The descriptors MUST include an `artifactType` field that is set to the value of
 If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
 The descriptors MUST include annotations from the image manifest.
 If a query results in no matching referrers, an empty manifest list MUST be returned.
-If a manifest with the digest `<digest>` does not exist, a registry MAY return an empty manifest list.
-After a manifest with the digest `<digest>` is pushed, the registry MUST include previously pushed entries in the referrers list.
 
 ```json
 {
