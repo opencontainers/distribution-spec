@@ -47,13 +47,49 @@ type descriptor struct {
 	// Size specifies the size in bytes of the blob.
 	Size int64 `json:"size"`
 
+	// URLs specifies a list of URLs from which this object MAY be downloaded
+	URLs []string `json:"urls,omitempty"`
+
+	// Annotations contains arbitrary metadata relating to the targeted content.
+	Annotations map[string]string `json:"annotations,omitempty"`
+
 	// Data specifies the data of the object described by the descriptor.
 	Data []byte `json:"data,omitempty"`
+
+	// Platform describes the platform which the image in the manifest runs on.
+	//
+	// This should only be used when referring to a manifest.
+	Platform *platform `json:"platform,omitempty"`
+
+	// ArtifactType is the IANA media type of this artifact.
+	ArtifactType string `json:"artifactType,omitempty"`
 
 	// NewUnspecifiedField is not covered by image-spec.
 	// Registry implementations should still successfully store and serve
 	// manifests containing this data.
 	NewUnspecifiedField []byte `json:"newUnspecifiedField"`
+}
+
+// platform describes the platform which the image in the manifest runs on.
+type platform struct {
+	// Architecture field specifies the CPU architecture, for example
+	// `amd64` or `ppc64le`.
+	Architecture string `json:"architecture"`
+
+	// OS specifies the operating system, for example `linux` or `windows`.
+	OS string `json:"os"`
+
+	// OSVersion is an optional field specifying the operating system
+	// version, for example on Windows `10.0.14393.1066`.
+	OSVersion string `json:"os.version,omitempty"`
+
+	// OSFeatures is an optional field specifying an array of strings,
+	// each listing a required OS feature (for example on Windows `win32k`).
+	OSFeatures []string `json:"os.features,omitempty"`
+
+	// Variant is an optional field specifying a variant of the CPU, for
+	// example `v7` to specify ARMv7 when architecture is `arm`.
+	Variant string `json:"variant,omitempty"`
 }
 
 // rootFS describes a layer content addresses
