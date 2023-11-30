@@ -529,10 +529,11 @@ In addition to fetching the whole list of tags, a subset of the tags can be fetc
 In this case, the path will look like the following: `/v2/<name>/tags/list?n=<int>` <sup>[end-8b](#endpoints)</sup>
 
 `<name>` is the namespace of the repository, and `<int>` is an integer specifying the number of tags requested.
-The response to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository is less than `<int>`.
-Otherwise, the response MUST include `<int>` results.
-When `n` is zero, this endpoint MUST return an empty list, and MUST NOT include a `Link` header.
-Without the `last` query parameter (described next), the list returned will start at the beginning of the list and include `<int>` results.
+
+The registry implementation MAY impose a maximum limit and return a partial set with pagination links.
+See [Pagination](#pagination) for information on how to handle pagination links.
+
+Without the `last` query parameter (described next), the list returned will start at the beginning of the list.
 As above, the tags MUST be in lexical order.
 
 The `last` query parameter provides further means for limiting the number of tags.
@@ -545,6 +546,9 @@ That is to say, `<tagname>` will not be included in the results, but up to `<int
 The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
+
+When `n` is zero, this endpoint MUST return an empty list, and MUST NOT include a `Link` header.
+This is useful for cheaply testing the existence of a repository.
 
 ##### Listing Referrers
 
@@ -601,6 +605,7 @@ After a manifest with the digest `<digest>` is pushed, the registry MUST include
 A `Link` header MUST be included in the response when the descriptor list cannot be returned in a single manifest.
 Each response is an image index with different descriptors in the `manifests` field.
 The `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
+See [Pagination](#pagination) for information on how to handle pagination links.
 
 The registry SHOULD support filtering on `artifactType`.
 To fetch the list of referrers with a filter, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>?artifactType=<mediaType>` <sup>[end-12b](#endpoints)</sup>.
@@ -638,6 +643,57 @@ OCI-Filters-Applied: artifactType
 If the [referrers API](#listing-referrers) returns a 404, the client MUST fallback to pulling the [referrers tag schema](#referrers-tag-schema).
 The response SHOULD be an image index with the same content that would be expected from the referrers API.
 If the response to the [referrers API](#listing-referrers) is a 404, and the tag schema does not return a valid image index, the client SHOULD assume there are no referrers to the manifest.
+
+##### Pagination
+
+Paginated results can be retrieved by adding an `n` parameter to the request URL, declaring that the response SHOULD be limited to `n` results.
+
+Starting a paginated tags flow MAY begin as follows:
+
+```HTTP
+GET /v2/<name>/tags/list?n=<integer>
+```
+
+The above specifies that a tags response SHOULD be returned, from the start of the result set, ordered lexically, limiting the number of results to `n`.
+
+The response to such a request would look as follows:
+
+```HTTP
+200 OK
+Content-Type: application/json
+Link: <<url>?n=<n from the request>&last=<last tag value from previous response>>; rel="next"
+{
+    "name": "<name>",
+    "tags": [
+      "<tag>",
+      ...
+    ]
+}
+```
+
+To get the _next_ `n` entries, one can create a URL where the argument `last` has the value from `tags[len(tags)-1]`.
+If there are indeed more results, the URL for the next block is encoded in an [RFC5988](https://tools.ietf.org/html/rfc5988) `Link` header, as a "next" relation.
+If the header is not present, the client can assume that all results have been received.
+
+> __NOTE:__ In the request template above, note that the brackets are required. For example, if the url is `http://example.com/v2/hello-world/tags/list?n=20&last=b`, the value of the header would be `<http://example.com/v2/hello-world/tags/list?n=20&last=b>; rel="next"`.
+> Please see [RFC5988](https://tools.ietf.org/html/rfc5988) for details.
+
+Compliant client implementations SHOULD always use the `Link` header value when proceeding through results linearly.
+The client MAY construct URLs to skip forward in the list.
+
+To get the next result set, a client would issue the request as follows, using the URL encoded in the described `Link` header:
+
+```
+GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
+```
+
+The above process should then be repeated until the `Link` header is no longer set in the response.
+
+The tag list result set is represented abstractly as a lexically sorted list, where the position in that list can be specified by the query term `last`.
+The entries in the response start _after_ the term specified by `last`, up to `n` entries.
+
+The client can then issue the request with the above value from the `Link` header, receiving the values _v3_ and _v4_.
+Note that `n` may change on the second to last response or be fully omitted, depending on the server implementation.
 
 #### Content Management
 
