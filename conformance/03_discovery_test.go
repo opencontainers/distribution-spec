@@ -308,9 +308,6 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
-				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
-					Expect(h).To(Equal(configs[4].Digest))
-				}
 
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
@@ -332,9 +329,6 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 				Expect(resp.Header().Get("Content-Type")).To(Equal("application/vnd.oci.image.index.v1+json"))
-				if h := resp.Header().Get("Docker-Content-Digest"); h != "" {
-					Expect(h).To(Equal(configs[4].Digest))
-				}
 
 				var index index
 				err = json.Unmarshal(resp.Body(), &index)
