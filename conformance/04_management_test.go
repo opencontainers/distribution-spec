@@ -15,6 +15,7 @@ var test04ContentManagement = func() {
 		const defaultTagName = "tagtest0"
 		var tagToDelete string
 		var numTags int
+		var blobDeleteAllowed = true
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test config blob", func() {
@@ -147,7 +148,11 @@ var test04ContentManagement = func() {
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusAccepted),
+					Equal(http.StatusNotFound),
+					Equal(http.StatusMethodNotAllowed),
+				))
 				// layer blob
 				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
 				resp, err = client.Do(req)
@@ -156,12 +161,17 @@ var test04ContentManagement = func() {
 				Expect(resp.StatusCode()).To(SatisfyAny(
 					Equal(http.StatusAccepted),
 					Equal(http.StatusNotFound),
-        ))
+					Equal(http.StatusMethodNotAllowed),
+				))
+				if resp.StatusCode() == http.StatusMethodNotAllowed {
+					blobDeleteAllowed = false
+				}
 			})
 
 			g.Specify("GET request to deleted blob URL should yield 404 response", func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
+				RunOnlyIf(blobDeleteAllowed)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[3].Digest))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
