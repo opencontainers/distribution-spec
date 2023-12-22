@@ -561,10 +561,11 @@ If the request is invalid, such as a `<digest>` with an invalid syntax, a `400 B
 
 Upon success, the response MUST be a JSON body with an image index containing a list of descriptors.
 The `Content-Type` header MUST be set to `application/vnd.oci.image.index.v1+json`.
-Each descriptor is of an image manifest in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
-The descriptors MUST include an `artifactType` field that is set to the value of the `artifactType` in the image manifest, if present.
+Each descriptor is of an image manifest or index in the same `<name>` namespace with a `subject` field that specifies the value of `<digest>`.
+The descriptors MUST include an `artifactType` field that is set to the value of the `artifactType` in the image manifest or index, if present.
 If the `artifactType` is empty or missing in the image manifest, the value of `artifactType` MUST be set to the config descriptor `mediaType` value.
-The descriptors MUST include annotations from the image manifest.
+If the `artifactType` is empty or missing in an index, the `artifactType` MUST be omitted.
+The descriptors MUST include annotations from the image manifest or index.
 If a query results in no matching referrers, an empty manifest list MUST be returned.
 If a manifest with the digest `<digest>` does not exist, a registry MAY return an empty manifest list.
 After a manifest with the digest `<digest>` is pushed, the registry MUST include previously pushed entries in the referrers list.
@@ -580,7 +581,7 @@ After a manifest with the digest `<digest>` is pushed, the registry MUST include
       "digest": "sha256:a1a1a1...",
       "artifactType": "application/vnd.example.sbom.v1",
       "annotations": {
-        "org.opencontainers.artifact.created": "2022-01-01T14:42:55Z",
+        "org.opencontainers.image.created": "2022-01-01T14:42:55Z",
         "org.example.sbom.format": "json"
       }
     },
@@ -590,8 +591,16 @@ After a manifest with the digest `<digest>` is pushed, the registry MUST include
       "digest": "sha256:a2a2a2...",
       "artifactType": "application/vnd.example.signature.v1",
       "annotations": {
-        "org.opencontainers.artifact.created": "2022-01-01T07:21:33Z",
+        "org.opencontainers.image.created": "2022-01-01T07:21:33Z",
         "org.example.signature.fingerprint": "abcd"
+      }
+    },
+    {
+      "mediaType": "application/vnd.oci.image.index.v1+json",
+      "size": 1234,
+      "digest": "sha256:a3a3a3...",
+      "annotations": {
+        "org.opencontainers.image.created": "2023-01-01T07:21:33Z",
       }
     }
   ]
