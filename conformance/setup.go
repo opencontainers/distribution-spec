@@ -149,6 +149,8 @@ var (
 	refsManifestBConfigArtifactDigest  string
 	refsManifestBLayerArtifactContent  []byte
 	refsManifestBLayerArtifactDigest   string
+	refsManifestCLayerArtifactContent  []byte
+	refsManifestCLayerArtifactDigest   string
 	refsIndexArtifactContent           []byte
 	refsIndexArtifactDigest            string
 	reportJUnitFilename                string
@@ -460,6 +462,33 @@ func init() {
 
 	refsManifestBLayerArtifactDigest = godigest.FromBytes(refsManifestBLayerArtifactContent).String()
 	testAnnotationValues[refsManifestBLayerArtifactDigest] = refsManifestBLayerArtifact.Annotations[testAnnotationKey]
+
+	// ManifestCLayerArtifact is the same as B but based on a subject that has not been pushed
+	refsManifestCLayerArtifact := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		ArtifactType:  testRefArtifactTypeB,
+		Config:        emptyJSONDescriptor,
+		Subject: &descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      int64(len(manifests[3].Content)),
+			Digest:    godigest.FromBytes(manifests[3].Content),
+		},
+		Layers: []descriptor{
+			{
+				MediaType: testRefArtifactTypeB,
+				Size:      int64(len(testRefBlobB)),
+				Digest:    godigest.FromBytes(testRefBlobB),
+			},
+		},
+	}
+
+	refsManifestCLayerArtifactContent, err = json.MarshalIndent(&refsManifestCLayerArtifact, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	refsManifestCLayerArtifactDigest = godigest.FromBytes(refsManifestCLayerArtifactContent).String()
 
 	testRefArtifactTypeIndex = "application/vnd.food.stand"
 	refsIndexArtifact := index{

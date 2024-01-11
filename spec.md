@@ -567,8 +567,6 @@ If the `artifactType` is empty or missing in the image manifest, the value of `a
 If the `artifactType` is empty or missing in an index, the `artifactType` MUST be omitted.
 The descriptors MUST include annotations from the image manifest or index.
 If a query results in no matching referrers, an empty manifest list MUST be returned.
-If a manifest with the digest `<digest>` does not exist, a registry MAY return an empty manifest list.
-After a manifest with the digest `<digest>` is pushed, the registry MUST include previously pushed entries in the referrers list.
 
 ```json
 {
