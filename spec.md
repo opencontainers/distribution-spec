@@ -209,7 +209,7 @@ If the blob or manifest is not found in the registry, the response code MUST be 
 Pushing an object typically works in the opposite order as a pull: the blobs making up the object are uploaded first, and the manifest last.
 A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
 
-A registry MUST accept an otherwise valid manifest with a `subject` field that references a manifest that does not exist, allowing clients to push a manifest and referrers to that manifest in either order.
+A registry MUST initially accept an otherwise valid manifest with a `subject` field that references a manifest that does not exist in the repository, allowing clients to push a manifest and referrers to that manifest in either order.
 A registry MAY reject a manifest uploaded to the manifest endpoint with descriptors in other fields that reference a manifest or blob that does not exist in the registry.
 When a manifest is rejected for this reason, it MUST result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
