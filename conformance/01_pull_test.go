@@ -171,7 +171,7 @@ var test01Pull = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 			})
 
-			g.Specify("HEAD request to manifest path (digest) should yield 200 response", func() {
+			g.Specify("HEAD request to manifest[0] path (digest) should yield 200 response", func() {
 				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.HEAD, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -183,7 +183,7 @@ var test01Pull = func() {
 				}
 			})
 
-			g.Specify("HEAD request to manifest path (digest) should yield 200 response", func() {
+			g.Specify("HEAD request to manifest[1] path (digest) should yield 200 response", func() {
 				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.HEAD, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -217,7 +217,7 @@ var test01Pull = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
 			})
 
-			g.Specify("GET request to manifest path (digest) should yield 200 response", func() {
+			g.Specify("GET request to manifest[0] path (digest) should yield 200 response", func() {
 				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -226,7 +226,7 @@ var test01Pull = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
 
-			g.Specify("GET request to manifest path (digest) should yield 200 response", func() {
+			g.Specify("GET request to manifest[1] path (digest) should yield 200 response", func() {
 				SkipIfDisabled(pull)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest)).
 					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
@@ -270,7 +270,7 @@ var test01Pull = func() {
 
 		g.Context("Teardown", func() {
 			if deleteManifestBeforeBlobs {
-				g.Specify("Delete manifest created in setup", func() {
+				g.Specify("Delete manifest[0] created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest))
@@ -284,7 +284,7 @@ var test01Pull = func() {
 						Equal(http.StatusMethodNotAllowed),
 					))
 				})
-				g.Specify("Delete manifest created in setup", func() {
+				g.Specify("Delete manifest[1] created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
@@ -300,7 +300,7 @@ var test01Pull = func() {
 				})
 			}
 
-			g.Specify("Delete config blob created in setup", func() {
+			g.Specify("Delete config[0] blob created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[0].Digest))
@@ -314,7 +314,7 @@ var test01Pull = func() {
 					Equal(http.StatusMethodNotAllowed),
 				))
 			})
-			g.Specify("Delete config blob created in setup", func() {
+			g.Specify("Delete config[1] blob created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
@@ -345,7 +345,7 @@ var test01Pull = func() {
 			})
 
 			if !deleteManifestBeforeBlobs {
-				g.Specify("Delete manifest created in setup", func() {
+				g.Specify("Delete manifest[0] created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest))
@@ -359,7 +359,7 @@ var test01Pull = func() {
 						Equal(http.StatusMethodNotAllowed),
 					))
 				})
-				g.Specify("Delete manifest created in setup", func() {
+				g.Specify("Delete manifest[1] created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
