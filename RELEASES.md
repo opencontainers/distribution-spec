@@ -3,7 +3,7 @@
 The release process hopes to encourage early, consistent consensus-building during project development.
 The mechanisms used are regular community communication on the mailing list about progress, scheduled meetings for issue resolution and release triage, and regularly paced and communicated releases.
 Releases are proposed and adopted or rejected using the usual [project governance](GOVERNANCE.md) rules and procedures.
-
+yo
 An anti-pattern that we want to avoid is heavy development or discussions "late cycle" around major releases.
 We want to build a community that is involved and communicates consistently through all releases instead of relying on "silent periods" as a judge of stability.
 
