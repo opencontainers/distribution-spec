@@ -198,7 +198,7 @@ func init() {
 	client, err = reggie.NewClient(hostname,
 		reggie.WithDefaultName(namespace),
 		reggie.WithUsernamePassword(username, password),
-		reggie.WithDebug(true),
+		reggie.WithDebug(debug),
 		reggie.WithUserAgent("distribution-spec-conformance-tests"),
 		reggie.WithAuthScope(authScope),
 		reggie.WithInsecureSkipTLSVerify(true))
