@@ -447,17 +447,20 @@ func (l *httpDebugLogger) Warnf(format string, v ...interface{}) {
 }
 
 func (l *httpDebugLogger) Debugf(format string, v ...interface{}) {
-	re := regexp.MustCompile("(?i)(\"?\\w*(authorization|token|state)\\w*\"?(:|=)\\s*)(\")?\\s*((bearer|basic)? )?[^\\s&\"]*(\")?")
-	format = re.ReplaceAllString(format, "$1$4$5*****$7")
 	l.output("DEBUG "+format, v...)
 }
 
+var (
+	redactRegexp  = regexp.MustCompile(`(?i)("?\w*(authorization|token|state)\w*"?(:|=)\s*)(")?\s*((bearer|basic)? )?[^\s&"]*(")?`)
+	redactReplace = "$1$4$5*****$7"
+)
+
 func (l *httpDebugLogger) output(format string, v ...interface{}) {
 	if len(v) == 0 {
-		l.l.Print(format)
+		l.l.Print(redactRegexp.ReplaceAllString(format, redactReplace))
 		return
 	}
-	_, err := l.w.Write([]byte(fmt.Sprintf(format, v...)))
+	_, err := l.w.Write([]byte(redactRegexp.ReplaceAllString(fmt.Sprintf(format, v...), redactReplace)))
 	if err != nil {
 		l.Errorf(err.Error())
 	}
