@@ -72,7 +72,7 @@ var test01Pull = func() {
 			g.Specify("Populate registry with test manifest", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				tag := testTagName
+				tag = testTagName
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
 					reggie.WithReference(tag)).
 					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
@@ -98,26 +98,13 @@ var test01Pull = func() {
 					BeNumerically("<", 300)))
 			})
 
-			g.Specify("Get the name of a tag", func() {
-				SkipIfDisabled(pull)
-				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				tag = getTagNameFromResponse(resp)
-
-				// attempt to forcibly overwrite this tag with the unique manifest for this run
-				req = client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(tag)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[0].Content)
-				_, _ = client.Do(req)
-			})
-
 			g.Specify("Get tag name from environment", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIfNot(runPullSetup)
-				tag = os.Getenv(envVarTagName)
+				tmp := os.Getenv(envVarTagName)
+				if tmp != "" {
+					tag = tmp
+				}
 			})
 		})
 
