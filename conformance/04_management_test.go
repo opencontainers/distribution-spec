@@ -131,12 +131,21 @@ var test04ContentManagement = func() {
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-				tagList := &TagList{}
-				jsonData := []byte(resp.String())
-				err = json.Unmarshal(jsonData, tagList)
-				Expect(err).To(BeNil())
-				Expect(len(tagList.Tags)).To(BeNumerically("<", numTags))
+				Expect(resp.StatusCode()).To(SatisfyAny(
+					Equal(http.StatusNotFound),
+					Equal(http.StatusOK),
+				))
+				expectTags := numTags - 1
+				if resp.StatusCode() == http.StatusOK {
+					tagList := &TagList{}
+					jsonData := []byte(resp.String())
+					err = json.Unmarshal(jsonData, tagList)
+					Expect(err).To(BeNil())
+					Expect(len(tagList.Tags)).To(Equal(expectTags))
+				}
+				if resp.StatusCode() == http.StatusNotFound {
+					Expect(expectTags).To(Equal(0))
+				}
 			})
 		})
 
