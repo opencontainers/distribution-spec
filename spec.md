@@ -153,7 +153,7 @@ To pull a manifest, perform a `GET` request to a URL in the following form:
 The `<reference>` MUST NOT be in any other format.
 Throughout this document, `<name>` MUST match the following regular expression:
 
-`[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*`
+`[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(?::[0-9]+)?(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*`
 
 Throughout this document, `<reference>` as a tag MUST be at most 128 characters in length and MUST match the following regular expression:
 
