@@ -624,19 +624,6 @@ func getTagList(resp *reggie.Response) []string {
 	return tagList.Tags
 }
 
-func getTagNameFromResponse(lastResponse *reggie.Response) (tagName string) {
-	tl := &TagList{}
-	if lastResponse != nil {
-		jsonData := lastResponse.Body()
-		err := json.Unmarshal(jsonData, tl)
-		if err == nil && len(tl.Tags) > 0 {
-			tagName = tl.Tags[0]
-		}
-	}
-
-	return
-}
-
 // Adapted from https://gist.github.com/dopey/c69559607800d2f2f90b1b1ed4e550fb
 func randomString(n int) string {
 	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
