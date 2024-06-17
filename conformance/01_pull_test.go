@@ -298,6 +298,7 @@ var test01Pull = func() {
 						BeNumerically(">=", 200),
 						BeNumerically("<", 300),
 					),
+					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
 				))
 			})
@@ -312,6 +313,7 @@ var test01Pull = func() {
 						BeNumerically(">=", 200),
 						BeNumerically("<", 300),
 					),
+					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
 				))
 			})
@@ -327,6 +329,7 @@ var test01Pull = func() {
 						BeNumerically(">=", 200),
 						BeNumerically("<", 300),
 					),
+					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
 				))
 			})
