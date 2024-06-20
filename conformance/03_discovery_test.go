@@ -405,8 +405,8 @@ var test03ContentDiscovery = func() {
 								BeNumerically(">=", 200),
 								BeNumerically("<", 300),
 							),
-							Equal(http.StatusMethodNotAllowed),
 							Equal(http.StatusNotFound),
+							Equal(http.StatusMethodNotAllowed),
 						))
 					}
 				})
@@ -423,6 +423,7 @@ var test03ContentDiscovery = func() {
 						BeNumerically(">=", 200),
 						BeNumerically("<", 300),
 					),
+					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
 				))
 			})
@@ -438,6 +439,7 @@ var test03ContentDiscovery = func() {
 						BeNumerically(">=", 200),
 						BeNumerically("<", 300),
 					),
+					Equal(http.StatusNotFound),
 					Equal(http.StatusMethodNotAllowed),
 				))
 			})
@@ -484,8 +486,8 @@ var test03ContentDiscovery = func() {
 							BeNumerically(">=", 200),
 							BeNumerically("<", 300),
 						),
-						Equal(http.StatusMethodNotAllowed),
 						Equal(http.StatusNotFound),
+						Equal(http.StatusMethodNotAllowed),
 					))
 				}
 
