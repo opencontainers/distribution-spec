@@ -444,7 +444,7 @@ This indicates that the upload session has begun and that the client MAY proceed
 
 ##### Pushing Manifests
 
-To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers and body: `/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
+To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers and body: `/v2/<name>/manifests/<reference>` <sup>[end-7a](#endpoints)</sup>
 
 Clients SHOULD set the `Content-Type` header to the type of the manifest being pushed.
 The client SHOULD NOT include parameters on the `Content-Type` header (see [RFC7231](https://www.rfc-editor.org/rfc/rfc7231#section-3.1.1.1)).
@@ -465,6 +465,12 @@ Manifest byte stream:
 
 `<name>` is the namespace of the repository, and the `<reference>` MUST be either a) a digest or b) a tag.
 
+When `<reference>` is a tag, the client may also provide the digest of the content via a `PUT` request in the following format:
+
+`/v2/<name>/manifests/<tag>?digest=<digest>` <sup>[end-7b](#endpoints)</sup>
+
+`<tag>` is the value of the tag and `<digest>` is the value of the digest being pushed.
+
 The uploaded manifest MUST reference any blobs that make up the object.
 However, the list of blobs MAY be empty.
 
@@ -478,6 +484,7 @@ Location: <location>
 The `<location>` is a pullable manifest URL.
 The Docker-Content-Digest header returns the canonical digest of the uploaded blob, and MUST be equal to the client provided digest.
 Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
+If the client provided digest is invalid or uses an unsupported algorithm, the registry SHOULD respond with a response code `400 Bad Request`.
 
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
@@ -758,7 +765,8 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
 | end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
 | end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`       |
-| end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`             |
+| end-7a  | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`400`/`413` |
+| end-7b  | `PUT`          | `/v2/<name>/manifests/<tag>?digest=<digest>`                   | `201`       | `404`/`400`/`413` |
 | end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
 | end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
 | end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
