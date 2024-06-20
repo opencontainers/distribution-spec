@@ -190,6 +190,8 @@ If present, the value of this header MUST be a digest matching that of the respo
 
 If the blob is not found in the registry, the response code MUST be `404 Not Found`.
 
+A registry SHOULD support the `Range` request header in accordance with [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-range-requests).
+
 ##### Checking if content exists in the registry
 
 In order to verify that a repository contains a given manifest or blob, make a `HEAD` request to a URL in the following form:
