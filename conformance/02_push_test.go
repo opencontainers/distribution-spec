@@ -54,6 +54,40 @@ var test02Push = func() {
 			})
 		})
 
+		g.Context("Blob Upload sha512 Streamed", func() {
+			g.Specify("PATCH request with blob in body should yield 202 response", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/").
+					SetQueryParam("digest-algorithm", "sha512")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+
+				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetBody(testBlobs["sha512"][0].Content)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				lastResponse = resp
+			})
+
+			g.Specify("PUT request to session URL with digest should yield 201 response", func() {
+				SkipIfDisabled(push)
+				Expect(lastResponse).ToNot(BeNil())
+				req := client.NewRequest(reggie.PUT, lastResponse.GetRelativeLocation()).
+					SetQueryParam("digest", testBlobs["sha512"][0].Digest).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", testBlobs["sha512"][0].ContentLength)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+			})
+		})
+
 		g.Context("Blob Upload Monolithic", func() {
 			g.Specify("GET nonexistent blob should result in 404 response", func() {
 				SkipIfDisabled(push)
@@ -136,6 +170,23 @@ var test02Push = func() {
 					SetHeader("Content-Type", "application/octet-stream").
 					SetQueryParam("digest", layerBlobDigest).
 					SetBody(layerBlobData)
+				resp, err = client.Do(req)
+				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+			})
+
+			g.Specify("PUT upload of a sha512 blob should yield a 201 Response", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+					SetHeader("Content-Length", testBlobs["sha512"][1].ContentLength).
+					SetHeader("Content-Type", "application/octet-stream").
+					SetQueryParam("digest", testBlobs["sha512"][1].Digest).
+					SetBody(testBlobs["sha512"][1].Content)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
@@ -351,6 +402,20 @@ var test02Push = func() {
 				}
 			})
 
+			g.Specify("PUT should accept a sha512 manifest upload", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+					reggie.WithReference(testTag512Name)).
+					SetQueryParam("digest", testManifests["sha512"].Digest).
+					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+					SetBody(testManifests["sha512"].Content)
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				location := resp.Header().Get("Location")
+				Expect(location).ToNot(BeEmpty())
+				Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+			})
+
 			g.Specify("Registry should accept a manifest upload with no layers", func() {
 				SkipIfDisabled(push)
 				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
@@ -377,6 +442,15 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 			})
+
+			g.Specify("GET request to sha512 manifest URL (digest) should yield 200 response", func() {
+				SkipIfDisabled(push)
+				req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<digest>", reggie.WithDigest(testManifests["sha512"].Digest)).
+					SetHeader("Accept", "application/vnd.oci.image.manifest.v1+json")
+				resp, err := client.Do(req)
+				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
+			})
 		})
 
 		g.Context("Teardown", func() {
@@ -386,6 +460,16 @@ var test02Push = func() {
 					RunOnlyIf(runPushSetup)
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
 					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(testManifests["sha512"].Digest))
+					resp, err = client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(
 						SatisfyAll(
@@ -440,12 +524,40 @@ var test02Push = func() {
 				))
 			})
 
+			for _, blob := range testBlobs["sha512"] {
+				g.Specify("Delete sha512 blob created in setup", func() {
+					SkipIfDisabled(push)
+					RunOnlyIf(runPushSetup)
+					req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(blob.Digest))
+					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusNotFound),
+						Equal(http.StatusMethodNotAllowed),
+					))
+				})
+			}
+
 			if !deleteManifestBeforeBlobs {
 				g.Specify("Delete manifest created in tests", func() {
 					SkipIfDisabled(push)
 					RunOnlyIf(runPushSetup)
 					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
 					resp, err := client.Do(req)
+					Expect(err).To(BeNil())
+					Expect(resp.StatusCode()).To(SatisfyAny(
+						SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300),
+						),
+						Equal(http.StatusMethodNotAllowed),
+					))
+					req = client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(testManifests["sha512"].Digest))
+					resp, err = client.Do(req)
 					Expect(err).To(BeNil())
 					Expect(resp.StatusCode()).To(SatisfyAny(
 						SatisfyAll(

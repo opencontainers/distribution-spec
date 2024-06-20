@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   run:
@@ -12,12 +15,14 @@ jobs:
       - name: checkout source code
         uses: actions/checkout@v3
       - name: Start a test registry (zot)
+        id: registry-zot
         run: |
           set -x
           make registry-ci
+          echo "port=$(docker port oci-conformance 5000 | head -1 | cut -f2 -d:)" >>$GITHUB_OUTPUT
       - name: Run OCI distribution-spec conformance
         env:
-          OCI_ROOT_URL: http://localhost:5000
+          OCI_ROOT_URL: http://localhost:${{ steps.registry-zot.outputs.port }}
           OCI_NAMESPACE: myorg/myrepo
           OCI_TEST_PULL: 1
           OCI_TEST_PUSH: 1

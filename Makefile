@@ -92,26 +92,32 @@ conformance-test:
 
 conformance-binary: $(OUTPUT_DIRNAME)/conformance.test
 
-TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.0-rc6@sha256:bf95a94849cd9c6f596fb10e5a2d03b74267e7886d1ba0b3dab33337d9e46e5c
+# TODO: update image once changes are merged in zot
+# TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.1.0
+TEST_REGISTRY_CONTAINER ?= ghcr.io/andaaron/zot-minimal-linux-amd64:v2.1.0-manifest-digest
 registry-ci:
-	docker rm -f oci-conformance && \
-		mkdir -p $(OUTPUT_DIRNAME) && \
-		echo '{"distSpecVersion":"1.1.0-dev","storage":{"rootDirectory":"/tmp/zot","gc":false,"dedupe":false},"http":{"address":"0.0.0.0","port":"5000"},"log":{"level":"debug"}}' > $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json
-		docker run -d \
-			-v $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json:/etc/zot/config.json \
-			--name=oci-conformance \
-			-p 5000:5000 \
-			$(TEST_REGISTRY_CONTAINER) && \
-		sleep 5
+	docker rm -f oci-conformance || true
+	mkdir -p $(OUTPUT_DIRNAME)
+	docker run -d --rm \
+		--name=oci-conformance \
+		-p 5000 \
+		$(TEST_REGISTRY_CONTAINER)
+	sleep 5
 
-conformance-ci:
-	export OCI_ROOT_URL="http://localhost:5000" && \
+conformance-ci: conformance-binary
+	export OCI_ROOT_URL="http://localhost:$$(docker port oci-conformance 5000 | head -1 | cut -f2 -d:)" && \
 		export OCI_NAMESPACE="myorg/myrepo" && \
 		export OCI_TEST_PULL=1 && \
 		export OCI_TEST_PUSH=1 && \
 		export OCI_TEST_CONTENT_DISCOVERY=1 && \
 		export OCI_TEST_CONTENT_MANAGEMENT=1 && \
 		$(shell pwd)/$(OUTPUT_DIRNAME)/conformance.test
+
+conformance-clean:
+	docker stop oci-conformance || true
+	[ ! -f $(OUTPUT_DIRNAME)/conformance.test ] || rm "$(OUTPUT_DIRNAME)/conformance.test"
+	[ ! -f "junit.xml" ] || rm junit.xml
+	[ ! -f "report.html" ] || rm report.html
 
 $(OUTPUT_DIRNAME)/conformance.test:
 	cd conformance && \

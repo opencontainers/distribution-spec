@@ -68,8 +68,11 @@ const (
 	envVarContentManagement         = "OCI_TEST_CONTENT_MANAGEMENT"
 	envVarPushEmptyLayer            = "OCI_SKIP_EMPTY_LAYER_PUSH_TEST"
 	envVarBlobDigest                = "OCI_BLOB_DIGEST"
+	envVarBlob512Digest             = "OCI_BLOB512_DIGEST"
 	envVarManifestDigest            = "OCI_MANIFEST_DIGEST"
+	envVarManifest512Digest         = "OCI_MANIFEST512_DIGEST"
 	envVarTagName                   = "OCI_TAG_NAME"
+	envVarTag512Name                = "OCI_TAG512_NAME"
 	envVarTagList                   = "OCI_TAG_LIST"
 	envVarHideSkippedWorkflows      = "OCI_HIDE_SKIPPED_WORKFLOWS"
 	envVarAuthScope                 = "OCI_AUTH_SCOPE"
@@ -79,7 +82,6 @@ const (
 	envVarReportDir                 = "OCI_REPORT_DIR"
 
 	emptyLayerTestTag = "emptylayer"
-	testTagName       = "tagtest0"
 
 	titlePull              = "Pull"
 	titlePush              = "Push"
@@ -105,6 +107,8 @@ var (
 		envVarContentDiscovery:  contentDiscovery,
 		envVarContentManagement: contentManagement,
 	}
+	testTagName    = "tagtest0"
+	testTag512Name = "tagtest512"
 
 	testBlobA                          []byte
 	testBlobALength                    string
@@ -128,6 +132,8 @@ var (
 	testBlobBChunk2Range               string
 	testAnnotationKey                  string
 	testAnnotationValues               map[string]string
+	testBlobs                          map[string][]*TestBlob
+	testManifests                      map[string]*TestBlob
 	client                             *reggie.Client
 	crossmountNamespace                string
 	dummyDigest                        string
@@ -159,6 +165,7 @@ var (
 	testsToRun                         int
 	suiteDescription                   string
 	runPullSetup                       bool
+	runPull512Setup                    bool
 	runPushSetup                       bool
 	runContentDiscoverySetup           bool
 	runContentManagementSetup          bool
@@ -251,6 +258,65 @@ func init() {
 	layerBlobDigestRaw := godigest.FromBytes(layerBlobData)
 	layerBlobDigest = layerBlobDigestRaw.String()
 	layerBlobContentLength = fmt.Sprintf("%d", len(layerBlobData))
+
+	testBlobs = map[string][]*TestBlob{}
+	testManifests = map[string]*TestBlob{}
+	layer512Dig := godigest.SHA512.FromBytes(layerBlobData)
+	testBlobs["sha512"] = []*TestBlob{
+		{
+			Content:       layerBlobData,
+			ContentLength: fmt.Sprintf("%d", len(layerBlobData)),
+			Digest:        layer512Dig.String(),
+		},
+	}
+	imgConf := image{
+		Architecture: "amd64",
+		OS:           "linux",
+		RootFS: rootFS{
+			Type: "layers",
+			DiffIDs: []godigest.Digest{
+				layer512Dig,
+			},
+		},
+		Author: randomString(16),
+	}
+	configBytes, err := json.MarshalIndent(imgConf, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	configDig := godigest.SHA512.FromBytes(configBytes)
+	testBlobs["sha512"] = append(testBlobs["sha512"], &TestBlob{
+		Content:       configBytes,
+		ContentLength: fmt.Sprintf("%d", len(configBytes)),
+		Digest:        configDig.String(),
+	})
+	imgMan := manifest{
+		SchemaVersion: 2,
+		MediaType:     "application/vnd.oci.image.manifest.v1+json",
+		Config: descriptor{
+			MediaType:           "application/vnd.oci.image.config.v1+json",
+			Digest:              configDig,
+			Size:                int64(len(configBytes)),
+			Data:                configBytes,           // must be the config content.
+			NewUnspecifiedField: []byte("hello world"), // content doesn't matter.
+		},
+		Layers: []descriptor{
+			{
+				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+				Size:      int64(len(layerBlobData)),
+				Digest:    layer512Dig,
+			},
+		},
+	}
+	imgManBytes, err := json.MarshalIndent(imgMan, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	testManifests["sha512"] = &TestBlob{
+		Content:       imgManBytes,
+		ContentLength: fmt.Sprintf("%d", imgManBytes),
+		Digest:        godigest.SHA512.FromBytes(imgManBytes).String(),
+	}
 
 	layers := []descriptor{{
 		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
@@ -544,6 +610,7 @@ func init() {
 	}
 
 	runPullSetup = true
+	runPull512Setup = true
 	runPushSetup = true
 	runContentDiscoverySetup = true
 	runContentManagementSetup = true
@@ -553,6 +620,16 @@ func init() {
 		os.Getenv(envVarManifestDigest) != "" &&
 		os.Getenv(envVarBlobDigest) != "" {
 		runPullSetup = false
+		testTagName = os.Getenv(envVarTagName)
+	}
+
+	if os.Getenv(envVarTag512Name) != "" &&
+		os.Getenv(envVarManifest512Digest) != "" &&
+		os.Getenv(envVarBlob512Digest) != "" {
+		runPull512Setup = false
+		testTag512Name = os.Getenv(envVarTag512Name)
+		testManifests["sha512"].Digest = os.Getenv(envVarManifest512Digest)
+		testBlobs["sha512"][0].Digest = os.Getenv(envVarBlob512Digest)
 	}
 
 	if os.Getenv(envVarTagList) != "" {
