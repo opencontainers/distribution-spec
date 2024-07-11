@@ -155,6 +155,11 @@ Throughout this document, `<name>` MUST match the following regular expression:
 
 `[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*`
 
+_Implementers note:_
+Many clients impose a limit of 255 characters on the length of the concatenation of the registry hostname (and optional port), `/`, and `<name>` value.
+If the registry name is `registry.example.org:5000`, those clients would be limited to a `<name>` of 229 characters (255 minus 25 for the registry hostname and port and minus 1 for a `/` separator).
+For compatibility with those clients, registries should avoid values of `<name>` that would cause this limit to be exceeded.
+
 Throughout this document, `<reference>` as a tag MUST be at most 128 characters in length and MUST match the following regular expression:
 
 `[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}`
@@ -550,7 +555,7 @@ The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
-*Implementers note:*
+_Implementers note:_
 Previous versions of this specification did not include the `Link` header.
 Clients depending on the number of tags returned matching `n` may prematurely stop pagination on registries using the `Link` header.
 When available, clients should prefer the `Link` header over using the `last` parameter for pagination.
