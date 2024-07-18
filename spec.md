@@ -61,6 +61,7 @@ These error codes are OPTIONAL and clients SHOULD NOT depend on them.
 Several terms are used frequently in this document and warrant basic definitions:
 
 - **Registry**: a service that handles the required APIs defined in this specification
+- **Repository**: a scope for API calls on a registry for a collection of content (including manifests, blobs, and tags).
 - **Client**: a tool that communicates with Registries
 - **Push**: the act of uploading blobs and manifests to a registry
 - **Pull**: the act of downloading blobs and manifests from a registry
@@ -180,7 +181,7 @@ If the digest does differ, it MAY be the case that the hashing algorithms used d
 See [Content Digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> for information on how to detect the hashing algorithm in use.
 Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded blob data.
 
-If the manifest is not found in the registry, the response code MUST be `404 Not Found`.
+If the manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
 ##### Pulling blobs
 
@@ -193,7 +194,7 @@ A GET request to an existing blob URL MUST provide the expected blob, with a res
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 If present, the value of this header MUST be a digest matching that of the response body.
 
-If the blob is not found in the registry, the response code MUST be `404 Not Found`.
+If the blob is not found in the repository, the response code MUST be `404 Not Found`.
 
 A registry SHOULD support the `Range` request header in accordance with [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-range-requests).
 
@@ -209,7 +210,7 @@ A HEAD request to an existing blob or manifest URL MUST return `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 A successful response SHOULD contain the size in bytes of the uploaded blob in the header `Content-Length`.
 
-If the blob or manifest is not found in the registry, the response code MUST be `404 Not Found`.
+If the blob or manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
 #### Push
 
