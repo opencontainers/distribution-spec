@@ -73,7 +73,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Object**: one conceptual piece of content stored as blobs with an accompanying manifest. (This was previously described as an "artifact")
 - **Descriptor**: a reference that describes the type, metadata and content address of referenced content. Descriptors are defined under the OCI Image Spec <sup>[apdx-5](#appendix)</sup>.
 - **Digest**: a unique identifier created from a cryptographic hash of a Blob's content. Digests are defined under the OCI Image Spec <sup>[apdx-3](#appendix)</sup>
-- **Tag**: a custom, human-readable manifest identifier
+- **Tag**: a custom, human-readable pointer to a manifest. A manifest digest may have zero, one, or many tags referencing it.
 - **Subject**: an association from one manifest to another, typically used to attach an artifact to an image.
 - **Referrers List**: a list of manifests with a subject relationship to a specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
 
@@ -675,6 +675,8 @@ If tag deletion is disabled, the registry MUST respond with either a `400 Bad Re
 
 To delete a tag, perform a `DELETE` request to a path in the following format: `/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
 
+Once deleted, a `GET` to `/v2/<name>/manifests/<tag>` will return a 404.
+
 ##### Deleting Manifests
 
 To delete a manifest, perform a `DELETE` request to a path in the following format: `/v2/<name>/manifests/<digest>` <sup>[end-9](#endpoints)</sup>
@@ -682,6 +684,8 @@ To delete a manifest, perform a `DELETE` request to a path in the following form
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest to be deleted.
 Upon success, the registry MUST respond with a `202 Accepted` code.
 If the repository does not exist, the response MUST return `404 Not Found`.
+
+Once deleted, a `GET` to `/v2/<name>/manifests/<digest>` and any tag pointing to that digest will return a 404.
 
 When deleting an image manifest that contains a `subject` field, and the [referrers API](#listing-referrers) returns a 404, clients SHOULD:
 
