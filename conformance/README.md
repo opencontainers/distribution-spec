@@ -86,6 +86,9 @@ to content already present in the registry:
 OCI_MANIFEST_DIGEST=<digest>
 OCI_TAG_NAME=<tag>
 OCI_BLOB_DIGEST=<digest>
+OCI_MANIFEST512_DIGEST=<digest>
+OCI_TAG512_NAME=<tag>
+OCI_BLOB512_DIGEST=<digest>
 ```
 
 ##### Push

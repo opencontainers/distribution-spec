@@ -31,7 +31,7 @@ runs:
       run: |
         set -x
 
-        # Enter the directory containing the checkout of this action which is surpisingly hard to do (but we did it... #OCI)
+        # Enter the directory containing the checkout of this action which is surprisingly hard to do (but we did it... #OCI)
         cd "$(dirname $(find $(find ~/work/_actions -name distribution-spec -print -quit) -name Makefile -print -quit))"
         
         # The .git folder is not present, but the dirname is the requested action ref, so use this as the conformance version
