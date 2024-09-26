@@ -669,11 +669,11 @@ Similarly, a registry MAY implement tag deletion, while others MAY allow deletio
 
 ##### Deleting tags
 
+To delete a tag, perform a `DELETE` request to a path in the following format: `/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
+
 `<name>` is the namespace of the repository, and `<tag>` is the name of the tag to be deleted.
 Upon success, the registry MUST respond with a `202 Accepted` code.
 If tag deletion is disabled, the registry MUST respond with either a `400 Bad Request` or a `405 Method Not Allowed`.
-
-To delete a tag, perform a `DELETE` request to a path in the following format: `/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
 
 Once deleted, a `GET` to `/v2/<name>/manifests/<tag>` will return a 404.
 
@@ -684,6 +684,7 @@ To delete a manifest, perform a `DELETE` request to a path in the following form
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the manifest to be deleted.
 Upon success, the registry MUST respond with a `202 Accepted` code.
 If the repository does not exist, the response MUST return `404 Not Found`.
+If manifest deletion is disabled, the registry MUST respond with either a `400 Bad Request` or a `405 Method Not Allowed`.
 
 Once deleted, a `GET` to `/v2/<name>/manifests/<digest>` and any tag pointing to that digest will return a 404.
 
@@ -703,6 +704,7 @@ To delete a blob, perform a `DELETE` request to a path in the following format: 
 `<name>` is the namespace of the repository, and `<digest>` is the digest of the blob to be deleted.
 Upon success, the registry MUST respond with code `202 Accepted`.
 If the blob is not found, a `404 Not Found` code MUST be returned.
+If blob deletion is disabled, the registry MUST respond with either a `400 Bad Request` or a `405 Method Not Allowed`.
 
 ### Backwards Compatibility
 
@@ -768,12 +770,12 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
 | end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
 | end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`       |
-| end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`             |
+| end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
 | end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
 | end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
 | end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
-| end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`405`       |
-| end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`       | `404`             |
+| end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`400`/`405` |
+| end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`/`202` | `404`             |
 | end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                                | `200`       | `404`/`400`       |
 | end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
 | end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
