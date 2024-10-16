@@ -179,7 +179,8 @@ A successful response SHOULD contain the digest of the uploaded blob in the head
 The `Docker-Content-Digest` header, if present on the response, returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
 If the digest does differ, it MAY be the case that the hashing algorithms used do not match.
 See [Content Digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> for information on how to detect the hashing algorithm in use.
-Most clients MAY ignore the value, but if it is used, the client MUST verify the value against the uploaded blob data.
+Most clients MAY ignore the value, but if it is used, the client MUST verify the value matches the returned manifest.
+If the `<reference>` part of a manifest request is a digest, clients SHOULD verify the returned manifest matches this digest.
 
 If the manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
@@ -193,6 +194,8 @@ To pull a blob, perform a `GET` request to a URL in the following form:
 A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
 A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 If present, the value of this header MUST be a digest matching that of the response body.
+Most clients MAY ignore the value, but if it is used, the client MUST verify the value matches the returned response body.
+Clients SHOULD verify that the response body matches the requested digest.
 
 If the blob is not found in the repository, the response code MUST be `404 Not Found`.
 
