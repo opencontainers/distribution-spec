@@ -15,10 +15,10 @@ jobs:
 
     steps:
       - name: checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: setup go environment
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
 
@@ -43,7 +43,7 @@ jobs:
 
       - name: Upload OCI conformance results as build artifact
         if: always() && steps.tests.outputs.has-report == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: oci-conformance-results-${{ matrix.go }}
           path: |
