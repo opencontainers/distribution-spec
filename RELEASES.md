@@ -64,7 +64,7 @@ Releases usually follow a few steps:
   - [ ] a commit bumping `./specs-go/version.go` to next version and empty the `VersionDev` variable
   - [ ] a commit adding back the "+dev" to `VersionDev`
 - [ ] send email to <dev@opencontainers.org>
-  - [ ] copy the exact commit hash for bumping the version from the pull-request (since master always stays as "-dev")
+  - [ ] copy the exact commit hash for bumping the version from the pull-request (since master always stays as "+dev")
   - [ ] count the PRs since last release (that this version is tracking, in the cases of multiple branching), like `git log --pretty=oneline --no-merges --decorate $priorTag..$versionBumpCommit  | grep \(pr\/ | wc -l`
   - [ ] get the date for a week from now, like `TZ=UTC date --date='next week'`
   - [ ] OPTIONAL find a cute animal gif to attach to the email, and subsequently the release description
@@ -95,5 +95,6 @@ $sig
   - [ ] link to the the VOTE thread and include the passing vote count
   - [ ] link to the pull request that merged the release
 - [ ] add release notes to the website <https://github.com/opencontainers/opencontainers.org/tree/main/content/release-notices>
+- [ ] update the version number at <https://github.com/opencontainers/specs.opencontainers.org> in `_data/specs.yaml`
 
 [charter]: https://github.com/opencontainers/tob/blob/main/CHARTER.md
