@@ -721,14 +721,17 @@ A client querying the [referrers API](#listing-referrers) and receiving a `404 N
 
 ##### Referrers Tag Schema
 
-```text
-<alg>-<ref>
-```
+The Referrers Tag associated with a [Content Digest](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> MUST match the Truncated Algorithm, a `-` character, and the Truncated Encoded section, with any characters not allowed by [`<reference>` tags](#pulling-manifests) replaced with `-`.
+The Truncated Algorithm associated with a Content Digest MUST match the digest's `algorithm` section truncated to 32 characters.
+The Truncated Encoded section associated with a Content Digest MUST match the digest's `encoded` section truncated to 64 characters.
 
-- `<alg>`: the digest algorithm (e.g. `sha256` or `sha512`)
-- `<ref>`: the digest from the `subject` field (limit of 64 characters)
+For example, the following list maps `subject` field digests to Referrers Tags:
 
-For example, a manifest with the `subject` field digest set to `sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` in the `registry.example.org/project` repository would have a descriptor in the referrers list at `registry.example.org/project:sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.
+| Digest | Truncated Algorithm | Truncated Encoded | Referrers Tag |
+| ------ | ------------------- | ----------------- | ------------- |
+| sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | sha256 | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | sha256-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |
+| sha512:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | sha512 | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa |
+| test+algorithm+using+algorithm+separators+and+lots+of+characters+to+excercise+overall+truncation:alsoSome=InTheEncodedSectionToShowHyphenReplacementAndLotsAndLotsOfCharactersToExcerciseEncodedTruncation | test+algorithm+using+algorithm+s | alsoSome=InTheEncodedSectionToShowHyphenReplacementAndLotsAndLot | test-algorithm-using-algorithm-s-alsoSome-InTheEncodedSectionToShowHyphenReplacementAndLotsAndLot |
 
 This tag should return an image index matching the expected response of the [referrers API](#listing-referrers).
 Maintaining the content of this tag is the responsibility of clients pushing and deleting image manifests that contain a `subject` field.
