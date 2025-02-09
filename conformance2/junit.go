@@ -36,7 +36,7 @@ type junitTestSuite struct {
 	Name       string          `xml:"name,attr"`                     // name of suite
 	Package    string          `xml:"package,attr,omitempty"`        // hierarchy of suite
 	Tests      int             `xml:"tests,attr"`                    // count of tests
-	Failures   int             `xml:"failures,attr"`                 //  count of failures
+	Failures   int             `xml:"failures,attr"`                 // count of failures
 	Errors     int             `xml:"errors,attr"`                   // count of errors
 	Disabled   int             `xml:"disabled,attr,omitempty"`       // count of disabled tests
 	Skipped    int             `xml:"skipped,attr,omitempty"`        // count of skipped tests

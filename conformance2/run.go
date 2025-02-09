@@ -236,19 +236,14 @@ func (r *runner) TestEmpty() error {
 
 func (r *runner) TestEmptyTagList() error {
 	return r.Child("tag list", func(r *runner) error {
-		errs := []error{}
 		if err := r.APIRequire(apiTagList); err != nil {
 			r.Skip(err)
 			return nil
 		}
 		if _, err := r.common.api.TagList(r.common.config.schemeReg, r.common.config.Repo1); err != nil {
-			r.APIFail(apiTagList)
-			errs = append(errs, err)
+			r.APIFail(err, apiTagList)
 		} else {
 			r.APIPass(apiTagList)
-		}
-		if len(errs) > 0 {
-			return errors.Join(errs...)
 		}
 		return nil
 	})
@@ -298,8 +293,8 @@ func (r *runner) TestPushBlobPostPut(tdName string, dig digest.Digest) error {
 			return nil
 		}
 		if err := r.common.api.BlobPostPut(r.common.config.schemeReg, r.common.config.Repo1, dig, r.common.data[tdName]); err != nil {
-			r.APIFail(apiBlobPostPut)
-			return err
+			r.APIFail(err, apiBlobPostPut)
+			return nil
 		}
 		r.APIPass(apiBlobPostPut)
 		return nil
@@ -313,8 +308,8 @@ func (r *runner) TestPushBlobPostOnly(tdName string, dig digest.Digest) error {
 			return nil
 		}
 		if err := r.common.api.BlobPostOnly(r.common.config.schemeReg, r.common.config.Repo1, dig, r.common.data[tdName]); err != nil {
-			r.APIFail(apiBlobPostOnly)
-			return err
+			r.APIFail(err, apiBlobPostOnly)
+			return nil
 		}
 		r.APIPass(apiBlobPostOnly)
 		return nil
@@ -332,8 +327,8 @@ func (r *runner) TestPushManifest(tdName string, dig digest.Digest) error {
 				return nil
 			}
 			if err := r.common.api.ManifestPut(r.common.config.schemeReg, r.common.config.Repo1, td.tag, dig, td); err != nil {
-				r.APIFail(apiManifestPutTag)
-				return err
+				r.APIFail(err, apiManifestPutTag)
+				return nil
 			}
 			r.APIPass(apiManifestPutTag)
 			return nil
@@ -347,8 +342,8 @@ func (r *runner) TestPushManifest(tdName string, dig digest.Digest) error {
 				return nil
 			}
 			if err := r.common.api.ManifestPut(r.common.config.schemeReg, r.common.config.Repo1, dig.String(), dig, td); err != nil {
-				r.APIFail(apiManifestPutDigest)
-				return err
+				r.APIFail(err, apiManifestPutDigest)
+				return nil
 			}
 			r.APIPass(apiManifestPutDigest)
 			return nil
@@ -385,15 +380,20 @@ func (r *runner) Child(name string, fn func(*runner) error) error {
 }
 
 func (r *runner) Skip(err error) {
-	r.results.status = statusSkip
-	r.results.counts[statusSkip]++
+	s := statusSkip
+	if errors.Is(err, ErrDisabled) {
+		s = statusDisabled
+	}
+	r.results.status = r.results.status.Set(s)
+	r.results.counts[s]++
 	fmt.Fprintf(r.results.output, "%s: skipping test:\n  %s\n", r.name,
 		strings.ReplaceAll(err.Error(), "\n", "\n  "))
 }
 
-func (r *runner) APIFail(apis ...apiType) {
+func (r *runner) APIFail(err error, apis ...apiType) {
 	r.results.status = r.results.status.Set(statusFail)
 	r.results.counts[statusFail]++
+	r.results.errs = append(r.results.errs, err)
 	for _, a := range apis {
 		r.common.apiStatus[a] = r.common.apiStatus[a].Set(statusFail)
 	}
@@ -419,33 +419,33 @@ func (r *runner) APIRequire(apis ...apiType) error {
 		switch a {
 		case apiTagList:
 			if !r.common.config.APIs.Tags {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration", aText))
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case apiManifestPutTag, apiManifestPutDigest, apiManifestPutSubject,
 			apiBlobPush, apiBlobPostOnly, apiBlobPostPut,
 			apiBlobPatchChunk, apiBlobPatchStream, apiBlobMountSource, apiBlobMountAnonymous:
 			if !r.common.config.APIs.Push {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration", aText))
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case apiManifestGetTag, apiManifestGetDigest, apiBlobGetFull, apiBlobGetRange:
 			if !r.common.config.APIs.Pull {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration", aText))
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case apiBlobDelete:
 			if !r.common.config.APIs.Delete.Blob {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration", aText))
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case apiManifestDeleteTag:
 			if !r.common.config.APIs.Delete.Tag {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration", aText))
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case apiManifestDeleteDigest:
 			if !r.common.config.APIs.Delete.Manifest {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration", aText))
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case apiReferrers:
 			if !r.common.config.APIs.Referrer {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration", aText))
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		}
 		// do not check the [r.global.apiState] since tests may pass or fail based on different input data
@@ -454,4 +454,57 @@ func (r *runner) APIRequire(apis ...apiType) error {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (r *runner) ToJunit() *junitTestSuites {
+	statusTotal := 0
+	for i := status(1); i < statusMax; i++ {
+		statusTotal += r.results.counts[i]
+	}
+	tSec := fmt.Sprintf("%f", r.results.stop.Sub(r.results.start).Seconds())
+	jTSuites := junitTestSuites{
+		Tests:    statusTotal,
+		Errors:   r.results.counts[statusError],
+		Failures: r.results.counts[statusFail],
+		Skipped:  r.results.counts[statusSkip],
+		Disabled: r.results.counts[statusDisabled],
+		Time:     tSec,
+	}
+	jTSuite := junitTestSuite{
+		Name:     r.name,
+		Tests:    statusTotal,
+		Errors:   r.results.counts[statusError],
+		Failures: r.results.counts[statusFail],
+		Skipped:  r.results.counts[statusSkip],
+		Disabled: r.results.counts[statusDisabled],
+		Time:     tSec,
+	}
+	jTSuite.Testcases = r.ToJunitTestCases()
+	// TODO: inject configuration as properties on jTSuite
+	jTSuites.Suites = []junitTestSuite{jTSuite}
+	return &jTSuites
+}
+
+func (r *runner) ToJunitTestCases() []junitTest {
+	jTests := []junitTest{}
+	if len(r.children) == 0 {
+		// return the test case for a leaf node
+		jTest := junitTest{
+			Name:      r.name,
+			Time:      fmt.Sprintf("%f", r.results.stop.Sub(r.results.start).Seconds()),
+			SystemErr: r.results.output.String(),
+			Status:    r.results.status.ToJunit(),
+		}
+		if len(r.results.errs) > 0 {
+			jTest.SystemOut = fmt.Sprintf("%v", errors.Join(r.results.errs...))
+		}
+		jTests = append(jTests, jTest)
+	}
+	if len(r.children) > 0 {
+		// recursively collect test cases from child nodes
+		for _, child := range r.children {
+			jTests = append(jTests, child.ToJunitTestCases()...)
+		}
+	}
+	return jTests
 }
