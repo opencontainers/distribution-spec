@@ -17,16 +17,17 @@ const (
 )
 
 type config struct {
-	Registry  string     `conformance:"REGISTRY" yaml:"registry"` // hostname:port of registry server
-	TLS       tls        `conformance:"TLS" yaml:"tls"`           // tls configuration for communicating with the registry
-	Repo1     string     `conformance:"REPO1" yaml:"repo1"`       // first repository for pushing content
-	Repo2     string     `conformance:"REPO2" yaml:"repo2"`       // second repository for pushing content
-	LoginUser string     `conformance:"USERNAME" yaml:"username"` // username for login, leave blank for anonymous
-	LoginPass string     `conformance:"PASSWORD" yaml:"password"` // password for login, leave blank for anonymous
-	LogLevel  string     `conformance:"LOG" yaml:"logging"`       // TODO: logging level, use slog levels
-	APIs      configAPI  `conformance:"API" yaml:"apis"`          // API tests to run
-	Data      configData `conformance:"DATA" yaml:"data"`
-	schemeReg string     // base for url to access the registry
+	Registry   string     `conformance:"REGISTRY" yaml:"registry"` // hostname:port of registry server
+	TLS        tls        `conformance:"TLS" yaml:"tls"`           // tls configuration for communicating with the registry
+	Repo1      string     `conformance:"REPO1" yaml:"repo1"`       // first repository for pushing content
+	Repo2      string     `conformance:"REPO2" yaml:"repo2"`       // second repository for pushing content
+	LoginUser  string     `conformance:"USERNAME" yaml:"username"` // username for login, leave blank for anonymous
+	LoginPass  string     `conformance:"PASSWORD" yaml:"password"` // password for login, leave blank for anonymous
+	LogLevel   string     `conformance:"LOG" yaml:"logging"`       // TODO: logging level, use slog levels
+	APIs       configAPI  `conformance:"API" yaml:"apis"`          // API tests to run
+	Data       configData `conformance:"DATA" yaml:"data"`
+	ResultsDir string     `conformance:"RESULTS_DIR" yaml:"resultsDir"` // Directory to write results
+	schemeReg  string     // base for url to access the registry
 }
 
 type tls int
@@ -93,6 +94,7 @@ func configLoad() (config, error) {
 			SubjectList:      true,
 			Nondistributable: false,
 		},
+		ResultsDir: "./results",
 	}
 
 	// TODO:

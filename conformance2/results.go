@@ -18,12 +18,13 @@ type results struct {
 type status int
 
 const (
-	statusUnknown status = iota // status is undefined
-	statusSkip                  // test was skipped
-	statusPass                  // test passed
-	statusFail                  // test detected a conformance failure
-	statusError                 // failure of the test engine itself
-	statusMax                   // only used for allocating arrays
+	statusUnknown  status = iota // status is undefined
+	statusDisabled               // test was disabled by configuration
+	statusSkip                   // test was skipped
+	statusPass                   // test passed
+	statusFail                   // test detected a conformance failure
+	statusError                  // failure of the test engine itself
+	statusMax                    // only used for allocating arrays
 )
 
 func (s status) Set(set status) status {
@@ -40,6 +41,8 @@ func (s status) String() string {
 		return "Pass"
 	case statusSkip:
 		return "Skip"
+	case statusDisabled:
+		return "Disabled"
 	case statusFail:
 		return "Fail"
 	case statusError:
@@ -55,4 +58,17 @@ func (s status) MarshalText() ([]byte, error) {
 		return []byte(ret), fmt.Errorf("unknown status %d", s)
 	}
 	return []byte(ret), nil
+}
+
+func (s status) ToJunit() string {
+	switch s {
+	case statusPass:
+		return junitPassed
+	case statusSkip, statusDisabled:
+		return junitSkipped
+	case statusFail:
+		return junitFailure
+	default:
+		return junitError
+	}
 }
