@@ -17,10 +17,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to setup test: %v\n", err)
 		return
 	}
-	err = r.TestAll()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Test failed:\n%v\n", err)
-	}
+	_ = r.TestAll()
 	r.Report(os.Stdout)
 	// TODO: write junit.xml report
 }

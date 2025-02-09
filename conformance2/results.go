@@ -12,7 +12,6 @@ type results struct {
 	output *bytes.Buffer
 	start  time.Time
 	stop   time.Time
-	child  []*results
 	counts [statusMax]int
 }
 
