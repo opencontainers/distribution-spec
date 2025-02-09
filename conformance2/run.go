@@ -22,9 +22,10 @@ const (
 var blobAPIs = []apiType{apiBlobPostPut, apiBlobPostOnly}
 
 type runner struct {
-	common  *runnerCommon
-	name    string // name of current runner step, concatenated onto the parent's name
-	results results
+	common   *runnerCommon
+	name     string // name of current runner step, concatenated onto the parent's name
+	results  results
+	children []*runner
 }
 
 type runnerCommon struct {
@@ -155,7 +156,10 @@ func (r *runner) GenerateData() error {
 }
 
 func (r *runner) Report(w io.Writer) {
-	// TODO: walk the runner tree and display failures from various steps
+	fmt.Fprintf(w, "Test results\n")
+	r.ReportWalkErr(w, "")
+	fmt.Fprintf(w, "\n")
+
 	fmt.Fprintf(w, "OCI Conformance Result: %s\n", r.results.status.String())
 	padWidth := 30
 
@@ -200,6 +204,21 @@ func (r *runner) Report(w io.Writer) {
 	}
 	fmt.Fprintf(w, "\n")
 	// TODO: include config
+}
+
+func (r *runner) ReportWalkErr(w io.Writer, prefix string) {
+	fmt.Fprintf(w, "%s%s: %s\n", prefix, r.name, r.results.status)
+	if len(r.children) == 0 && len(r.results.errs) > 0 {
+		// show errors from leaf nodes
+		for _, err := range r.results.errs {
+			fmt.Fprintf(w, "%s - %s\n", prefix, err.Error())
+		}
+	}
+	if len(r.children) > 0 {
+		for _, child := range r.children {
+			child.ReportWalkErr(w, prefix+"  ")
+		}
+	}
 }
 
 func (r *runner) TestEmpty() error {
@@ -338,30 +357,30 @@ func (r *runner) TestPushManifest(tdName string, dig digest.Digest) error {
 }
 
 func (r *runner) Child(name string, fn func(*runner) error) error {
-	rr := runner{
+	rChild := runner{
 		results: results{
 			output: &bytes.Buffer{},
 		},
 		common: r.common,
 	}
 	if r.name != "" {
-		rr.name = fmt.Sprintf("%s/%s", r.name, name)
+		rChild.name = fmt.Sprintf("%s/%s", r.name, name)
 	} else {
-		rr.name = name
+		rChild.name = name
 	}
-	r.results.child = append(r.results.child, &rr.results)
-	rr.results.start = time.Now()
-	err := fn(&rr)
-	rr.results.stop = time.Now()
+	r.children = append(r.children, &rChild)
+	rChild.results.start = time.Now()
+	err := fn(&rChild)
+	rChild.results.stop = time.Now()
 	if err != nil {
-		rr.results.errs = append(rr.results.errs, err)
-		rr.results.status = rr.results.status.Set(statusError)
-		rr.results.counts[statusError]++
+		rChild.results.errs = append(rChild.results.errs, err)
+		rChild.results.status = rChild.results.status.Set(statusError)
+		rChild.results.counts[statusError]++
 	}
 	for i := statusUnknown; i < statusMax; i++ {
-		r.results.counts[i] += rr.results.counts[i]
+		r.results.counts[i] += rChild.results.counts[i]
 	}
-	r.results.status = r.results.status.Set(rr.results.status)
+	r.results.status = r.results.status.Set(rChild.results.status)
 	return err
 }
 
