@@ -559,6 +559,17 @@ The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
+The registry SHOULD support filtering on `tagType`.
+To fetch the list of tags with a filter, perform a `GET` request to a path in the following format: `/v2/<name>/tags/list?tagType=<tagType>` <sup>[end-8c](#endpoints)</sup>
+If filtering is requested and applied, the response MUST include a header `OCI-Filters-Applied: tagType` denoting that an `tagType` filter was applied.
+If multiple filters are applied, the header MUST contain a comma separated list of applied filters.
+If the `OCI-Filters-Applied` is included, the `n` and `last` query parameters and any `Link` headers MUST be applied
+to the filtered list of tags.
+
+If the `tagType` query parameter is provided, it MUST be one of the following values:
+- `digest`: tags values which start with the prefix `sha256-` used in [Referrers Tag Schema](#referrers-tag-schema) and elsewhere
+- `real`: tag values which do not match another `tagType` listed above (e.g. "latest")
+
 _Implementers note:_
 Previous versions of this specification did not include the `Link` header.
 Clients depending on the number of tags returned matching `n` may prematurely stop pagination on registries using the `Link` header.
@@ -776,6 +787,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
 | end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
 | end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
+| end-8c  | `GET`          | `/v2/<name>/tags/list?tagType=<tagType>`                       | `200`       | `404`             |
 | end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
 | end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`400`/`405` |
 | end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`/`202` | `404`             |
