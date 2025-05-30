@@ -30,8 +30,12 @@ var test02Push = func() {
 				location := resp.Header().Get("Location")
 				Expect(location).ToNot(BeEmpty())
 
+				length, _ := strconv.Atoi(testBlobALength)
+
 				req = client.NewRequest(reggie.PATCH, resp.GetRelativeLocation()).
 					SetHeader("Content-Type", "application/octet-stream").
+					SetHeader("Content-Length", testBlobALength).
+					SetHeader("Content-Range", fmt.Sprintf("0-%d", length-1)).
 					SetBody(testBlobA)
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
@@ -217,7 +221,8 @@ var test02Push = func() {
 
 			g.Specify("Get on stale blob upload should return 204 with a range and location", func() {
 				SkipIfDisabled(push)
-				req := client.NewRequest(reggie.GET, prevResponse.GetRelativeLocation())
+				req := client.
+					NewRequest(reggie.GET, prevResponse.GetRelativeLocation())
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusNoContent))
