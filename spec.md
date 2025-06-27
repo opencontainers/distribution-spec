@@ -559,8 +559,9 @@ The tags MUST be in lexical order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
-Registries MAY support an enhanced tag listing experience when clients pass an `Accept` header value of 
-`application/vnd.oci.image.index.v1+json`. If a registry supports this mode, they MUST support these additional query parameters:
+Registries MAY support an enhanced tag listing experience when clients pass an `Accept` header value of `application/vnd.oci.image.index.v1+json`.
+If a registry supports this mode, they MUST set the `Content-Type: application/vnd.oci.image.index.v1+json` header.
+Registries supporting the enhanced tag list MUST support these additional query parameters:
 * `sort_by` - allowed values are `created_at`, `name`
 * `sort_order` - allowed values are `asc` and `desc`
 
@@ -593,7 +594,7 @@ The response MUST be a json body in the following format:
 ```
 The following annotations MUST be included:
 * `org.opencontainers.image.ref.created` - Date and time the reference was created (date-time string as defined by RFC 3339). If unknown, default to epoch.
-* `org.opencontainers.image.ref.name` - Reference name of the manifest.
+* `org.opencontainers.image.ref.name` - Name of the tag.
 
 The following annotations MAY be included:
 * `org.opencontainers.image.created` - Date and time on which the image was built (date-time string as defined by RFC 3339).
@@ -603,8 +604,8 @@ The following annotations MAY be included:
 _Implementers note:_
 Previous versions of this specification did not include the `Link` header.
 Clients depending on the number of tags returned matching `n` may prematurely stop pagination on registries using the `Link` header.
-When available, clients should prefer the `Link` header over using the `last` parameter for pagination. If using enhanced
-tag listing, the `Link` header MUST be provided.
+When available, clients should prefer the `Link` header over using the `last` parameter for pagination.
+If using enhanced tag listing, clients MUST use the `Link` header for pagination.
 
 ##### Listing Referrers
 
