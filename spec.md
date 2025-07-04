@@ -721,6 +721,7 @@ This host component in a repository name SHOULD be the registry host a client co
 This original host component used by the client is referred to as the source host in the API documentation.
 A proxy registry MAY use the `ns` query parameter to resolve an upstream registry host.
 A registry MAY choose to ignore the `ns` query parameter.
+A registry that uses the `ns` query parameter to scope the request SHOULD return the `ns` query parameter value in the `OCI-Namespace` header.
 
 A client SHOULD be aware of whether a registry host is a proxy, such as when the `ns` query parameter differs from the `Host` header.
 A client SHOULD avoid sending `ns` query parameters to non-proxy registries.
