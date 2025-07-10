@@ -237,6 +237,7 @@ var test02Push = func() {
 				Expect(err).To(BeNil())
 				location := resp.Header().Get("Location")
 				Expect(resp.StatusCode()).To(Equal(http.StatusAccepted))
+				Expect(resp.Header().Get("Range")).To(Equal(fmt.Sprintf("0-%d", len(testBlobB)-1)))
 				Expect(location).ToNot(BeEmpty())
 				lastResponse = resp
 			})
