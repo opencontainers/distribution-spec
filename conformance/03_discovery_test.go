@@ -272,7 +272,6 @@ var test03ContentDiscovery = func() {
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 				tagList = getTagList(resp)
-				Expect(err).To(BeNil())
 				Expect(len(tagList)).To(Equal(numResults))
 			})
 
@@ -283,16 +282,18 @@ var test03ContentDiscovery = func() {
 					SetQueryParam("n", strconv.Itoa(numResults))
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
+				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 				tagList = getTagList(resp)
+				last := tagList[numResults-1]
 				req = client.NewRequest(reggie.GET, "/v2/<name>/tags/list").
 					SetQueryParam("n", strconv.Itoa(numResults)).
 					SetQueryParam("last", tagList[numResults-1])
 				resp, err = client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
-				Expect(err).To(BeNil())
+				tagList = getTagList(resp)
 				Expect(len(tagList)).To(BeNumerically("<=", numResults))
-				Expect(tagList).To(ContainElement(tagList[numResults-1]))
+				Expect(tagList).ToNot(ContainElement(last))
 			})
 		})
 
