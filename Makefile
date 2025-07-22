@@ -92,7 +92,7 @@ conformance-test:
 
 conformance-binary: $(OUTPUT_DIRNAME)/conformance.test
 
-TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.0-rc6@sha256:bf95a94849cd9c6f596fb10e5a2d03b74267e7886d1ba0b3dab33337d9e46e5c
+TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.0.4@sha256:0312c23d9658b912a0d4db5c6ecd6d4391c1211912f10de3e9a52685f000318a
 registry-ci:
 	docker rm -f oci-conformance && \
 		mkdir -p $(OUTPUT_DIRNAME) && \
