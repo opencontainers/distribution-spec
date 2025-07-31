@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -61,17 +62,18 @@ var test03ContentDiscovery = func() {
 				SkipIfDisabled(contentDiscovery)
 				RunOnlyIf(runContentDiscoverySetup)
 				for i := 0; i < numTags; i++ {
-					tag := fmt.Sprintf("test%d", i)
-					tagList = append(tagList, tag)
-					req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-						reggie.WithReference(tag)).
-						SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-						SetBody(manifests[2].Content)
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300)))
+					for _, tag := range []string{"test" + strconv.Itoa(i), "TEST" + strconv.Itoa(i)} {
+						tagList = append(tagList, tag)
+						req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+							reggie.WithReference(tag)).
+							SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
+							SetBody(manifests[2].Content)
+						resp, err := client.Do(req)
+						Expect(err).To(BeNil())
+						Expect(resp.StatusCode()).To(SatisfyAll(
+							BeNumerically(">=", 200),
+							BeNumerically("<", 300)))
+					}
 				}
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
@@ -253,7 +255,7 @@ var test03ContentDiscovery = func() {
 		})
 
 		g.Context("Test content discovery endpoints (listing tags)", func() {
-			g.Specify("GET request to list tags should yield 200 response", func() {
+			g.Specify("GET request to list tags should yield 200 response and be in sorted order", func() {
 				SkipIfDisabled(contentDiscovery)
 				req := client.NewRequest(reggie.GET, "/v2/<name>/tags/list")
 				resp, err := client.Do(req)
@@ -261,6 +263,15 @@ var test03ContentDiscovery = func() {
 				Expect(resp.StatusCode()).To(Equal(http.StatusOK))
 				tagList = getTagList(resp)
 				numTags = len(tagList)
+				// If the list is not empty, the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
+				sortedTagListLexical := append([]string{}, tagList...)
+				sort.SliceStable(sortedTagListLexical, func(i, j int) bool {
+					return strings.ToLower(sortedTagListLexical[i]) < strings.ToLower(sortedTagListLexical[j])
+				})
+				// Historically, registries have not been lexical, so allow `sort.Strings` to be valid too.
+				sortedTagListAsciibetical := append([]string{}, tagList...)
+				sort.Strings(sortedTagListAsciibetical)
+				Expect(tagList).To(Or(Equal(sortedTagListLexical), Equal(sortedTagListAsciibetical)))
 			})
 
 			g.Specify("GET number of tags should be limitable by `n` query parameter", func() {

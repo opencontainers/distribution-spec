@@ -520,7 +520,7 @@ To fetch the list of tags, perform a `GET` request to a path in the following fo
 `<name>` is the namespace of the repository.
 Assuming a repository is found, this request MUST return a `200 OK` response code.
 The list of tags MAY be empty if there are no tags on the repository.
-If the list is not empty, the tags MUST be in lexical order (i.e. case-insensitive alphanumeric order).
+If the list is not empty, the tags MUST be in lexical (i.e. case-insensitive alphanumeric order) or "ASCIIbetical" ([Go's `sort.Strings`](https://pkg.go.dev/sort#Strings)) order.
 
 Upon success, the response MUST be a json body in the following format:
 ```json
@@ -546,7 +546,7 @@ A `Link` header MAY be included in the response when additional tags are availab
 If included, the `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
 When `n` is zero, this endpoint MUST return an empty list, and MUST NOT include a `Link` header.
 Without the `last` query parameter (described next), the list returned will start at the beginning of the list and include `<int>` results.
-As above, the tags MUST be in lexical order.
+As above, the tags MUST be in lexical or "ASCIIbetical" order.
 
 The `last` query parameter provides further means for limiting the number of tags.
 It is usually used in combination with the `n` parameter: `/v2/<name>/tags/list?n=<int>&last=<tagname>` <sup>[end-8b](#endpoints)</sup>
@@ -555,7 +555,7 @@ It is usually used in combination with the `n` parameter: `/v2/<name>/tags/list?
 `<tagname>` MUST NOT be a numerical index, but rather it MUST be a proper tag.
 A request of this sort will return up to `<int>` tags, beginning non-inclusively with `<tagname>`.
 That is to say, `<tagname>` will not be included in the results, but up to `<int>` tags *after* `<tagname>` will be returned.
-The tags MUST be in lexical order.
+The tags MUST be in lexical or "ASCIIbetical" order.
 
 When using the `last` query parameter, the `n` parameter is OPTIONAL.
 
