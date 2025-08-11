@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -15,25 +14,18 @@ import (
 )
 
 const (
+	testName  = "OCI Conformance Test"
 	dataImage = "01-image"
 	dataIndex = "02-index"
 )
 
-var blobAPIs = []apiType{apiBlobPostPut, apiBlobPostOnly}
+var blobAPIs = []stateAPIType{stateAPIBlobPostPut, stateAPIBlobPostOnly}
 
 type runner struct {
-	common   *runnerCommon
-	name     string // name of current runner step, concatenated onto the parent's name
-	results  results
-	children []*runner
-}
-
-type runnerCommon struct {
-	config     config
-	api        *api
-	apiStatus  map[apiType]status
-	data       map[string]*testData
-	dataStatus map[string]status
+	config  config
+	api     *api
+	state   *state
+	results *results
 }
 
 func runnerNew(c config) (*runner, error) {
@@ -44,42 +36,34 @@ func runnerNew(c config) (*runner, error) {
 			return nil, fmt.Errorf("failed to parse logging level %s: %w", c.LogLevel, err)
 		}
 	}
-	ret := runner{
-		name: "OCI Conformance Test",
-		results: results{
-			output: &bytes.Buffer{},
-			start:  time.Now(),
-		},
-		common: &runnerCommon{
-			config:     c,
-			api:        apiNew(http.DefaultClient),
-			apiStatus:  map[apiType]status{},
-			data:       map[string]*testData{},
-			dataStatus: map[string]status{},
-		},
+	r := runner{
+		config:  c,
+		api:     apiNew(http.DefaultClient),
+		state:   stateNew(),
+		results: resultsNew(testName, nil),
 	}
-	return &ret, nil
+	return &r, nil
 }
 
 func (r *runner) TestAll() error {
 	errs := []error{}
-	r.results.start = time.Now()
+	r.results.Start()
 
 	err := r.GenerateData()
 	if err != nil {
 		return fmt.Errorf("aborting tests, unable to generate data: %w", err)
 	}
 
-	err = r.TestEmpty()
+	err = r.TestEmpty(r.results)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
-	err = r.TestPush(dataImage)
+	err = r.TestPush(r.results, dataImage)
 	if err != nil {
 		errs = append(errs, err)
 	}
-	err = r.TestPush(dataIndex)
+	err = r.TestPush(r.results, dataIndex)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -96,31 +80,31 @@ func (r *runner) TestAll() error {
 func (r *runner) GenerateData() error {
 	// standard image with a layer per blob test
 	tdName := dataImage
-	r.common.dataStatus[tdName] = statusUnknown
-	r.common.data[tdName] = newTestData("OCI Image", "image")
+	r.state.dataStatus[tdName] = statusUnknown
+	r.state.data[tdName] = newTestData("OCI Image", "image")
 	digCList := []digest.Digest{}
 	digUCList := []digest.Digest{}
 	for l := 0; l < len(blobAPIs); l++ {
-		digC, digUC, _, err := r.common.data[tdName].genLayer(l)
+		digC, digUC, _, err := r.state.data[tdName].genLayer(l)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
 		}
 		digCList = append(digCList, digC)
 		digUCList = append(digUCList, digUC)
 	}
-	cDig, _, err := r.common.data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
+	cDig, _, err := r.state.data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-	mDig, _, err := r.common.data[tdName].genManifest(cDig, digCList)
+	mDig, _, err := r.state.data[tdName].genManifest(cDig, digCList)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
 	_ = mDig
 	// multi-platform index
 	tdName = dataIndex
-	r.common.dataStatus[tdName] = statusUnknown
-	r.common.data[tdName] = newTestData("OCI Index", "index")
+	r.state.dataStatus[tdName] = statusUnknown
+	r.state.data[tdName] = newTestData("OCI Index", "index")
 	platList := []*platform{
 		{OS: "linux", Architecture: "amd64"},
 		{OS: "linux", Architecture: "arm64"},
@@ -130,24 +114,24 @@ func (r *runner) GenerateData() error {
 		digCList = []digest.Digest{}
 		digUCList = []digest.Digest{}
 		for l := 0; l < len(blobAPIs); l++ {
-			digC, digUC, _, err := r.common.data[tdName].genLayer(l)
+			digC, digUC, _, err := r.state.data[tdName].genLayer(l)
 			if err != nil {
 				return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
 			}
 			digCList = append(digCList, digC)
 			digUCList = append(digUCList, digUC)
 		}
-		cDig, _, err := r.common.data[tdName].genConfig(*p, digUCList)
+		cDig, _, err := r.state.data[tdName].genConfig(*p, digUCList)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
-		mDig, _, err := r.common.data[tdName].genManifest(cDig, digCList)
+		mDig, _, err := r.state.data[tdName].genManifest(cDig, digCList)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 		digImgList = append(digImgList, mDig)
 	}
-	_, _, err = r.common.data[tdName].genIndex(platList, digImgList)
+	_, _, err = r.state.data[tdName].genIndex(platList, digImgList)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
@@ -157,7 +141,7 @@ func (r *runner) GenerateData() error {
 
 func (r *runner) Report(w io.Writer) {
 	fmt.Fprintf(w, "Test results\n")
-	r.ReportWalkErr(w, "")
+	r.results.ReportWalkErr(w, "")
 	fmt.Fprintf(w, "\n")
 
 	fmt.Fprintf(w, "OCI Conformance Result: %s\n", r.results.status.String())
@@ -180,51 +164,36 @@ func (r *runner) Report(w io.Writer) {
 	}
 
 	fmt.Fprintf(w, "API conformance:\n")
-	for i := apiType(0); i < apiMax; i++ {
+	for i := stateAPIType(0); i < stateAPIMax; i++ {
 		pad := ""
 		if len(i.String()) < padWidth {
 			pad = strings.Repeat(".", padWidth-len(i.String()))
 		}
-		fmt.Fprintf(w, "  %s%s: %10s\n", i.String(), pad, r.common.apiStatus[i].String())
+		fmt.Fprintf(w, "  %s%s: %10s\n", i.String(), pad, r.state.apiStatus[i].String())
 	}
 	fmt.Fprintf(w, "\n")
 
 	fmt.Fprintf(w, "Data conformance:\n")
 	tdNames := []string{}
-	for tdName := range r.common.data {
+	for tdName := range r.state.data {
 		tdNames = append(tdNames, tdName)
 	}
 	sort.Strings(tdNames)
 	for _, tdName := range tdNames {
 		pad := ""
-		if len(r.common.data[tdName].name) < padWidth {
-			pad = strings.Repeat(".", padWidth-len(r.common.data[tdName].name))
+		if len(r.state.data[tdName].name) < padWidth {
+			pad = strings.Repeat(".", padWidth-len(r.state.data[tdName].name))
 		}
-		fmt.Fprintf(w, "  %s%s: %10s\n", r.common.data[tdName].name, pad, r.common.dataStatus[tdName].String())
+		fmt.Fprintf(w, "  %s%s: %10s\n", r.state.data[tdName].name, pad, r.state.dataStatus[tdName].String())
 	}
 	fmt.Fprintf(w, "\n")
 	// TODO: include config
 }
 
-func (r *runner) ReportWalkErr(w io.Writer, prefix string) {
-	fmt.Fprintf(w, "%s%s: %s\n", prefix, r.name, r.results.status)
-	if len(r.children) == 0 && len(r.results.errs) > 0 {
-		// show errors from leaf nodes
-		for _, err := range r.results.errs {
-			fmt.Fprintf(w, "%s - %s\n", prefix, err.Error())
-		}
-	}
-	if len(r.children) > 0 {
-		for _, child := range r.children {
-			child.ReportWalkErr(w, prefix+"  ")
-		}
-	}
-}
-
-func (r *runner) TestEmpty() error {
-	return r.Child("empty", func(r *runner) error {
+func (r *runner) TestEmpty(parent *results) error {
+	return r.ChildRun("empty", parent, func(r *runner, res *results) error {
 		errs := []error{}
-		if err := r.TestEmptyTagList(); err != nil {
+		if err := r.TestEmptyTagList(res); err != nil {
 			errs = append(errs, err)
 		}
 		if len(errs) > 0 {
@@ -234,180 +203,173 @@ func (r *runner) TestEmpty() error {
 	})
 }
 
-func (r *runner) TestEmptyTagList() error {
-	return r.Child("tag list", func(r *runner) error {
-		if err := r.APIRequire(apiTagList); err != nil {
-			r.Skip(err)
+func (r *runner) TestEmptyTagList(parent *results) error {
+	return r.ChildRun("tag list", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPITagList); err != nil {
+			r.Skip(res, err)
 			return nil
 		}
-		if _, err := r.common.api.TagList(r.common.config.schemeReg, r.common.config.Repo1); err != nil {
-			r.APIFail(err, apiTagList)
+		if _, err := r.api.TagList(r.config.schemeReg, r.config.Repo1); err != nil {
+			r.APIFail(res, err, stateAPITagList)
 		} else {
-			r.APIPass(apiTagList)
+			r.APIPass(res, stateAPITagList)
 		}
 		return nil
 	})
 }
 
-func (r *runner) TestPush(tdName string) error {
+func (r *runner) TestPush(parent *results, tdName string) error {
 	// add more APIs
-	return r.Child("push", func(r *runner) error {
+	return r.ChildRun("push", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		curAPI := 0
-		for dig := range r.common.data[tdName].blobs {
+		for dig := range r.state.data[tdName].blobs {
 			curAPI = (curAPI + 1) % len(blobAPIs)
 			var err error
 			switch blobAPIs[curAPI] {
-			case apiBlobPostPut:
-				err = r.TestPushBlobPostPut(tdName, dig)
+			case stateAPIBlobPostPut:
+				err = r.TestPushBlobPostPut(res, tdName, dig)
 				if err != nil {
 					errs = append(errs, err)
 				}
-			case apiBlobPostOnly:
-				err = r.TestPushBlobPostOnly(tdName, dig)
+			case stateAPIBlobPostOnly:
+				err = r.TestPushBlobPostOnly(res, tdName, dig)
 				if err != nil {
 					errs = append(errs, err)
 				}
 			}
 			// TODO: fallback to any blob push method
 		}
-		for _, dig := range r.common.data[tdName].manOrder {
-			err := r.TestPushManifest(tdName, dig)
+		for _, dig := range r.state.data[tdName].manOrder {
+			err := r.TestPushManifest(res, tdName, dig)
 			if err != nil {
 				errs = append(errs, err)
 			}
 		}
 		if len(errs) > 0 {
-			r.common.dataStatus[tdName] = r.common.dataStatus[tdName].Set(statusFail)
+			r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusFail)
 			return errors.Join(errs...)
 		}
-		r.common.dataStatus[tdName] = r.common.dataStatus[tdName].Set(statusPass)
+		r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusPass)
 		return nil
 	})
 }
 
-func (r *runner) TestPushBlobPostPut(tdName string, dig digest.Digest) error {
-	return r.Child("blob-post-put", func(r *runner) error {
-		if err := r.APIRequire(apiBlobPostPut); err != nil {
-			r.Skip(err)
+func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.Digest) error {
+	return r.ChildRun("blob-post-put", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIBlobPostPut); err != nil {
+			r.Skip(res, err)
 			return nil
 		}
-		if err := r.common.api.BlobPostPut(r.common.config.schemeReg, r.common.config.Repo1, dig, r.common.data[tdName]); err != nil {
-			r.APIFail(err, apiBlobPostPut)
+		if err := r.api.BlobPostPut(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName]); err != nil {
+			r.APIFail(res, err, stateAPIBlobPostPut)
 			return nil
 		}
-		r.APIPass(apiBlobPostPut)
+		r.APIPass(res, stateAPIBlobPostPut)
 		return nil
 	})
 }
 
-func (r *runner) TestPushBlobPostOnly(tdName string, dig digest.Digest) error {
-	return r.Child("blob-post-only", func(r *runner) error {
-		if err := r.APIRequire(apiBlobPostOnly); err != nil {
-			r.Skip(err)
+func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest.Digest) error {
+	return r.ChildRun("blob-post-only", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIBlobPostOnly); err != nil {
+			r.Skip(res, err)
 			return nil
 		}
-		if err := r.common.api.BlobPostOnly(r.common.config.schemeReg, r.common.config.Repo1, dig, r.common.data[tdName]); err != nil {
-			r.APIFail(err, apiBlobPostOnly)
+		if err := r.api.BlobPostOnly(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName]); err != nil {
+			r.APIFail(res, err, stateAPIBlobPostOnly)
 			return nil
 		}
-		r.APIPass(apiBlobPostOnly)
+		r.APIPass(res, stateAPIBlobPostOnly)
 		return nil
 	})
 }
 
-func (r *runner) TestPushManifest(tdName string, dig digest.Digest) error {
-	td := r.common.data[tdName]
+func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Digest) error {
+	td := r.state.data[tdName]
 	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
 		// push by tag
-		return r.Child("manifest-by-tag", func(r *runner) error {
-			if err := r.APIRequire(apiManifestPutTag); err != nil {
-				r.common.dataStatus[tdName] = r.common.dataStatus[tdName].Set(statusSkip)
-				r.Skip(err)
+		return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestPutTag); err != nil {
+				r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusSkip)
+				r.Skip(res, err)
 				return nil
 			}
-			if err := r.common.api.ManifestPut(r.common.config.schemeReg, r.common.config.Repo1, td.tag, dig, td); err != nil {
-				r.APIFail(err, apiManifestPutTag)
+			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, td.tag, dig, td); err != nil {
+				r.APIFail(res, err, stateAPIManifestPutTag)
 				return nil
 			}
-			r.APIPass(apiManifestPutTag)
+			r.APIPass(res, stateAPIManifestPutTag)
 			return nil
 		})
 	} else {
 		// push by digest
-		return r.Child("manifest-by-digest", func(r *runner) error {
-			if err := r.APIRequire(apiManifestPutDigest); err != nil {
-				r.common.dataStatus[tdName] = r.common.dataStatus[tdName].Set(statusSkip)
-				r.Skip(err)
+		return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
+				r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusSkip)
+				r.Skip(res, err)
 				return nil
 			}
-			if err := r.common.api.ManifestPut(r.common.config.schemeReg, r.common.config.Repo1, dig.String(), dig, td); err != nil {
-				r.APIFail(err, apiManifestPutDigest)
+			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, dig.String(), dig, td); err != nil {
+				r.APIFail(res, err, stateAPIManifestPutDigest)
 				return nil
 			}
-			r.APIPass(apiManifestPutDigest)
+			r.APIPass(res, stateAPIManifestPutDigest)
 			return nil
 		})
 	}
 }
 
-func (r *runner) Child(name string, fn func(*runner) error) error {
-	rChild := runner{
-		results: results{
-			output: &bytes.Buffer{},
-		},
-		common: r.common,
+func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *results) error) error {
+	res := resultsNew(name, parent)
+	if parent != nil {
+		parent.children = append(parent.children, res)
 	}
-	if r.name != "" {
-		rChild.name = fmt.Sprintf("%s/%s", r.name, name)
-	} else {
-		rChild.name = name
-	}
-	r.children = append(r.children, &rChild)
-	rChild.results.start = time.Now()
-	err := fn(&rChild)
-	rChild.results.stop = time.Now()
+	err := fn(r, res)
+	res.stop = time.Now()
 	if err != nil {
-		rChild.results.errs = append(rChild.results.errs, err)
-		rChild.results.status = rChild.results.status.Set(statusError)
-		rChild.results.counts[statusError]++
+		res.errs = append(res.errs, err)
+		res.status = res.status.Set(statusError)
+		res.counts[statusError]++
 	}
-	for i := statusUnknown; i < statusMax; i++ {
-		r.results.counts[i] += rChild.results.counts[i]
+	if parent != nil {
+		for i := statusUnknown; i < statusMax; i++ {
+			parent.counts[i] += res.counts[i]
+		}
+		parent.status = parent.status.Set(res.status)
 	}
-	r.results.status = r.results.status.Set(rChild.results.status)
 	return err
 }
 
-func (r *runner) Skip(err error) {
+func (r *runner) Skip(res *results, err error) {
 	s := statusSkip
 	if errors.Is(err, ErrDisabled) {
 		s = statusDisabled
 	}
-	r.results.status = r.results.status.Set(s)
-	r.results.counts[s]++
-	fmt.Fprintf(r.results.output, "%s: skipping test:\n  %s\n", r.name,
+	res.status = res.status.Set(s)
+	res.counts[s]++
+	fmt.Fprintf(res.output, "%s: skipping test:\n  %s\n", res.name,
 		strings.ReplaceAll(err.Error(), "\n", "\n  "))
 }
 
-func (r *runner) APIFail(err error, apis ...apiType) {
-	r.results.status = r.results.status.Set(statusFail)
-	r.results.counts[statusFail]++
-	r.results.errs = append(r.results.errs, err)
+func (r *runner) APIFail(res *results, err error, apis ...stateAPIType) {
+	res.status = res.status.Set(statusFail)
+	res.counts[statusFail]++
+	res.errs = append(res.errs, err)
 	for _, a := range apis {
-		r.common.apiStatus[a] = r.common.apiStatus[a].Set(statusFail)
+		r.state.apiStatus[a] = r.state.apiStatus[a].Set(statusFail)
 	}
 }
 
-func (r *runner) APIPass(apis ...apiType) {
-	r.results.status = r.results.status.Set(statusPass)
+func (r *runner) APIPass(res *results, apis ...stateAPIType) {
+	res.status = res.status.Set(statusPass)
 	r.results.counts[statusPass]++
 	for _, a := range apis {
-		r.common.apiStatus[a] = r.common.apiStatus[a].Set(statusPass)
+		r.state.apiStatus[a] = r.state.apiStatus[a].Set(statusPass)
 	}
 }
 
-func (r *runner) APIRequire(apis ...apiType) error {
+func (r *runner) APIRequire(apis ...stateAPIType) error {
 	errs := []error{}
 	for _, a := range apis {
 		aText, err := a.MarshalText()
@@ -417,34 +379,34 @@ func (r *runner) APIRequire(apis ...apiType) error {
 		}
 		// check the configuration disables the api
 		switch a {
-		case apiTagList:
-			if !r.common.config.APIs.Tags {
+		case stateAPITagList:
+			if !r.config.APIs.Tags {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case apiManifestPutTag, apiManifestPutDigest, apiManifestPutSubject,
-			apiBlobPush, apiBlobPostOnly, apiBlobPostPut,
-			apiBlobPatchChunk, apiBlobPatchStream, apiBlobMountSource, apiBlobMountAnonymous:
-			if !r.common.config.APIs.Push {
+		case stateAPIManifestPutTag, stateAPIManifestPutDigest, stateAPIManifestPutSubject,
+			stateAPIBlobPush, stateAPIBlobPostOnly, stateAPIBlobPostPut,
+			stateAPIBlobPatchChunk, stateAPIBlobPatchStream, stateAPIBlobMountSource, stateAPIBlobMountAnonymous:
+			if !r.config.APIs.Push {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case apiManifestGetTag, apiManifestGetDigest, apiBlobGetFull, apiBlobGetRange:
-			if !r.common.config.APIs.Pull {
+		case stateAPIManifestGetTag, stateAPIManifestGetDigest, stateAPIBlobGetFull, stateAPIBlobGetRange:
+			if !r.config.APIs.Pull {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case apiBlobDelete:
-			if !r.common.config.APIs.Delete.Blob {
+		case stateAPIBlobDelete:
+			if !r.config.APIs.Delete.Blob {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case apiManifestDeleteTag:
-			if !r.common.config.APIs.Delete.Tag {
+		case stateAPIManifestDeleteTag:
+			if !r.config.APIs.Delete.Tag {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case apiManifestDeleteDigest:
-			if !r.common.config.APIs.Delete.Manifest {
+		case stateAPIManifestDeleteDigest:
+			if !r.config.APIs.Delete.Manifest {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case apiReferrers:
-			if !r.common.config.APIs.Referrer {
+		case stateAPIReferrers:
+			if !r.config.APIs.Referrer {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		}
@@ -454,57 +416,4 @@ func (r *runner) APIRequire(apis ...apiType) error {
 		return errors.Join(errs...)
 	}
 	return nil
-}
-
-func (r *runner) ToJunit() *junitTestSuites {
-	statusTotal := 0
-	for i := status(1); i < statusMax; i++ {
-		statusTotal += r.results.counts[i]
-	}
-	tSec := fmt.Sprintf("%f", r.results.stop.Sub(r.results.start).Seconds())
-	jTSuites := junitTestSuites{
-		Tests:    statusTotal,
-		Errors:   r.results.counts[statusError],
-		Failures: r.results.counts[statusFail],
-		Skipped:  r.results.counts[statusSkip],
-		Disabled: r.results.counts[statusDisabled],
-		Time:     tSec,
-	}
-	jTSuite := junitTestSuite{
-		Name:     r.name,
-		Tests:    statusTotal,
-		Errors:   r.results.counts[statusError],
-		Failures: r.results.counts[statusFail],
-		Skipped:  r.results.counts[statusSkip],
-		Disabled: r.results.counts[statusDisabled],
-		Time:     tSec,
-	}
-	jTSuite.Testcases = r.ToJunitTestCases()
-	// TODO: inject configuration as properties on jTSuite
-	jTSuites.Suites = []junitTestSuite{jTSuite}
-	return &jTSuites
-}
-
-func (r *runner) ToJunitTestCases() []junitTest {
-	jTests := []junitTest{}
-	if len(r.children) == 0 {
-		// return the test case for a leaf node
-		jTest := junitTest{
-			Name:      r.name,
-			Time:      fmt.Sprintf("%f", r.results.stop.Sub(r.results.start).Seconds()),
-			SystemErr: r.results.output.String(),
-			Status:    r.results.status.ToJunit(),
-		}
-		if len(r.results.errs) > 0 {
-			jTest.SystemOut = fmt.Sprintf("%v", errors.Join(r.results.errs...))
-		}
-		jTests = append(jTests, jTest)
-	}
-	if len(r.children) > 0 {
-		// recursively collect test cases from child nodes
-		for _, child := range r.children {
-			jTests = append(jTests, child.ToJunitTestCases()...)
-		}
-	}
-	return jTests
 }
