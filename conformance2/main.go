@@ -25,7 +25,7 @@ func main() {
 	r.Report(os.Stdout)
 	os.MkdirAll(c.ResultsDir, 0755)
 	// write junit.xml report
-	ju := r.ToJunit()
+	ju := r.results.ToJunit()
 	fh, err := os.Create(filepath.Join(c.ResultsDir, "junit.xml"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create junit.xml: %v\n", err)
