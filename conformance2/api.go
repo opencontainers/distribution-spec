@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	specs "github.com/opencontainers/distribution-spec/specs-go/v1"
@@ -15,23 +17,36 @@ import (
 )
 
 type api struct {
-	client *http.Client
-	// TODO: include auth
+	client     *http.Client
+	user, pass string
 }
 
-func apiNew(client *http.Client) *api {
-	return &api{
+type apiOpt func(*api)
+
+func apiNew(client *http.Client, opts ...apiOpt) *api {
+	a := &api{
 		client: client,
+	}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
+}
+
+func apiWithAuth(user, pass string) apiOpt {
+	return func(a *api) {
+		a.user = user
+		a.pass = pass
 	}
 }
 
-type apiOpt struct {
+type apiDoOpt struct {
 	reqFn  func(*http.Request) error
 	respFn func(*http.Response) error
 	out    *bytes.Buffer
 }
 
-func (a *api) Do(opts ...apiOpt) error {
+func (a *api) Do(opts ...apiDoOpt) error {
 	reqFns := []func(*http.Request) error{}
 	respFns := []func(*http.Response) error{}
 	var out *bytes.Buffer
@@ -63,6 +78,17 @@ func (a *api) Do(opts ...apiOpt) error {
 	if err != nil {
 		return err
 	}
+	// on auth failures, generate the auth header and retry
+	if resp.StatusCode == http.StatusUnauthorized {
+		auth, err := a.getAuthHeader(c, resp)
+		if err == nil && auth != "" {
+			req.Header.Set("Authorization", auth)
+			resp, err = c.Do(req)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	errs := []error{}
 	for _, respFn := range respFns {
 		err := respFn(resp)
@@ -87,11 +113,11 @@ func (a *api) TagList(registry, repo string) (specs.TagList, error) {
 	err = a.Do(
 		apiWithURL(u),
 		apiWithOr(
-			[]apiOpt{
+			[]apiDoOpt{
 				apiExpectStatus(http.StatusOK),
 				apiExpectJSONBody(&tl),
 			},
-			[]apiOpt{
+			[]apiDoOpt{
 				apiExpectStatus(http.StatusNotFound),
 			},
 		),
@@ -211,8 +237,8 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 
 // apiWithOr succeeds with any of the lists of respFn's are all successful.
 // Note that reqFn entries are ignored.
-func apiWithOr(optLists ...[]apiOpt) apiOpt {
-	return apiOpt{
+func apiWithOr(optLists ...[]apiDoOpt) apiDoOpt {
+	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
 			var err error
 			for _, opts := range optLists {
@@ -234,8 +260,8 @@ func apiWithOr(optLists ...[]apiOpt) apiOpt {
 	}
 }
 
-func apiWithMethod(method string) apiOpt {
-	return apiOpt{
+func apiWithMethod(method string) apiDoOpt {
+	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
 			req.Method = method
 			return nil
@@ -243,8 +269,8 @@ func apiWithMethod(method string) apiOpt {
 	}
 }
 
-func apiWithURL(u *url.URL) apiOpt {
-	return apiOpt{
+func apiWithURL(u *url.URL) apiDoOpt {
+	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
 			req.URL = u
 			return nil
@@ -252,8 +278,8 @@ func apiWithURL(u *url.URL) apiOpt {
 	}
 }
 
-func apiWithHeaderAdd(key, value string) apiOpt {
-	return apiOpt{
+func apiWithHeaderAdd(key, value string) apiDoOpt {
+	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
 			if req.Header == nil {
 				req.Header = http.Header{}
@@ -264,8 +290,8 @@ func apiWithHeaderAdd(key, value string) apiOpt {
 	}
 }
 
-func apiWithBody(body io.ReadCloser) apiOpt {
-	return apiOpt{
+func apiWithBody(body io.ReadCloser) apiDoOpt {
+	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
 			req.Body = body
 			return nil
@@ -273,8 +299,8 @@ func apiWithBody(body io.ReadCloser) apiOpt {
 	}
 }
 
-func apiExpectHeaders(h *http.Header) apiOpt {
-	return apiOpt{
+func apiExpectHeaders(h *http.Header) apiDoOpt {
+	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
 			*h = resp.Header
 			return nil
@@ -282,8 +308,8 @@ func apiExpectHeaders(h *http.Header) apiOpt {
 	}
 }
 
-func apiExpectStatus(statusCodes ...int) apiOpt {
-	return apiOpt{
+func apiExpectStatus(statusCodes ...int) apiDoOpt {
+	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
 			for _, c := range statusCodes {
 				if resp.StatusCode == c {
@@ -295,12 +321,97 @@ func apiExpectStatus(statusCodes ...int) apiOpt {
 	}
 }
 
-func apiExpectJSONBody(data any) apiOpt {
-	return apiOpt{
+func apiExpectJSONBody(data any) apiDoOpt {
+	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
 			return json.NewDecoder(resp.Body).Decode(data)
 		},
 	}
+}
+
+type authHeader struct {
+	Type    string
+	Realm   string
+	Service string
+	Scope   string
+}
+
+type authInfo struct {
+	Token       string `json:"token"`
+	AccessToken string `json:"access_token"`
+}
+
+func (a *api) getAuthHeader(client http.Client, resp *http.Response) (string, error) {
+	header := resp.Header.Get("WWW-Authenticate")
+	if resp.StatusCode != http.StatusUnauthorized || header == "" {
+		return "", fmt.Errorf("status code or header invalid for adding auth, status %d, header %s", resp.StatusCode, header)
+	}
+	parsed, err := parseAuthHeader(header)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Type == "basic" {
+		return fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(a.user+":"+a.pass))), nil
+	}
+	if parsed.Type == "bearer" {
+		u, err := resp.Request.URL.Parse(parsed.Realm)
+		if err != nil {
+			return "", fmt.Errorf("failed to parse realm url: %w", err)
+		}
+		param := url.Values{}
+		param.Set("service", parsed.Service)
+		if parsed.Scope != "" {
+			param.Set("scope", parsed.Scope)
+		}
+		u.RawQuery = param.Encode()
+		req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to created request: %w", err)
+		}
+		req.Header.Set("Accept", "application/json")
+		req.SetBasicAuth(a.user, a.pass)
+		authResp, err := client.Do(req)
+		if err != nil {
+			return "", fmt.Errorf("failed to send auth request: %w", err)
+		}
+		if authResp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("invalid status on auth request: %d", authResp.StatusCode)
+		}
+		ai := authInfo{}
+		if err := json.NewDecoder(authResp.Body).Decode(&ai); err != nil {
+			return "", fmt.Errorf("failed to parse auth response: %w", err)
+		}
+		if ai.AccessToken != "" {
+			ai.Token = ai.AccessToken
+		}
+		return fmt.Sprintf("Bearer %s", ai.Token), nil
+	}
+	return "", fmt.Errorf("failed to parse auth header: %s", header)
+}
+
+var (
+	authHeaderMatcher = regexp.MustCompile("(?i).*(bearer|basic).*")
+	authParamsMatcher = regexp.MustCompile(`([a-zA-z]+)="(.+?)"`)
+)
+
+func parseAuthHeader(header string) (authHeader, error) {
+	// TODO: replace with a better parser, quotes should be optional, get character set from upstream http rfc
+	var parsed authHeader
+	parsed.Type = authHeaderMatcher.ReplaceAllString(header, "$1")
+	if parsed.Type == "bearer" {
+		matches := authParamsMatcher.FindAllStringSubmatch(header, -1)
+		for _, match := range matches {
+			switch strings.ToLower(match[1]) {
+			case "realm":
+				parsed.Realm = match[2]
+			case "service":
+				parsed.Service = match[2]
+			case "scope":
+				parsed.Scope = match[2]
+			}
+		}
+	}
+	return parsed, nil
 }
 
 type wrapTransport struct {
