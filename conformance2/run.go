@@ -36,9 +36,13 @@ func runnerNew(c config) (*runner, error) {
 			return nil, fmt.Errorf("failed to parse logging level %s: %w", c.LogLevel, err)
 		}
 	}
+	apiOpts := []apiOpt{}
+	if c.LoginUser != "" && c.LoginPass != "" {
+		apiOpts = append(apiOpts, apiWithAuth(c.LoginUser, c.LoginPass))
+	}
 	r := runner{
 		config:  c,
-		api:     apiNew(http.DefaultClient),
+		api:     apiNew(http.DefaultClient, apiOpts...),
 		state:   stateNew(),
 		results: resultsNew(testName, nil),
 	}
