@@ -417,10 +417,10 @@ func (a *api) getAuthHeader(client http.Client, resp *http.Response) (string, er
 	if err != nil {
 		return "", err
 	}
-	if strings.ToLower(parsed.Type) == "basic" {
+	if parsed.Type == "basic" {
 		return fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(a.user+":"+a.pass))), nil
 	}
-	if strings.ToLower(parsed.Type) == "bearer" {
+	if parsed.Type == "bearer" {
 		u, err := resp.Request.URL.Parse(parsed.Realm)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse realm url: %w", err)
@@ -464,7 +464,7 @@ var (
 func parseAuthHeader(header string) (authHeader, error) {
 	// TODO: replace with a better parser, quotes should be optional, get character set from upstream http rfc
 	var parsed authHeader
-	parsed.Type = authHeaderMatcher.ReplaceAllString(header, "$1")
+	parsed.Type = strings.ToLower(authHeaderMatcher.ReplaceAllString(header, "$1"))
 	if parsed.Type == "bearer" {
 		matches := authParamsMatcher.FindAllStringSubmatch(header, -1)
 		for _, match := range matches {
