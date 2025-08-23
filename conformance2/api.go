@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 
 	specs "github.com/opencontainers/distribution-spec/specs-go/v1"
@@ -43,13 +45,13 @@ func apiWithAuth(user, pass string) apiOpt {
 type apiDoOpt struct {
 	reqFn  func(*http.Request) error
 	respFn func(*http.Response) error
-	out    *bytes.Buffer
+	out    io.Writer
 }
 
 func (a *api) Do(opts ...apiDoOpt) error {
 	reqFns := []func(*http.Request) error{}
 	respFns := []func(*http.Response) error{}
-	var out *bytes.Buffer
+	var out io.Writer
 	for _, opt := range opts {
 		if opt.reqFn != nil {
 			reqFns = append(reqFns, opt.reqFn)
@@ -61,7 +63,10 @@ func (a *api) Do(opts ...apiDoOpt) error {
 			out = opt.out
 		}
 	}
-	req := &http.Request{}
+	req, err := http.NewRequest(http.MethodGet, "", nil)
+	if err != nil {
+		return err
+	}
 	for _, reqFn := range reqFns {
 		err := reqFn(req)
 		if err != nil {
@@ -78,18 +83,27 @@ func (a *api) Do(opts ...apiDoOpt) error {
 	if err != nil {
 		return err
 	}
+	errs := []error{}
 	// on auth failures, generate the auth header and retry
 	if resp.StatusCode == http.StatusUnauthorized {
 		auth, err := a.getAuthHeader(c, resp)
+		if err != nil {
+			errs = append(errs, err)
+		}
 		if err == nil && auth != "" {
 			req.Header.Set("Authorization", auth)
+			if req.GetBody != nil {
+				req.Body, err = req.GetBody()
+				if err != nil {
+					return fmt.Errorf("failed to reset body after auth request: %w", err)
+				}
+			}
 			resp, err = c.Do(req)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	errs := []error{}
 	for _, respFn := range respFns {
 		err := respFn(resp)
 		if err != nil {
@@ -104,13 +118,13 @@ func (a *api) Do(opts ...apiDoOpt) error {
 	return nil
 }
 
-func (a *api) TagList(registry, repo string) (specs.TagList, error) {
+func (a *api) TagList(registry, repo string, opts ...apiDoOpt) (specs.TagList, error) {
 	tl := specs.TagList{}
 	u, err := url.Parse(registry + "/v2/" + repo + "/tags/list")
 	if err != nil {
 		return tl, err
 	}
-	err = a.Do(
+	err = a.Do(apiWithAnd(opts),
 		apiWithURL(u),
 		apiWithOr(
 			[]apiDoOpt{
@@ -125,7 +139,7 @@ func (a *api) TagList(registry, repo string) (specs.TagList, error) {
 	return tl, err
 }
 
-func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testData) error {
+func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
 		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s", dig.String())
@@ -138,12 +152,12 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
 	headers := http.Header{}
-	err = a.Do(
+	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
 		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiWithBody(io.NopCloser(bytes.NewReader(bodyBytes))),
+		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated),
 		apiExpectHeaders(&headers),
 	)
@@ -158,7 +172,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	return nil
 }
 
-func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData) error {
+func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
 		return fmt.Errorf("BlobPostPut missing expected digest to send: %s", dig.String())
@@ -168,7 +182,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 		return err
 	}
 	headers := http.Header{}
-	err = a.Do(
+	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
 		apiExpectStatus(http.StatusAccepted),
@@ -188,12 +202,12 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	qa := uPut.Query()
 	qa.Set("digest", dig.String())
 	uPut.RawQuery = qa.Encode()
-	err = a.Do(
+	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(uPut),
 		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiWithBody(io.NopCloser(bytes.NewReader(bodyBytes))),
+		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated),
 		apiExpectHeaders(&headers),
 	)
@@ -208,7 +222,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	return nil
 }
 
-func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData) error {
+func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.manifests[dig]
 	if !ok {
 		return fmt.Errorf("ManifestPut missing expected digest to send: %s", dig.String())
@@ -219,10 +233,10 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	}
 	mediaType := getMediaType(bodyBytes)
 	headers := http.Header{}
-	err = a.Do(
+	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
-		apiWithBody(io.NopCloser(bytes.NewReader(bodyBytes))),
+		apiWithBody(bodyBytes),
 		apiWithHeaderAdd("Content-Type", mediaType),
 		apiExpectStatus(http.StatusCreated),
 		apiExpectHeaders(&headers),
@@ -233,6 +247,50 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	// TODO: validate headers: location, docker-content-digest (optional), oci-subject (depending on option)
 	td.repo = repo
 	return nil
+}
+
+func apiWithAnd(opts []apiDoOpt) apiDoOpt {
+	ret := apiDoOpt{}
+	reqFns := [](func(*http.Request) error){}
+	respFns := [](func(*http.Response) error){}
+	for _, opt := range opts {
+		if opt.reqFn != nil {
+			reqFns = append(reqFns, opt.reqFn)
+		}
+		if opt.respFn != nil {
+			respFns = append(respFns, opt.respFn)
+		}
+		if opt.out != nil {
+			ret.out = opt.out
+		}
+	}
+	if len(reqFns) == 1 {
+		ret.reqFn = reqFns[0]
+	} else if len(reqFns) > 0 {
+		ret.reqFn = func(r *http.Request) error {
+			for _, fn := range reqFns {
+				err := fn(r)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}
+	if len(respFns) == 1 {
+		ret.respFn = respFns[0]
+	} else if len(respFns) > 0 {
+		ret.respFn = func(r *http.Response) error {
+			for _, fn := range respFns {
+				err := fn(r)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}
+	return ret
 }
 
 // apiWithOr succeeds with any of the lists of respFn's are all successful.
@@ -290,10 +348,13 @@ func apiWithHeaderAdd(key, value string) apiDoOpt {
 	}
 }
 
-func apiWithBody(body io.ReadCloser) apiDoOpt {
+func apiWithBody(body []byte) apiDoOpt {
 	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
-			req.Body = body
+			req.Body = io.NopCloser(bytes.NewReader(body))
+			req.GetBody = func() (io.ReadCloser, error) {
+				return io.NopCloser(bytes.NewReader(body)), nil
+			}
 			return nil
 		},
 	}
@@ -329,6 +390,12 @@ func apiExpectJSONBody(data any) apiDoOpt {
 	}
 }
 
+func apiSaveOutput(out io.Writer) apiDoOpt {
+	return apiDoOpt{
+		out: out,
+	}
+}
+
 type authHeader struct {
 	Type    string
 	Realm   string
@@ -350,10 +417,10 @@ func (a *api) getAuthHeader(client http.Client, resp *http.Response) (string, er
 	if err != nil {
 		return "", err
 	}
-	if parsed.Type == "basic" {
+	if strings.ToLower(parsed.Type) == "basic" {
 		return fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(a.user+":"+a.pass))), nil
 	}
-	if parsed.Type == "bearer" {
+	if strings.ToLower(parsed.Type) == "bearer" {
 		u, err := resp.Request.URL.Parse(parsed.Realm)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse realm url: %w", err)
@@ -386,7 +453,7 @@ func (a *api) getAuthHeader(client http.Client, resp *http.Response) (string, er
 		}
 		return fmt.Sprintf("Bearer %s", ai.Token), nil
 	}
-	return "", fmt.Errorf("failed to parse auth header: %s", header)
+	return "", fmt.Errorf("failed to parse auth header, type=%s: %s", parsed.Type, header)
 }
 
 var (
@@ -415,27 +482,18 @@ func parseAuthHeader(header string) (authHeader, error) {
 }
 
 type wrapTransport struct {
-	out  *bytes.Buffer
+	out  io.Writer
 	orig http.RoundTripper
 }
 
 func (wt *wrapTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if wt.out != nil {
+		_ = printRequest(req, wt.out)
+	}
 	resp, err := wt.orig.RoundTrip(req)
 	if wt.out != nil {
-		// copy headers to censor auth field
-		reqHead := req.Header.Clone()
-		if reqHead.Get("Authorization") != "" {
-			reqHead.Set("Authorization", "[censored]")
-		}
-		reqCensored := req
-		reqCensored.Header = reqHead
-		fmt.Fprintf(wt.out, "%s\n~~~ REQUEST ~~~\n", strings.Repeat("=", 80))
-		// TODO: switch to output individual fields
-		reqCensored.Write(wt.out)
 		if err == nil {
-			fmt.Fprintf(wt.out, "%s\n~~~ RESPONSE ~~~\n", strings.Repeat("-", 80))
-			// TODO: switch to ouput individual fields, do not output body
-			resp.Write(wt.out)
+			_ = printResponse(resp, wt.out)
 		}
 		if err != nil {
 			fmt.Fprintf(wt.out, "%s\n~~~ Error ~~~\n%s\n", strings.Repeat("-", 80), err.Error())
@@ -455,4 +513,103 @@ func getMediaType(body []byte) string {
 	}
 	_ = json.Unmarshal(body, &dmt)
 	return dmt.MediaType
+}
+
+func cloneBodyReq(req *http.Request) ([]byte, error) {
+	if req.GetBody != nil {
+		rc, err := req.GetBody()
+		if err != nil {
+			return nil, err
+		}
+		out, err := io.ReadAll(rc)
+		_ = rc.Close()
+		return out, err
+	}
+	if req.Body == nil {
+		return []byte{}, nil
+	}
+	out, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+	_ = req.Body.Close()
+	// replace the body with a buffer so it can be reused
+	req.Body = io.NopCloser(bytes.NewReader(out))
+	return out, err
+}
+
+func cloneBodyResp(resp *http.Response) ([]byte, error) {
+	if resp.Body == nil {
+		return []byte{}, nil
+	}
+	out, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	_ = resp.Body.Close()
+	// replace the body with a buffer so it can be reused
+	resp.Body = io.NopCloser(bytes.NewReader(out))
+	return out, err
+}
+
+func mediaTypeBase(orig string) string {
+	base, _, _ := strings.Cut(orig, ";")
+	return strings.TrimSpace(strings.ToLower(base))
+}
+
+func printBody(body []byte, w io.Writer) error {
+	if len(body) == 0 {
+		fmt.Fprintf(w, "--- Empty body ---\n")
+		return nil
+	}
+	ct := http.DetectContentType(body)
+	switch mediaTypeBase(ct) {
+	case "application/json", "text/plain":
+		fmt.Fprintf(w, "%.*s\n", truncateBody, string(body))
+		if len(body) > truncateBody {
+			fmt.Fprintf(w, "--- Truncated body from %d to %d bytes ---\n", len(body), truncateBody)
+		}
+	default:
+		fmt.Fprintf(w, "--- Output of %s not supported, %d bytes not shown ---\n", ct, len(body))
+	}
+	return nil
+}
+
+func printHeaders(headers http.Header, w io.Writer) error {
+	fmt.Fprintf(w, "Headers:\n")
+	for _, k := range slices.Sorted(maps.Keys(headers)) {
+		fmt.Fprintf(w, "  %25s: %v\n", k, headers[k])
+	}
+	return nil
+}
+
+func printRequest(req *http.Request, w io.Writer) error {
+	// copy headers to censor auth field
+	reqHead := req.Header.Clone()
+	if reqHead.Get("Authorization") != "" {
+		reqHead.Set("Authorization", "[censored]")
+	}
+	fmt.Fprintf(w, "%s\n~~~ REQUEST ~~~\n", strings.Repeat("=", 80))
+	fmt.Fprintf(w, "Method: %s\nURL: %s\n", req.Method, req.URL.String())
+	printHeaders(reqHead, w)
+	body, err := cloneBodyReq(req)
+	if err != nil {
+		return err
+	}
+	printBody(body, w)
+
+	return nil
+}
+
+func printResponse(resp *http.Response, w io.Writer) error {
+	fmt.Fprintf(w, "%s\n~~~ RESPONSE ~~~\n", strings.Repeat("-", 80))
+	fmt.Fprintf(w, "Status: %d\n", resp.StatusCode)
+	printHeaders(resp.Header, w)
+	body, err := cloneBodyResp(resp)
+	if err != nil {
+		return err
+	}
+	printBody(body, w)
+
+	return nil
 }

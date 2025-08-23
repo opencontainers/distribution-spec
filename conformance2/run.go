@@ -213,7 +213,8 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 			r.Skip(res, err)
 			return nil
 		}
-		if _, err := r.api.TagList(r.config.schemeReg, r.config.Repo1); err != nil {
+		_, _ = res.output.WriteString("start of tag list test")
+		if _, err := r.api.TagList(r.config.schemeReg, r.config.Repo1, apiSaveOutput(res.output)); err != nil {
 			r.APIFail(res, err, stateAPITagList)
 		} else {
 			r.APIPass(res, stateAPITagList)
@@ -265,7 +266,7 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 			r.Skip(res, err)
 			return nil
 		}
-		if err := r.api.BlobPostPut(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName]); err != nil {
+		if err := r.api.BlobPostPut(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName], apiSaveOutput(res.output)); err != nil {
 			r.APIFail(res, err, stateAPIBlobPostPut)
 			return nil
 		}
@@ -280,7 +281,7 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 			r.Skip(res, err)
 			return nil
 		}
-		if err := r.api.BlobPostOnly(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName]); err != nil {
+		if err := r.api.BlobPostOnly(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName], apiSaveOutput(res.output)); err != nil {
 			r.APIFail(res, err, stateAPIBlobPostOnly)
 			return nil
 		}
@@ -299,7 +300,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				r.Skip(res, err)
 				return nil
 			}
-			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, td.tag, dig, td); err != nil {
+			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, td.tag, dig, td, apiSaveOutput(res.output)); err != nil {
 				r.APIFail(res, err, stateAPIManifestPutTag)
 				return nil
 			}
@@ -314,7 +315,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				r.Skip(res, err)
 				return nil
 			}
-			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, dig.String(), dig, td); err != nil {
+			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, dig.String(), dig, td, apiSaveOutput(res.output)); err != nil {
 				r.APIFail(res, err, stateAPIManifestPutDigest)
 				return nil
 			}
@@ -367,7 +368,7 @@ func (r *runner) APIFail(res *results, err error, apis ...stateAPIType) {
 
 func (r *runner) APIPass(res *results, apis ...stateAPIType) {
 	res.status = res.status.Set(statusPass)
-	r.results.counts[statusPass]++
+	res.counts[statusPass]++
 	for _, a := range apis {
 		r.state.apiStatus[a] = r.state.apiStatus[a].Set(statusPass)
 	}

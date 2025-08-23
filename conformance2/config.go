@@ -14,6 +14,7 @@ const (
 	envOCIConf     = "OCI"
 	envOCIConfFile = "OCI_CONFIGURATION"
 	defaultOCIConf = "oci-conformance.yml"
+	truncateBody   = 4096
 )
 
 type config struct {
