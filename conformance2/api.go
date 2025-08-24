@@ -73,6 +73,9 @@ func (a *api) Do(opts ...apiDoOpt) error {
 			return err
 		}
 	}
+	if out != nil {
+		out = redactWriter{w: out}
+	}
 	wt := &wrapTransport{out: out, orig: a.client.Transport}
 	if a.client.Transport == nil {
 		wt.orig = http.DefaultTransport
@@ -584,14 +587,9 @@ func printHeaders(headers http.Header, w io.Writer) error {
 }
 
 func printRequest(req *http.Request, w io.Writer) error {
-	// copy headers to censor auth field
-	reqHead := req.Header.Clone()
-	if reqHead.Get("Authorization") != "" {
-		reqHead.Set("Authorization", "[censored]")
-	}
 	fmt.Fprintf(w, "%s\n~~~ REQUEST ~~~\n", strings.Repeat("=", 80))
 	fmt.Fprintf(w, "Method: %s\nURL: %s\n", req.Method, req.URL.String())
-	printHeaders(reqHead, w)
+	printHeaders(req.Header, w)
 	body, err := cloneBodyReq(req)
 	if err != nil {
 		return err
@@ -612,4 +610,22 @@ func printResponse(resp *http.Response, w io.Writer) error {
 	printBody(body, w)
 
 	return nil
+}
+
+type redactWriter struct {
+	w io.Writer
+}
+
+var (
+	redactRegexp  = regexp.MustCompile(`(?i)("?\w*(authorization|token|state)\w*"?(:|=)\s*)(")?\s*((bearer|basic)? )?[^\s&"]*(")?`)
+	redactReplace = []byte("$1$4$5*****$7")
+)
+
+func (rw redactWriter) Write(p []byte) (int, error) {
+	pRedact := redactRegexp.ReplaceAll(p, redactReplace)
+	n, err := rw.w.Write(pRedact)
+	if err != nil || n != len(pRedact) {
+		return 0, err
+	}
+	return len(p), nil
 }
