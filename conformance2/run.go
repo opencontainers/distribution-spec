@@ -215,9 +215,9 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 		}
 		_, _ = res.output.WriteString("start of tag list test")
 		if _, err := r.api.TagList(r.config.schemeReg, r.config.Repo1, apiSaveOutput(res.output)); err != nil {
-			r.APIFail(res, err, stateAPITagList)
+			r.APIFail(res, err, "", stateAPITagList)
 		} else {
-			r.APIPass(res, stateAPITagList)
+			r.APIPass(res, "", stateAPITagList)
 		}
 		return nil
 	})
@@ -252,10 +252,8 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 			}
 		}
 		if len(errs) > 0 {
-			r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusFail)
 			return errors.Join(errs...)
 		}
-		r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusPass)
 		return nil
 	})
 }
@@ -267,10 +265,10 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 			return nil
 		}
 		if err := r.api.BlobPostPut(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName], apiSaveOutput(res.output)); err != nil {
-			r.APIFail(res, err, stateAPIBlobPostPut)
+			r.APIFail(res, err, tdName, stateAPIBlobPostPut)
 			return nil
 		}
-		r.APIPass(res, stateAPIBlobPostPut)
+		r.APIPass(res, tdName, stateAPIBlobPostPut)
 		return nil
 	})
 }
@@ -282,10 +280,10 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 			return nil
 		}
 		if err := r.api.BlobPostOnly(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName], apiSaveOutput(res.output)); err != nil {
-			r.APIFail(res, err, stateAPIBlobPostOnly)
+			r.APIFail(res, err, tdName, stateAPIBlobPostOnly)
 			return nil
 		}
-		r.APIPass(res, stateAPIBlobPostOnly)
+		r.APIPass(res, tdName, stateAPIBlobPostOnly)
 		return nil
 	})
 }
@@ -301,10 +299,10 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				return nil
 			}
 			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, td.tag, dig, td, apiSaveOutput(res.output)); err != nil {
-				r.APIFail(res, err, stateAPIManifestPutTag)
+				r.APIFail(res, err, tdName, stateAPIManifestPutTag)
 				return nil
 			}
-			r.APIPass(res, stateAPIManifestPutTag)
+			r.APIPass(res, tdName, stateAPIManifestPutTag)
 			return nil
 		})
 	} else {
@@ -316,10 +314,10 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				return nil
 			}
 			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, dig.String(), dig, td, apiSaveOutput(res.output)); err != nil {
-				r.APIFail(res, err, stateAPIManifestPutDigest)
+				r.APIFail(res, err, tdName, stateAPIManifestPutDigest)
 				return nil
 			}
-			r.APIPass(res, stateAPIManifestPutDigest)
+			r.APIPass(res, tdName, stateAPIManifestPutDigest)
 			return nil
 		})
 	}
@@ -357,18 +355,24 @@ func (r *runner) Skip(res *results, err error) {
 		strings.ReplaceAll(err.Error(), "\n", "\n  "))
 }
 
-func (r *runner) APIFail(res *results, err error, apis ...stateAPIType) {
+func (r *runner) APIFail(res *results, err error, tdName string, apis ...stateAPIType) {
 	res.status = res.status.Set(statusFail)
 	res.counts[statusFail]++
 	res.errs = append(res.errs, err)
+	if tdName != "" {
+		r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusFail)
+	}
 	for _, a := range apis {
 		r.state.apiStatus[a] = r.state.apiStatus[a].Set(statusFail)
 	}
 }
 
-func (r *runner) APIPass(res *results, apis ...stateAPIType) {
+func (r *runner) APIPass(res *results, tdName string, apis ...stateAPIType) {
 	res.status = res.status.Set(statusPass)
 	res.counts[statusPass]++
+	if tdName != "" {
+		r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusPass)
+	}
 	for _, a := range apis {
 		r.state.apiStatus[a] = r.state.apiStatus[a].Set(statusPass)
 	}
