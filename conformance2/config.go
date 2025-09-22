@@ -15,6 +15,7 @@ const (
 	envOCIConfFile = "OCI_CONFIGURATION"
 	defaultOCIConf = "oci-conformance.yml"
 	truncateBody   = 4096
+	confVersion    = "TBD"
 )
 
 type config struct {
@@ -28,7 +29,8 @@ type config struct {
 	APIs       configAPI  `conformance:"API" yaml:"apis"`          // API tests to run
 	Data       configData `conformance:"DATA" yaml:"data"`
 	ResultsDir string     `conformance:"RESULTS_DIR" yaml:"resultsDir"` // Directory to write results
-	schemeReg  string     // base for url to access the registry
+	Version    string
+	schemeReg  string // base for url to access the registry
 }
 
 type tls int
@@ -96,6 +98,7 @@ func configLoad() (config, error) {
 			Nondistributable: false,
 		},
 		ResultsDir: "./results",
+		Version:    confVersion,
 	}
 
 	// TODO:
@@ -232,4 +235,283 @@ func confFromEnv(env, tag string, vp reflect.Value) error {
 		return fmt.Errorf("unsupported kind: %s", v.Kind())
 	}
 	return nil
+}
+
+func (c config) Report() string {
+	// censor credentials
+	if c.LoginUser != "" {
+		c.LoginUser = "***"
+	}
+	if c.LoginPass != "" {
+		c.LoginPass = "***"
+	}
+	b, err := yaml.Marshal(c)
+	if err != nil {
+		return fmt.Sprintf("failed to marshal config: %v", err)
+	}
+	return string(b)
+}
+
+// TODO: adjust fields to align with results
+var confHTMLTemplates = map[string]string{
+	"report": `<html>
+  <head>
+    <title>OCI Distribution Conformance Tests</title>
+    <style>
+      body {
+        padding: 10px 20px 10px 20px;
+        font-family: -apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,Hiragino Sans GB,Microsoft YaHei,Helvetica Neue,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
+        background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAG0lEQVQYV2Pce7zwv7NlPyMDFMAZGAIwlRgqAFydCAVv5m4UAAAAAElFTkSuQmCC") repeat;
+        /* background made with http://www.patternify.com/ */
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        background-color: white;
+      }
+      th, td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+      }
+      tr:hover {
+        background-color: #ffe39b;
+      }
+      .result {
+        padding: 1.25em 0 .25em 0.8em;
+        border: 1px solid #e1e1e1;
+        border-radius: 5px;
+        margin-top: 10px;
+      }
+      .red {
+        background: #ffc8c8;
+      }
+      pre.fail-message {
+        background: #f9a5a5;
+        padding: 20px;
+        margin-right: 10px;
+        display: inline-block;
+        border-radius: 4px;
+        font-size: 1.25em;
+        width: 94%;
+        overflow-x: auto;
+        max-width: 85%;
+      }
+      .green {
+        background: #c8ffc8;
+        padding: 1.25em 0 1.25em 0.8em;
+      }
+      .grey {
+        background: lightgrey;
+        padding: 1.25em 0 1.25em 0.8em;
+      }
+      .toggle {
+        border: 2px solid #3e3e3e;
+        cursor: pointer;
+        width: 1em;
+        text-align: center;
+        font-weight: bold;
+        display: inline;
+        font-family: monospace;
+        padding: 0 .25em 0 .25em;
+        margin: 1em 1em 1em 0;
+        font-size: 12pt;
+        color: #3e3e3e;
+        border-radius: 3px;
+      }
+      pre.pre-box {
+        background: #343a40;
+        color: #fff;
+        padding: 10px;
+        border: 1px solid gray;
+        display: inline-block;
+        border-radius: 4px;
+        width: 97%;
+        font-size: 1.25em;
+        overflow-x: auto;
+        max-height: 60em;
+        overflow-y: auto;
+        max-width: 85%;
+      }
+      .summary {
+        width: 100%;
+        height: auto;
+        padding: 0 0 .5em 0;
+        border-radius: 6px;
+        border: 1px solid #cccddd;
+        background: white;
+      }
+      .summary-bullet {
+        width: 100%;
+        height: auto;
+        display: flex;
+        flex-wrap: wrap;
+        padding: .5em .1em .1em .5em;
+      }
+      .bullet-left {
+        width: 25%;
+        font-weight: bold;
+        font-size: 100%;
+      }
+      .bullet-right {
+        width: auto;
+        font-family: monospace;
+        font-size: 110%;
+      }
+      .quick-summary {
+        width: 70%;
+        display: flex;
+        margin: 0 auto 0 0;
+        font-weight: bold;
+        font-size: 1.2em;
+      }
+      .darkgreen {
+        color: green;
+      }
+      .darkred {
+        color: red;
+        padding: 0 0 0 2em;
+      }
+      .darkgrey {
+        color: grey;
+        padding: 0 0 0 2em;
+      }
+      .meter {
+        border: 1px solid black;
+        margin: 0 .5em 0 auto;
+        display: flex;
+        height: 25px;
+        width: 45%;
+      }
+      @media only screen and (max-width: 600px) {
+        .meter {
+          display: none;
+        }
+      }
+      .meter-green {
+        height: 100%;
+        background: green;
+        width: {{ .PercentPassed -}}%;
+      }
+      .meter-red {
+        height: 100%;
+        background: red;
+        width: {{ .PercentFailed -}}%;
+      }
+      .meter-grey {
+        height: 100%;
+        background: grey;
+        width: {{ .PercentSkipped -}}%;
+      }
+      .subcategory {
+        background: white;
+        padding: 0px 20px 20px 20px;
+        border: 1px solid #cccddd;
+        border-radius: 6px;
+      }
+      h2 {
+        margin-top: 45px;
+      }
+      h4 {
+        vertical-align: bottom;
+        cursor: pointer;
+      }
+    </style>
+    <script>
+      function toggleOutput(id) {
+        var elem = document.getElementById(id);
+        var button = document.getElementById(id + "-button");
+        if (elem.style['display'] === 'block') {
+          button.innerHTML = "+";
+          elem.style['display'] = 'none';
+        } else {
+          button.innerHTML = "-";
+          elem.style['display'] = 'block';
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <h1>OCI Distribution Conformance Tests</h1>
+    {{ template "summary" . }}
+    <div>
+    {{ template "results" .Results }}
+    </div>
+  </body>
+</html>`,
+	"summary": `<table>
+      <tr>
+      </tr>
+      <tr>
+        <td class="bullet-left">Summary</td>
+        <td>
+          <div class="quick-summary">
+            {{- if gt .NumPassed 0 -}}
+              <span class="darkgreen">
+              {{- if .AllPassed -}}All {{ end -}}{{ .NumPassed }} passed</span>
+            {{- end -}}
+            {{- if gt .NumFailed 0 -}}
+              <span class="darkred">
+              {{- if .AllFailed -}}All {{ end -}}{{ .NumFailed }} failed</span>
+            {{- end -}}
+            {{- if gt .NumSkipped 0 -}}
+              <span class="darkgrey">
+              {{- if .AllSkipped -}}All {{ end -}}{{ .NumSkipped }} skipped</span>
+            {{- end -}}
+            <div class="meter">
+              <div class="meter-green"></div>
+              <div class="meter-red"></div>
+              <div class="meter-grey"></div>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="bullet-left">Start Time</td>
+        <td>{{ .StartTimeString }}</td>
+      </tr>
+      <tr>
+        <td class="bullet-left">End Time</td>
+        <td>{{ .EndTimeString }}</td>
+      </tr>
+      <tr>
+        <td class="bullet-left">Time Elapsed</td>
+        <td>{{ .RunTime }}</td>
+      </tr>
+      <tr>
+        <td class="bullet-left">Test Version</td>
+        <td>{{ .Version }}</td>
+      </tr>
+      <tr>
+        <td class="bullet-left">Configuration</td>
+        <td><pre>{{ .Config.Report }}</pre></td>
+      </tr>
+    </table>`,
+	"results": `
+    <div class="result {{ template "status-color" .Status }}">
+    <h4 style="display: inline;">{{ .Name }}</h4>
+    {{- if ne .Output.String "" }}
+    <details><summary>Output</summary>
+    <pre class="pre-box">{{- html .Output.String -}}</pre>
+    </details>
+    {{- end }}
+    {{- if ne ( len .Errs ) 0 }}
+    <details><summary>Errors</summary>
+    {{- range $err := .Errs }}
+    <pre class="fail-message">{{ html $err.Error }}</pre>
+    {{- end }}
+    </details>
+    {{- end }}
+    {{- range $result := .Children }}
+    {{template "results" $result }}
+    {{- end }}
+    </div>
+  `,
+	"status-color": `
+  {{- if eq .String "Pass" }}green
+  {{- else if eq .String "Fail" }}red
+  {{- else if eq .String "Error" }}red
+  {{- else if eq .String "Skip" }}grey
+  {{- else if eq .String "Disabled" }}grey
+  {{- end }}`,
 }

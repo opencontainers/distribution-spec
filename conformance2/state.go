@@ -6,16 +6,16 @@ import (
 )
 
 type state struct {
-	apiStatus  map[stateAPIType]status
-	data       map[string]*testData
-	dataStatus map[string]status
+	APIStatus  map[stateAPIType]status
+	Data       map[string]*testData
+	DataStatus map[string]status
 }
 
 func stateNew() *state {
 	return &state{
-		apiStatus:  map[stateAPIType]status{},
-		data:       map[string]*testData{},
-		dataStatus: map[string]status{},
+		APIStatus:  map[stateAPIType]status{},
+		Data:       map[string]*testData{},
+		DataStatus: map[string]status{},
 	}
 }
 

@@ -5,48 +5,54 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 )
 
 type results struct {
-	name     string // name of current runner step, concatenated onto the parent's name
-	children []*results
-	parent   *results
-	status   status
-	errs     []error
-	output   *bytes.Buffer
-	start    time.Time
-	stop     time.Time
-	counts   [statusMax]int
+	Name     string // name of current runner step, concatenated onto the parent's name
+	Children []*results
+	Parent   *results
+	Status   status
+	Errs     []error
+	Output   *bytes.Buffer
+	Start    time.Time
+	Stop     time.Time
+	Counts   [statusMax]int
 }
 
 func resultsNew(name string, parent *results) *results {
 	fullName := name
-	if parent != nil && parent.name != "" {
-		fullName = fmt.Sprintf("%s/%s", parent.name, name)
+	if parent != nil && parent.Name != "" {
+		fullName = fmt.Sprintf("%s/%s", parent.Name, name)
 	}
 	return &results{
-		name:   fullName,
-		parent: parent,
-		output: &bytes.Buffer{},
-		start:  time.Now(),
+		Name:   fullName,
+		Parent: parent,
+		Output: &bytes.Buffer{},
+		Start:  time.Now(),
 	}
 }
 
-func (r *results) Start() {
-	r.start = time.Now()
+func (r *results) Count(s string) int {
+	st := statusUnknown
+	err := st.UnmarshalText([]byte(s))
+	if err != nil || st < 0 || st >= statusMax {
+		return -1
+	}
+	return r.Counts[st]
 }
 
 func (r *results) ReportWalkErr(w io.Writer, prefix string) {
-	fmt.Fprintf(w, "%s%s: %s\n", prefix, r.name, r.status)
-	if len(r.children) == 0 && len(r.errs) > 0 {
+	fmt.Fprintf(w, "%s%s: %s\n", prefix, r.Name, r.Status)
+	if len(r.Children) == 0 && len(r.Errs) > 0 {
 		// show errors from leaf nodes
-		for _, err := range r.errs {
+		for _, err := range r.Errs {
 			fmt.Fprintf(w, "%s - %s\n", prefix, err.Error())
 		}
 	}
-	if len(r.children) > 0 {
-		for _, child := range r.children {
+	if len(r.Children) > 0 {
+		for _, child := range r.Children {
 			child.ReportWalkErr(w, prefix+"  ")
 		}
 	}
@@ -55,24 +61,24 @@ func (r *results) ReportWalkErr(w io.Writer, prefix string) {
 func (r *results) ToJunit() *junitTestSuites {
 	statusTotal := 0
 	for i := status(1); i < statusMax; i++ {
-		statusTotal += r.counts[i]
+		statusTotal += r.Counts[i]
 	}
-	tSec := fmt.Sprintf("%f", r.stop.Sub(r.start).Seconds())
+	tSec := fmt.Sprintf("%f", r.Stop.Sub(r.Start).Seconds())
 	jTSuites := junitTestSuites{
 		Tests:    statusTotal,
-		Errors:   r.counts[statusError],
-		Failures: r.counts[statusFail],
-		Skipped:  r.counts[statusSkip],
-		Disabled: r.counts[statusDisabled],
+		Errors:   r.Counts[statusError],
+		Failures: r.Counts[statusFail],
+		Skipped:  r.Counts[statusSkip],
+		Disabled: r.Counts[statusDisabled],
 		Time:     tSec,
 	}
 	jTSuite := junitTestSuite{
-		Name:     r.name,
+		Name:     r.Name,
 		Tests:    statusTotal,
-		Errors:   r.counts[statusError],
-		Failures: r.counts[statusFail],
-		Skipped:  r.counts[statusSkip],
-		Disabled: r.counts[statusDisabled],
+		Errors:   r.Counts[statusError],
+		Failures: r.Counts[statusFail],
+		Skipped:  r.Counts[statusSkip],
+		Disabled: r.Counts[statusDisabled],
 		Time:     tSec,
 	}
 	jTSuite.Testcases = r.ToJunitTestCases()
@@ -83,22 +89,22 @@ func (r *results) ToJunit() *junitTestSuites {
 
 func (r *results) ToJunitTestCases() []junitTest {
 	jTests := []junitTest{}
-	if len(r.children) == 0 {
+	if len(r.Children) == 0 {
 		// return the test case for a leaf node
 		jTest := junitTest{
-			Name:      r.name,
-			Time:      fmt.Sprintf("%f", r.stop.Sub(r.start).Seconds()),
-			SystemErr: r.output.String(),
-			Status:    r.status.ToJunit(),
+			Name:      r.Name,
+			Time:      fmt.Sprintf("%f", r.Stop.Sub(r.Start).Seconds()),
+			SystemErr: r.Output.String(),
+			Status:    r.Status.ToJunit(),
 		}
-		if len(r.errs) > 0 {
-			jTest.SystemOut = fmt.Sprintf("%v", errors.Join(r.errs...))
+		if len(r.Errs) > 0 {
+			jTest.SystemOut = fmt.Sprintf("%v", errors.Join(r.Errs...))
 		}
 		jTests = append(jTests, jTest)
 	}
-	if len(r.children) > 0 {
+	if len(r.Children) > 0 {
 		// recursively collect test cases from child nodes
-		for _, child := range r.children {
+		for _, child := range r.Children {
 			jTests = append(jTests, child.ToJunitTestCases()...)
 		}
 	}
@@ -148,6 +154,26 @@ func (s status) MarshalText() ([]byte, error) {
 		return []byte(ret), fmt.Errorf("unknown status %d", s)
 	}
 	return []byte(ret), nil
+}
+
+func (s *status) UnmarshalText(text []byte) error {
+	switch strings.ToLower(string(text)) {
+	case "pass":
+		*s = statusPass
+	case "skip":
+		*s = statusSkip
+	case "disabled":
+		*s = statusDisabled
+	case "fail":
+		*s = statusDisabled
+	case "error":
+		*s = statusError
+	case "unknown":
+		*s = statusUnknown
+	default:
+		return fmt.Errorf("unknown status %s", string(text))
+	}
+	return nil
 }
 
 func (s status) ToJunit() string {
