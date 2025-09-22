@@ -617,8 +617,8 @@ type redactWriter struct {
 }
 
 var (
-	redactRegexp  = regexp.MustCompile(`(?i)("?\w*(authorization|token|state)\w*"?(:|=)\s*)(")?\s*((bearer|basic)? )?[^\s&"]*(")?`)
-	redactReplace = []byte("$1$4$5*****$7")
+	redactRegexp  = regexp.MustCompile(`(?i)("?\w*(?:authorization|token|state)\w*"?(?:=|:)\s*(?:\[)?\s*"?\s*(?:(?:bearer|basic)? )?)[^\s?&"\]]*`)
+	redactReplace = []byte("$1*****")
 )
 
 func (rw redactWriter) Write(p []byte) (int, error) {

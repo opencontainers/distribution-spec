@@ -25,7 +25,7 @@ func main() {
 	r.Report(os.Stdout)
 	os.MkdirAll(c.ResultsDir, 0755)
 	// write junit.xml report
-	ju := r.results.ToJunit()
+	ju := r.Results.ToJunit()
 	fh, err := os.Create(filepath.Join(c.ResultsDir, "junit.xml"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create junit.xml: %v\n", err)
@@ -39,5 +39,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "failed to generate junit.xml: %v\n", err)
 		return
 	}
-	// TODO: write report.html
+	fh, err = os.Create(filepath.Join(c.ResultsDir, "report.html"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create report.html: %v\n", err)
+		return
+	}
+	err = r.ReportHTML(fh)
+	_ = fh.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to generate report.html: %v\n", err)
+		return
+	}
 }
