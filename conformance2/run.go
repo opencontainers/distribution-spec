@@ -3,8 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
@@ -22,10 +24,10 @@ const (
 var blobAPIs = []stateAPIType{stateAPIBlobPostPut, stateAPIBlobPostOnly}
 
 type runner struct {
-	config  config
-	api     *api
-	state   *state
-	results *results
+	Config  config
+	API     *api
+	State   *state
+	Results *results
 }
 
 func runnerNew(c config) (*runner, error) {
@@ -41,39 +43,39 @@ func runnerNew(c config) (*runner, error) {
 		apiOpts = append(apiOpts, apiWithAuth(c.LoginUser, c.LoginPass))
 	}
 	r := runner{
-		config:  c,
-		api:     apiNew(http.DefaultClient, apiOpts...),
-		state:   stateNew(),
-		results: resultsNew(testName, nil),
+		Config:  c,
+		API:     apiNew(http.DefaultClient, apiOpts...),
+		State:   stateNew(),
+		Results: resultsNew(testName, nil),
 	}
 	return &r, nil
 }
 
 func (r *runner) TestAll() error {
 	errs := []error{}
-	r.results.Start()
+	r.Results.Start = time.Now()
 
 	err := r.GenerateData()
 	if err != nil {
 		return fmt.Errorf("aborting tests, unable to generate data: %w", err)
 	}
 
-	err = r.TestEmpty(r.results)
+	err = r.TestEmpty(r.Results)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
-	err = r.TestPush(r.results, dataImage)
+	err = r.TestPush(r.Results, dataImage)
 	if err != nil {
 		errs = append(errs, err)
 	}
-	err = r.TestPush(r.results, dataIndex)
+	err = r.TestPush(r.Results, dataIndex)
 	if err != nil {
 		errs = append(errs, err)
 	}
 	// TODO: add tests for different types of data
 
-	r.results.stop = time.Now()
+	r.Results.Stop = time.Now()
 
 	if len(errs) > 0 {
 		return errors.Join(errs...)
@@ -84,31 +86,31 @@ func (r *runner) TestAll() error {
 func (r *runner) GenerateData() error {
 	// standard image with a layer per blob test
 	tdName := dataImage
-	r.state.dataStatus[tdName] = statusUnknown
-	r.state.data[tdName] = newTestData("OCI Image", "image")
+	r.State.DataStatus[tdName] = statusUnknown
+	r.State.Data[tdName] = newTestData("OCI Image", "image")
 	digCList := []digest.Digest{}
 	digUCList := []digest.Digest{}
 	for l := 0; l < len(blobAPIs); l++ {
-		digC, digUC, _, err := r.state.data[tdName].genLayer(l)
+		digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
 		}
 		digCList = append(digCList, digC)
 		digUCList = append(digUCList, digUC)
 	}
-	cDig, _, err := r.state.data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
+	cDig, _, err := r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-	mDig, _, err := r.state.data[tdName].genManifest(cDig, digCList)
+	mDig, _, err := r.State.Data[tdName].genManifest(cDig, digCList)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
 	_ = mDig
 	// multi-platform index
 	tdName = dataIndex
-	r.state.dataStatus[tdName] = statusUnknown
-	r.state.data[tdName] = newTestData("OCI Index", "index")
+	r.State.DataStatus[tdName] = statusUnknown
+	r.State.Data[tdName] = newTestData("OCI Index", "index")
 	platList := []*platform{
 		{OS: "linux", Architecture: "amd64"},
 		{OS: "linux", Architecture: "arm64"},
@@ -118,24 +120,24 @@ func (r *runner) GenerateData() error {
 		digCList = []digest.Digest{}
 		digUCList = []digest.Digest{}
 		for l := 0; l < len(blobAPIs); l++ {
-			digC, digUC, _, err := r.state.data[tdName].genLayer(l)
+			digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
 			if err != nil {
 				return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
 			}
 			digCList = append(digCList, digC)
 			digUCList = append(digUCList, digUC)
 		}
-		cDig, _, err := r.state.data[tdName].genConfig(*p, digUCList)
+		cDig, _, err := r.State.Data[tdName].genConfig(*p, digUCList)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
-		mDig, _, err := r.state.data[tdName].genManifest(cDig, digCList)
+		mDig, _, err := r.State.Data[tdName].genManifest(cDig, digCList)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 		digImgList = append(digImgList, mDig)
 	}
-	_, _, err = r.state.data[tdName].genIndex(platList, digImgList)
+	_, _, err = r.State.Data[tdName].genIndex(platList, digImgList)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
@@ -145,10 +147,10 @@ func (r *runner) GenerateData() error {
 
 func (r *runner) Report(w io.Writer) {
 	fmt.Fprintf(w, "Test results\n")
-	r.results.ReportWalkErr(w, "")
+	r.Results.ReportWalkErr(w, "")
 	fmt.Fprintf(w, "\n")
 
-	fmt.Fprintf(w, "OCI Conformance Result: %s\n", r.results.status.String())
+	fmt.Fprintf(w, "OCI Conformance Result: %s\n", r.Results.Status.String())
 	padWidth := 30
 
 	statusTotal := 0
@@ -157,14 +159,14 @@ func (r *runner) Report(w io.Writer) {
 		if len(i.String()) < padWidth {
 			pad = strings.Repeat(".", padWidth-len(i.String()))
 		}
-		fmt.Fprintf(w, "  %s%s: %10d\n", i.String(), pad, r.results.counts[i])
-		statusTotal += r.results.counts[i]
+		fmt.Fprintf(w, "  %s%s: %10d\n", i.String(), pad, r.Results.Counts[i])
+		statusTotal += r.Results.Counts[i]
 	}
 	pad := strings.Repeat(".", padWidth-len("Total"))
 	fmt.Fprintf(w, "  %s%s: %10d\n\n", "Total", pad, statusTotal)
 
-	if len(r.results.errs) > 0 {
-		fmt.Fprintf(w, "Errors:\n%s\n\n", errors.Join(r.results.errs...))
+	if len(r.Results.Errs) > 0 {
+		fmt.Fprintf(w, "Errors:\n%s\n\n", errors.Join(r.Results.Errs...))
 	}
 
 	fmt.Fprintf(w, "API conformance:\n")
@@ -173,25 +175,79 @@ func (r *runner) Report(w io.Writer) {
 		if len(i.String()) < padWidth {
 			pad = strings.Repeat(".", padWidth-len(i.String()))
 		}
-		fmt.Fprintf(w, "  %s%s: %10s\n", i.String(), pad, r.state.apiStatus[i].String())
+		fmt.Fprintf(w, "  %s%s: %10s\n", i.String(), pad, r.State.APIStatus[i].String())
 	}
 	fmt.Fprintf(w, "\n")
 
 	fmt.Fprintf(w, "Data conformance:\n")
 	tdNames := []string{}
-	for tdName := range r.state.data {
+	for tdName := range r.State.Data {
 		tdNames = append(tdNames, tdName)
 	}
 	sort.Strings(tdNames)
 	for _, tdName := range tdNames {
 		pad := ""
-		if len(r.state.data[tdName].name) < padWidth {
-			pad = strings.Repeat(".", padWidth-len(r.state.data[tdName].name))
+		if len(r.State.Data[tdName].name) < padWidth {
+			pad = strings.Repeat(".", padWidth-len(r.State.Data[tdName].name))
 		}
-		fmt.Fprintf(w, "  %s%s: %10s\n", r.state.data[tdName].name, pad, r.state.dataStatus[tdName].String())
+		fmt.Fprintf(w, "  %s%s: %10s\n", r.State.Data[tdName].name, pad, r.State.DataStatus[tdName].String())
 	}
 	fmt.Fprintf(w, "\n")
 	// TODO: include config
+}
+
+func (r *runner) ReportHTML(w io.Writer) error {
+	data := reportData{
+		Config:          r.Config,
+		Results:         r.Results,
+		NumTotal:        r.Results.Counts[statusPass] + r.Results.Counts[statusFail] + r.Results.Counts[statusSkip],
+		NumPassed:       r.Results.Counts[statusPass],
+		NumFailed:       r.Results.Counts[statusFail],
+		NumSkipped:      r.Results.Counts[statusSkip],
+		StartTimeString: r.Results.Start.Format("Jan 2 15:04:05.000 -0700 MST"),
+		EndTimeString:   r.Results.Stop.Format("Jan 2 15:04:05.000 -0700 MST"),
+		RunTime:         r.Results.Stop.Sub(r.Results.Start).String(),
+	}
+	data.PercentPassed = int(math.Round(float64(data.NumPassed) / float64(data.NumTotal) * 100))
+	data.PercentFailed = int(math.Round(float64(data.NumFailed) / float64(data.NumTotal) * 100))
+	data.PercentSkipped = int(math.Round(float64(data.NumSkipped) / float64(data.NumTotal) * 100))
+	data.AllPassed = data.NumPassed == data.NumTotal
+	data.AllFailed = data.NumFailed == data.NumTotal
+	data.AllSkipped = data.NumSkipped == data.NumTotal
+	data.Version = r.Config.Version
+	// load all templates
+	t := template.New("report")
+	for name, value := range confHTMLTemplates {
+		tAdd, err := template.New(name).Parse(value)
+		if err != nil {
+			return fmt.Errorf("cannot parse report template %s: %v", name, err)
+		}
+		t, err = t.AddParseTree(name, tAdd.Tree)
+		if err != nil {
+			return fmt.Errorf("cannot add report template %s to tree: %v", name, err)
+		}
+	}
+	// execute the top level report template
+	return t.ExecuteTemplate(w, "report", data)
+}
+
+type reportData struct {
+	Config          config
+	Results         *results
+	NumTotal        int
+	NumPassed       int
+	NumFailed       int
+	NumSkipped      int
+	PercentPassed   int
+	PercentFailed   int
+	PercentSkipped  int
+	StartTimeString string
+	EndTimeString   string
+	RunTime         string
+	AllPassed       bool
+	AllFailed       bool
+	AllSkipped      bool
+	Version         string
 }
 
 func (r *runner) TestEmpty(parent *results) error {
@@ -213,8 +269,8 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 			r.Skip(res, err)
 			return nil
 		}
-		_, _ = res.output.WriteString("start of tag list test")
-		if _, err := r.api.TagList(r.config.schemeReg, r.config.Repo1, apiSaveOutput(res.output)); err != nil {
+		_, _ = res.Output.WriteString("start of tag list test")
+		if _, err := r.API.TagList(r.Config.schemeReg, r.Config.Repo1, apiSaveOutput(res.Output)); err != nil {
 			r.APIFail(res, err, "", stateAPITagList)
 		} else {
 			r.APIPass(res, "", stateAPITagList)
@@ -228,7 +284,7 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 	return r.ChildRun("push", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		curAPI := 0
-		for dig := range r.state.data[tdName].blobs {
+		for dig := range r.State.Data[tdName].blobs {
 			curAPI = (curAPI + 1) % len(blobAPIs)
 			var err error
 			switch blobAPIs[curAPI] {
@@ -245,7 +301,7 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 			}
 			// TODO: fallback to any blob push method
 		}
-		for _, dig := range r.state.data[tdName].manOrder {
+		for _, dig := range r.State.Data[tdName].manOrder {
 			err := r.TestPushManifest(res, tdName, dig)
 			if err != nil {
 				errs = append(errs, err)
@@ -264,7 +320,7 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 			r.Skip(res, err)
 			return nil
 		}
-		if err := r.api.BlobPostPut(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName], apiSaveOutput(res.output)); err != nil {
+		if err := r.API.BlobPostPut(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.APIFail(res, err, tdName, stateAPIBlobPostPut)
 			return nil
 		}
@@ -279,7 +335,7 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 			r.Skip(res, err)
 			return nil
 		}
-		if err := r.api.BlobPostOnly(r.config.schemeReg, r.config.Repo1, dig, r.state.data[tdName], apiSaveOutput(res.output)); err != nil {
+		if err := r.API.BlobPostOnly(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.APIFail(res, err, tdName, stateAPIBlobPostOnly)
 			return nil
 		}
@@ -289,16 +345,16 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 }
 
 func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Digest) error {
-	td := r.state.data[tdName]
+	td := r.State.Data[tdName]
 	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
 		// push by tag
 		return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
 			if err := r.APIRequire(stateAPIManifestPutTag); err != nil {
-				r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusSkip)
+				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
 				r.Skip(res, err)
 				return nil
 			}
-			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, td.tag, dig, td, apiSaveOutput(res.output)); err != nil {
+			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, apiSaveOutput(res.Output)); err != nil {
 				r.APIFail(res, err, tdName, stateAPIManifestPutTag)
 				return nil
 			}
@@ -309,11 +365,11 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 		// push by digest
 		return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
 			if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
-				r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusSkip)
+				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
 				r.Skip(res, err)
 				return nil
 			}
-			if err := r.api.ManifestPut(r.config.schemeReg, r.config.Repo1, dig.String(), dig, td, apiSaveOutput(res.output)); err != nil {
+			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, apiSaveOutput(res.Output)); err != nil {
 				r.APIFail(res, err, tdName, stateAPIManifestPutDigest)
 				return nil
 			}
@@ -326,20 +382,20 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *results) error) error {
 	res := resultsNew(name, parent)
 	if parent != nil {
-		parent.children = append(parent.children, res)
+		parent.Children = append(parent.Children, res)
 	}
 	err := fn(r, res)
-	res.stop = time.Now()
+	res.Stop = time.Now()
 	if err != nil {
-		res.errs = append(res.errs, err)
-		res.status = res.status.Set(statusError)
-		res.counts[statusError]++
+		res.Errs = append(res.Errs, err)
+		res.Status = res.Status.Set(statusError)
+		res.Counts[statusError]++
 	}
 	if parent != nil {
 		for i := statusUnknown; i < statusMax; i++ {
-			parent.counts[i] += res.counts[i]
+			parent.Counts[i] += res.Counts[i]
 		}
-		parent.status = parent.status.Set(res.status)
+		parent.Status = parent.Status.Set(res.Status)
 	}
 	return err
 }
@@ -349,32 +405,32 @@ func (r *runner) Skip(res *results, err error) {
 	if errors.Is(err, ErrDisabled) {
 		s = statusDisabled
 	}
-	res.status = res.status.Set(s)
-	res.counts[s]++
-	fmt.Fprintf(res.output, "%s: skipping test:\n  %s\n", res.name,
+	res.Status = res.Status.Set(s)
+	res.Counts[s]++
+	fmt.Fprintf(res.Output, "%s: skipping test:\n  %s\n", res.Name,
 		strings.ReplaceAll(err.Error(), "\n", "\n  "))
 }
 
 func (r *runner) APIFail(res *results, err error, tdName string, apis ...stateAPIType) {
-	res.status = res.status.Set(statusFail)
-	res.counts[statusFail]++
-	res.errs = append(res.errs, err)
+	res.Status = res.Status.Set(statusFail)
+	res.Counts[statusFail]++
+	res.Errs = append(res.Errs, err)
 	if tdName != "" {
-		r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusFail)
+		r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusFail)
 	}
 	for _, a := range apis {
-		r.state.apiStatus[a] = r.state.apiStatus[a].Set(statusFail)
+		r.State.APIStatus[a] = r.State.APIStatus[a].Set(statusFail)
 	}
 }
 
 func (r *runner) APIPass(res *results, tdName string, apis ...stateAPIType) {
-	res.status = res.status.Set(statusPass)
-	res.counts[statusPass]++
+	res.Status = res.Status.Set(statusPass)
+	res.Counts[statusPass]++
 	if tdName != "" {
-		r.state.dataStatus[tdName] = r.state.dataStatus[tdName].Set(statusPass)
+		r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusPass)
 	}
 	for _, a := range apis {
-		r.state.apiStatus[a] = r.state.apiStatus[a].Set(statusPass)
+		r.State.APIStatus[a] = r.State.APIStatus[a].Set(statusPass)
 	}
 }
 
@@ -389,33 +445,33 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 		// check the configuration disables the api
 		switch a {
 		case stateAPITagList:
-			if !r.config.APIs.Tags {
+			if !r.Config.APIs.Tags {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIManifestPutTag, stateAPIManifestPutDigest, stateAPIManifestPutSubject,
 			stateAPIBlobPush, stateAPIBlobPostOnly, stateAPIBlobPostPut,
 			stateAPIBlobPatchChunk, stateAPIBlobPatchStream, stateAPIBlobMountSource, stateAPIBlobMountAnonymous:
-			if !r.config.APIs.Push {
+			if !r.Config.APIs.Push {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIManifestGetTag, stateAPIManifestGetDigest, stateAPIBlobGetFull, stateAPIBlobGetRange:
-			if !r.config.APIs.Pull {
+			if !r.Config.APIs.Pull {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIBlobDelete:
-			if !r.config.APIs.Delete.Blob {
+			if !r.Config.APIs.Delete.Blob {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIManifestDeleteTag:
-			if !r.config.APIs.Delete.Tag {
+			if !r.Config.APIs.Delete.Tag {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIManifestDeleteDigest:
-			if !r.config.APIs.Delete.Manifest {
+			if !r.Config.APIs.Delete.Manifest {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIReferrers:
-			if !r.config.APIs.Referrer {
+			if !r.Config.APIs.Referrer {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		}
