@@ -58,35 +58,6 @@ func (r *results) ReportWalkErr(w io.Writer, prefix string) {
 	}
 }
 
-func (r *results) ToJunit() *junitTestSuites {
-	statusTotal := 0
-	for i := status(1); i < statusMax; i++ {
-		statusTotal += r.Counts[i]
-	}
-	tSec := fmt.Sprintf("%f", r.Stop.Sub(r.Start).Seconds())
-	jTSuites := junitTestSuites{
-		Tests:    statusTotal,
-		Errors:   r.Counts[statusError],
-		Failures: r.Counts[statusFail],
-		Skipped:  r.Counts[statusSkip],
-		Disabled: r.Counts[statusDisabled],
-		Time:     tSec,
-	}
-	jTSuite := junitTestSuite{
-		Name:     r.Name,
-		Tests:    statusTotal,
-		Errors:   r.Counts[statusError],
-		Failures: r.Counts[statusFail],
-		Skipped:  r.Counts[statusSkip],
-		Disabled: r.Counts[statusDisabled],
-		Time:     tSec,
-	}
-	jTSuite.Testcases = r.ToJunitTestCases()
-	// TODO: inject configuration as properties on jTSuite
-	jTSuites.Suites = []junitTestSuite{jTSuite}
-	return &jTSuites
-}
-
 func (r *results) ToJunitTestCases() []junitTest {
 	jTests := []junitTest{}
 	if len(r.Children) == 0 {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/xml"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,22 +22,21 @@ func main() {
 	_ = r.TestAll()
 	// show results
 	r.Report(os.Stdout)
+	// generate reports
 	os.MkdirAll(c.ResultsDir, 0755)
 	// write junit.xml report
-	ju := r.Results.ToJunit()
 	fh, err := os.Create(filepath.Join(c.ResultsDir, "junit.xml"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create junit.xml: %v\n", err)
 		return
 	}
-	enc := xml.NewEncoder(fh)
-	enc.Indent("", "  ")
-	err = enc.Encode(ju)
+	err = r.ReportJunit(fh)
 	_ = fh.Close()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to generate junit.xml: %v\n", err)
 		return
 	}
+	// write report.html
 	fh, err = os.Create(filepath.Join(c.ResultsDir, "report.html"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create report.html: %v\n", err)

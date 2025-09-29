@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"html/template"
@@ -193,7 +194,46 @@ func (r *runner) Report(w io.Writer) {
 		fmt.Fprintf(w, "  %s%s: %10s\n", r.State.Data[tdName].name, pad, r.State.DataStatus[tdName].String())
 	}
 	fmt.Fprintf(w, "\n")
-	// TODO: include config
+
+	fmt.Fprintf(w, "Configuration:\n")
+	fmt.Fprintf(w, "  %s", strings.ReplaceAll(r.Config.Report(), "\n", "\n  "))
+	fmt.Fprintf(w, "\n")
+}
+
+func (r *runner) ReportJunit(w io.Writer) error {
+	ju := r.toJunit()
+	enc := xml.NewEncoder(w)
+	enc.Indent("", "  ")
+	return enc.Encode(ju)
+}
+
+func (r *runner) toJunit() *junitTestSuites {
+	statusTotal := 0
+	for i := status(1); i < statusMax; i++ {
+		statusTotal += r.Results.Counts[i]
+	}
+	tSec := fmt.Sprintf("%f", r.Results.Stop.Sub(r.Results.Start).Seconds())
+	jTSuites := junitTestSuites{
+		Tests:    statusTotal,
+		Errors:   r.Results.Counts[statusError],
+		Failures: r.Results.Counts[statusFail],
+		Skipped:  r.Results.Counts[statusSkip],
+		Disabled: r.Results.Counts[statusDisabled],
+		Time:     tSec,
+	}
+	jTSuite := junitTestSuite{
+		Name:      r.Results.Name,
+		Tests:     statusTotal,
+		Errors:    r.Results.Counts[statusError],
+		Failures:  r.Results.Counts[statusFail],
+		Skipped:   r.Results.Counts[statusSkip],
+		Disabled:  r.Results.Counts[statusDisabled],
+		Time:      tSec,
+		Testcases: r.Results.ToJunitTestCases(),
+	}
+	jTSuite.Properties = []junitProperty{{Name: "Config", Value: r.Config.Report()}}
+	jTSuites.Suites = []junitTestSuite{jTSuite}
+	return &jTSuites
 }
 
 func (r *runner) ReportHTML(w io.Writer) error {
@@ -269,7 +309,6 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 			r.Skip(res, err)
 			return nil
 		}
-		_, _ = res.Output.WriteString("start of tag list test")
 		if _, err := r.API.TagList(r.Config.schemeReg, r.Config.Repo1, apiSaveOutput(res.Output)); err != nil {
 			r.APIFail(res, err, "", stateAPITagList)
 		} else {
