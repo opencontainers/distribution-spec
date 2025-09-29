@@ -252,7 +252,6 @@ func (c config) Report() string {
 	return string(b)
 }
 
-// TODO: adjust fields to align with results
 var confHTMLTemplates = map[string]string{
 	"report": `<html>
   <head>
