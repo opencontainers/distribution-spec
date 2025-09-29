@@ -135,10 +135,3 @@ type index struct {
 	// Annotations contains arbitrary metadata for the image index.
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
-
-// TODO: delete, needed to silence linter warnings during dev
-var (
-	_ = manifest{}
-	_ = image{}
-	_ = index{}
-)
