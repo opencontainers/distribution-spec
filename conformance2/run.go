@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ type runner struct {
 	API     *api
 	State   *state
 	Results *results
+	Log     *slog.Logger
 }
 
 func runnerNew(c config) (*runner, error) {
@@ -39,6 +41,9 @@ func runnerNew(c config) (*runner, error) {
 			return nil, fmt.Errorf("failed to parse logging level %s: %w", c.LogLevel, err)
 		}
 	}
+	if c.LogWriter == nil {
+		c.LogWriter = os.Stderr
+	}
 	apiOpts := []apiOpt{}
 	if c.LoginUser != "" && c.LoginPass != "" {
 		apiOpts = append(apiOpts, apiWithAuth(c.LoginUser, c.LoginPass))
@@ -48,6 +53,7 @@ func runnerNew(c config) (*runner, error) {
 		API:     apiNew(http.DefaultClient, apiOpts...),
 		State:   stateNew(),
 		Results: resultsNew(testName, nil),
+		Log:     slog.New(slog.NewTextHandler(c.LogWriter, &slog.HandlerOptions{Level: lvl})),
 	}
 	return &r, nil
 }
@@ -306,13 +312,13 @@ func (r *runner) TestEmpty(parent *results) error {
 func (r *runner) TestEmptyTagList(parent *results) error {
 	return r.ChildRun("tag list", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPITagList); err != nil {
-			r.Skip(res, err)
+			r.TestSkip(res, err)
 			return nil
 		}
 		if _, err := r.API.TagList(r.Config.schemeReg, r.Config.Repo1, apiSaveOutput(res.Output)); err != nil {
-			r.APIFail(res, err, "", stateAPITagList)
+			r.TestFail(res, err, "", stateAPITagList)
 		} else {
-			r.APIPass(res, "", stateAPITagList)
+			r.TestPass(res, "", stateAPITagList)
 		}
 		return nil
 	})
@@ -356,14 +362,14 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.Digest) error {
 	return r.ChildRun("blob-post-put", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPostPut); err != nil {
-			r.Skip(res, err)
+			r.TestSkip(res, err)
 			return nil
 		}
 		if err := r.API.BlobPostPut(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
-			r.APIFail(res, err, tdName, stateAPIBlobPostPut)
+			r.TestFail(res, err, tdName, stateAPIBlobPostPut)
 			return nil
 		}
-		r.APIPass(res, tdName, stateAPIBlobPostPut)
+		r.TestPass(res, tdName, stateAPIBlobPostPut)
 		return nil
 	})
 }
@@ -371,14 +377,14 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest.Digest) error {
 	return r.ChildRun("blob-post-only", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPostOnly); err != nil {
-			r.Skip(res, err)
+			r.TestSkip(res, err)
 			return nil
 		}
 		if err := r.API.BlobPostOnly(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
-			r.APIFail(res, err, tdName, stateAPIBlobPostOnly)
+			r.TestFail(res, err, tdName, stateAPIBlobPostOnly)
 			return nil
 		}
-		r.APIPass(res, tdName, stateAPIBlobPostOnly)
+		r.TestPass(res, tdName, stateAPIBlobPostOnly)
 		return nil
 	})
 }
@@ -390,14 +396,14 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 		return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
 			if err := r.APIRequire(stateAPIManifestPutTag); err != nil {
 				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.Skip(res, err)
+				r.TestSkip(res, err)
 				return nil
 			}
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, apiSaveOutput(res.Output)); err != nil {
-				r.APIFail(res, err, tdName, stateAPIManifestPutTag)
+				r.TestFail(res, err, tdName, stateAPIManifestPutTag)
 				return nil
 			}
-			r.APIPass(res, tdName, stateAPIManifestPutTag)
+			r.TestPass(res, tdName, stateAPIManifestPutTag)
 			return nil
 		})
 	} else {
@@ -405,14 +411,14 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 		return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
 			if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
 				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.Skip(res, err)
+				r.TestSkip(res, err)
 				return nil
 			}
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, apiSaveOutput(res.Output)); err != nil {
-				r.APIFail(res, err, tdName, stateAPIManifestPutDigest)
+				r.TestFail(res, err, tdName, stateAPIManifestPutDigest)
 				return nil
 			}
-			r.APIPass(res, tdName, stateAPIManifestPutDigest)
+			r.TestPass(res, tdName, stateAPIManifestPutDigest)
 			return nil
 		})
 	}
@@ -439,7 +445,7 @@ func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *result
 	return err
 }
 
-func (r *runner) Skip(res *results, err error) {
+func (r *runner) TestSkip(res *results, err error) {
 	s := statusSkip
 	if errors.Is(err, ErrDisabled) {
 		s = statusDisabled
@@ -448,9 +454,10 @@ func (r *runner) Skip(res *results, err error) {
 	res.Counts[s]++
 	fmt.Fprintf(res.Output, "%s: skipping test:\n  %s\n", res.Name,
 		strings.ReplaceAll(err.Error(), "\n", "\n  "))
+	r.Log.Info("skipping test", "name", res.Name, "error", err.Error())
 }
 
-func (r *runner) APIFail(res *results, err error, tdName string, apis ...stateAPIType) {
+func (r *runner) TestFail(res *results, err error, tdName string, apis ...stateAPIType) {
 	res.Status = res.Status.Set(statusFail)
 	res.Counts[statusFail]++
 	res.Errs = append(res.Errs, err)
@@ -460,9 +467,11 @@ func (r *runner) APIFail(res *results, err error, tdName string, apis ...stateAP
 	for _, a := range apis {
 		r.State.APIStatus[a] = r.State.APIStatus[a].Set(statusFail)
 	}
+	r.Log.Warn("failed test", "name", res.Name, "error", err.Error())
+	r.Log.Debug("failed test output", "name", res.Name, "output", res.Output.String())
 }
 
-func (r *runner) APIPass(res *results, tdName string, apis ...stateAPIType) {
+func (r *runner) TestPass(res *results, tdName string, apis ...stateAPIType) {
 	res.Status = res.Status.Set(statusPass)
 	res.Counts[statusPass]++
 	if tdName != "" {
@@ -471,6 +480,8 @@ func (r *runner) APIPass(res *results, tdName string, apis ...stateAPIType) {
 	for _, a := range apis {
 		r.State.APIStatus[a] = r.State.APIStatus[a].Set(statusPass)
 	}
+	r.Log.Info("passing test", "name", res.Name)
+	r.Log.Debug("passing test output", "name", res.Name, "output", res.Output.String())
 }
 
 func (r *runner) APIRequire(apis ...stateAPIType) error {
