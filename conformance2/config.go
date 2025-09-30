@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"strings"
@@ -19,18 +20,19 @@ const (
 )
 
 type config struct {
-	Registry   string     `conformance:"REGISTRY" yaml:"registry"` // hostname:port of registry server
-	TLS        tls        `conformance:"TLS" yaml:"tls"`           // tls configuration for communicating with the registry
-	Repo1      string     `conformance:"REPO1" yaml:"repo1"`       // first repository for pushing content
-	Repo2      string     `conformance:"REPO2" yaml:"repo2"`       // second repository for pushing content
-	LoginUser  string     `conformance:"USERNAME" yaml:"username"` // username for login, leave blank for anonymous
-	LoginPass  string     `conformance:"PASSWORD" yaml:"password"` // password for login, leave blank for anonymous
-	LogLevel   string     `conformance:"LOG" yaml:"logging"`       // TODO: logging level, use slog levels
-	APIs       configAPI  `conformance:"API" yaml:"apis"`          // API tests to run
-	Data       configData `conformance:"DATA" yaml:"data"`
+	Registry   string     `conformance:"REGISTRY" yaml:"registry"`      // hostname:port of registry server
+	TLS        tls        `conformance:"TLS" yaml:"tls"`                // tls configuration for communicating with the registry
+	Repo1      string     `conformance:"REPO1" yaml:"repo1"`            // first repository for pushing content
+	Repo2      string     `conformance:"REPO2" yaml:"repo2"`            // second repository for pushing content
+	LoginUser  string     `conformance:"USERNAME" yaml:"username"`      // username for login, leave blank for anonymous
+	LoginPass  string     `conformance:"PASSWORD" yaml:"password"`      // password for login, leave blank for anonymous
+	LogLevel   string     `conformance:"LOG" yaml:"logging"`            // slog logging level, defaults to "warn"
+	LogWriter  io.Writer  `yaml:"-"`                                    // writer used for logging, defaults to os.Stderr
+	APIs       configAPI  `conformance:"API" yaml:"apis"`               // API tests to run
+	Data       configData `conformance:"DATA" yaml:"data"`              // Data types to test
 	ResultsDir string     `conformance:"RESULTS_DIR" yaml:"resultsDir"` // Directory to write results
-	Version    string
-	schemeReg  string // base for url to access the registry
+	Version    string     `conformance:"VERSION" yaml:"version"`        // TODO: switch this to the OCI spec version for default settings
+	schemeReg  string     `yaml:"-"`                                    // base for url to access the registry
 }
 
 type tls int
@@ -71,9 +73,11 @@ type configData struct {
 func configLoad() (config, error) {
 	// initialize config with default values
 	c := config{
-		Registry: "localhost:5000",
-		Repo1:    "conformance/repo1",
-		Repo2:    "conformance/repo2",
+		Registry:  "localhost:5000",
+		Repo1:     "conformance/repo1",
+		Repo2:     "conformance/repo2",
+		LogLevel:  "warn",
+		LogWriter: os.Stderr,
 		APIs: configAPI{
 			Pull:     true,
 			Push:     true,
