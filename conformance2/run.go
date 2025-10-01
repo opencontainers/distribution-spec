@@ -97,7 +97,7 @@ func (r *runner) GenerateData() error {
 	r.State.Data[tdName] = newTestData("OCI Image", "image")
 	digCList := []digest.Digest{}
 	digUCList := []digest.Digest{}
-	for l := 0; l < len(blobAPIs); l++ {
+	for l := range blobAPIs {
 		digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
@@ -126,7 +126,7 @@ func (r *runner) GenerateData() error {
 	for _, p := range platList {
 		digCList = []digest.Digest{}
 		digUCList = []digest.Digest{}
-		for l := 0; l < len(blobAPIs); l++ {
+		for l := range blobAPIs {
 			digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
 			if err != nil {
 				return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
@@ -177,7 +177,7 @@ func (r *runner) Report(w io.Writer) {
 	}
 
 	fmt.Fprintf(w, "API conformance:\n")
-	for i := stateAPIType(0); i < stateAPIMax; i++ {
+	for i := range stateAPIMax {
 		pad := ""
 		if len(i.String()) < padWidth {
 			pad = strings.Repeat(".", padWidth-len(i.String()))
