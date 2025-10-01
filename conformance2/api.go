@@ -375,10 +375,8 @@ func apiExpectHeaders(h *http.Header) apiDoOpt {
 func apiExpectStatus(statusCodes ...int) apiDoOpt {
 	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
-			for _, c := range statusCodes {
-				if resp.StatusCode == c {
-					return nil
-				}
+			if slices.Contains(statusCodes, resp.StatusCode) {
+				return nil
 			}
 			return fmt.Errorf("unexpected status code %d", resp.StatusCode)
 		},
