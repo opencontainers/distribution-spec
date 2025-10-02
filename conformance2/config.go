@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -14,9 +15,10 @@ const (
 	confGoTag      = "conformance"
 	envOCIConf     = "OCI"
 	envOCIConfFile = "OCI_CONFIGURATION"
+	envOCIVersion  = "OCI_VERSION"
 	defaultOCIConf = "oci-conformance.yml"
 	truncateBody   = 4096
-	confVersion    = "TBD"
+	biVCSCommit    = "vcs.revision"
 )
 
 type config struct {
@@ -29,10 +31,11 @@ type config struct {
 	LogLevel   string     `conformance:"LOG" yaml:"logging"`            // slog logging level, defaults to "warn"
 	LogWriter  io.Writer  `yaml:"-"`                                    // writer used for logging, defaults to os.Stderr
 	APIs       configAPI  `conformance:"API" yaml:"apis"`               // API tests to run
-	Data       configData `conformance:"DATA" yaml:"data"`              // Data types to test
-	ResultsDir string     `conformance:"RESULTS_DIR" yaml:"resultsDir"` // Directory to write results
-	Version    string     `conformance:"VERSION" yaml:"version"`        // TODO: switch this to the OCI spec version for default settings
+	Data       configData `conformance:"DATA" yaml:"data"`              // data types to test
+	ResultsDir string     `conformance:"RESULTS_DIR" yaml:"resultsDir"` // directory to write results
+	Version    string     `conformance:"VERSION" yaml:"version"`        // spec version used to set test defaults
 	schemeReg  string     `yaml:"-"`                                    // base for url to access the registry
+	Commit     string     `yaml:"commit"`                               // injected git commit hash from runtime
 }
 
 type tls int
@@ -67,18 +70,58 @@ type configData struct {
 	SubjectMissing   bool `conformance:"SUBJECT_MISSING" yaml:"subjectMissing"`    // artifact with a missing subject
 	ArtifactList     bool `conformance:"ARTIFACT_LIST" yaml:"artifactList"`        // index of artifacts
 	SubjectList      bool `conformance:"SUBJECT_LIST" yaml:"subjectList"`          // index with a subject
-	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated
+	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated in spec 1.1
 }
 
 func configLoad() (config, error) {
-	// initialize config with default values
+	// read config from yaml file if available
+	loadFile := ""
+	configFile := []byte{}
+	if filename, ok := os.LookupEnv(envOCIConfFile); ok {
+		loadFile = filename
+	} else if fi, err := os.Stat(defaultOCIConf); err == nil && !fi.IsDir() {
+		loadFile = defaultOCIConf
+	}
+	if loadFile != "" {
+		fh, err := os.Open(loadFile)
+		if err != nil {
+			return config{}, err
+		}
+		configFile, err = io.ReadAll(fh)
+		_ = fh.Close()
+		if err != nil {
+			return config{}, err
+		}
+	}
+	// extract the version from the config file or env variable
+	configVersion := ""
+	if len(configFile) > 0 {
+		verStruct := struct {
+			Version string `yaml:"version"`
+		}{}
+		err := yaml.Unmarshal(configFile, &verStruct)
+		if err != nil {
+			return config{}, err
+		}
+		configVersion = verStruct.Version
+	}
+	configVersionEnv := os.Getenv(envOCIVersion)
+	if configVersionEnv != "" {
+		configVersion = configVersionEnv
+	}
+
+	// initialize config with default values based on spec version
 	c := config{
-		Registry:  "localhost:5000",
-		Repo1:     "conformance/repo1",
-		Repo2:     "conformance/repo2",
-		LogLevel:  "warn",
-		LogWriter: os.Stderr,
-		APIs: configAPI{
+		Registry:   "localhost:5000",
+		Repo1:      "conformance/repo1",
+		Repo2:      "conformance/repo2",
+		LogLevel:   "warn",
+		LogWriter:  os.Stderr,
+		ResultsDir: "./results",
+	}
+	switch configVersion {
+	case "", "1.1":
+		c.APIs = configAPI{
 			Pull:     true,
 			Push:     true,
 			Tags:     true,
@@ -88,8 +131,8 @@ func configLoad() (config, error) {
 				Manifest: true,
 				Blob:     true,
 			},
-		},
-		Data: configData{
+		}
+		c.Data = configData{
 			Image:            true,
 			Index:            true,
 			IndexList:        true,
@@ -100,9 +143,33 @@ func configLoad() (config, error) {
 			ArtifactList:     true,
 			SubjectList:      true,
 			Nondistributable: false,
-		},
-		ResultsDir: "./results",
-		Version:    confVersion,
+		}
+	case "1.0":
+		c.APIs = configAPI{
+			Pull:     true,
+			Push:     true,
+			Tags:     true,
+			Referrer: false,
+			Delete: configObjects{
+				Tag:      true,
+				Manifest: true,
+				Blob:     true,
+			},
+		}
+		c.Data = configData{
+			Image:            true,
+			Index:            true,
+			IndexList:        true,
+			Sparse:           false,
+			Artifact:         true,
+			Subject:          true,
+			SubjectMissing:   true,
+			ArtifactList:     true,
+			SubjectList:      true,
+			Nondistributable: true,
+		}
+	default:
+		return config{}, fmt.Errorf("unsupported config version %s", configVersion)
 	}
 
 	// TODO:
@@ -119,19 +186,8 @@ func configLoad() (config, error) {
 	// export OCI_DELETE_MANIFEST_BEFORE_BLOBS=0 // exclude option until a requirement is found
 
 	// read config from yaml file if available
-	loadFile := ""
-	if filename, ok := os.LookupEnv(envOCIConfFile); ok {
-		loadFile = filename
-	} else if fi, err := os.Stat(defaultOCIConf); err == nil && !fi.IsDir() {
-		loadFile = defaultOCIConf
-	}
-	if loadFile != "" {
-		fh, err := os.Open(loadFile)
-		if err != nil {
-			return c, err
-		}
-		err = yaml.NewDecoder(fh).Decode(&c)
-		_ = fh.Close()
+	if len(configFile) > 0 {
+		err := yaml.Unmarshal(configFile, &c)
 		if err != nil {
 			return c, err
 		}
@@ -150,6 +206,15 @@ func configLoad() (config, error) {
 	}
 	c.schemeReg = fmt.Sprintf("%s://%s", scheme, c.Registry)
 
+	// load the commit from the build info
+	if bi, ok := debug.ReadBuildInfo(); ok && bi != nil {
+		for _, setting := range bi.Settings {
+			if setting.Key == biVCSCommit {
+				c.Commit = setting.Value
+				break
+			}
+		}
+	}
 	return c, nil
 }
 
