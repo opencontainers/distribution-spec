@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"runtime/debug"
+	"strconv"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -291,14 +292,16 @@ func confFromEnv(env, tag string, vp reflect.Value) error {
 		return nil
 	}
 
+	// fall back to extracting by the kind
 	switch v.Kind() {
 	case reflect.String:
 		v.SetString(val)
-
-	// TODO:
-	// case reflect.Int:
-	// case reflect.Bool:
-
+	case reflect.Bool:
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return fmt.Errorf("failed to parse bool value from environment %s=%s", env, val)
+		}
+		v.SetBool(b)
 	default:
 		// unhandled type
 		return fmt.Errorf("unsupported kind: %s", v.Kind())
