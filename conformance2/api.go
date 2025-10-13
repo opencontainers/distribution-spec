@@ -49,6 +49,7 @@ type apiDoOpt struct {
 }
 
 func (a *api) Do(opts ...apiDoOpt) error {
+	errs := []error{}
 	reqFns := []func(*http.Request) error{}
 	respFns := []func(*http.Response) error{}
 	var out io.Writer
@@ -70,8 +71,13 @@ func (a *api) Do(opts ...apiDoOpt) error {
 	for _, reqFn := range reqFns {
 		err := reqFn(req)
 		if err != nil {
-			return err
+			errs = append(errs, err)
 		}
+	}
+	if len(errs) == 1 {
+		return errs[0]
+	} else if len(errs) > 1 {
+		return errors.Join(errs...)
 	}
 	if out != nil {
 		out = redactWriter{w: out}
@@ -86,7 +92,6 @@ func (a *api) Do(opts ...apiDoOpt) error {
 	if err != nil {
 		return err
 	}
-	errs := []error{}
 	// on auth failures, generate the auth header and retry
 	if resp.StatusCode == http.StatusUnauthorized {
 		auth, err := a.getAuthHeader(c, resp)
@@ -132,7 +137,7 @@ func (a *api) TagList(registry, repo string, opts ...apiDoOpt) (specs.TagList, e
 		apiWithOr(
 			[]apiDoOpt{
 				apiExpectStatus(http.StatusOK),
-				apiExpectJSONBody(&tl),
+				apiReturnJSONBody(&tl),
 			},
 			[]apiDoOpt{
 				apiExpectStatus(http.StatusNotFound),
@@ -154,7 +159,6 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	qa := u.Query()
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
-	headers := http.Header{}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
@@ -162,14 +166,10 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated),
-		apiExpectHeaders(&headers),
+		apiExpectHeader("Location", ""),
 	)
 	if err != nil {
 		return fmt.Errorf("blob post failed: %v", err)
-	}
-	l := headers.Get("Location")
-	if l == "" {
-		return fmt.Errorf("blob post did not return a location")
 	}
 	td.repo = repo
 	return nil
@@ -184,17 +184,17 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	if err != nil {
 		return err
 	}
-	headers := http.Header{}
+	resp := http.Response{}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
 		apiExpectStatus(http.StatusAccepted),
-		apiExpectHeaders(&headers),
+		apiReturnResponse(&resp),
 	)
 	if err != nil {
 		return fmt.Errorf("blob post failed: %v", err)
 	}
-	l := headers.Get("Location")
+	l := resp.Header.Get("Location")
 	if l == "" {
 		return fmt.Errorf("blob post did not return a location")
 	}
@@ -212,14 +212,10 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated),
-		apiExpectHeaders(&headers),
+		apiExpectHeader("Location", ""),
 	)
 	if err != nil {
 		return fmt.Errorf("blob put failed: %v", err)
-	}
-	l = headers.Get("location")
-	if l == "" {
-		return fmt.Errorf("blob put did not return a location header")
 	}
 	td.repo = repo
 	return nil
@@ -234,20 +230,27 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	if err != nil {
 		return err
 	}
-	mediaType := getMediaType(bodyBytes)
-	headers := http.Header{}
+	mediaType := detectMediaType(bodyBytes)
+	resp := http.Response{}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
 		apiWithBody(bodyBytes),
 		apiWithHeaderAdd("Content-Type", mediaType),
 		apiExpectStatus(http.StatusCreated),
-		apiExpectHeaders(&headers),
+		apiExpectHeader("Location", ""),
+		apiReturnResponse(&resp),
 	)
 	if err != nil {
 		return fmt.Errorf("manifest put failed: %v", err)
 	}
-	// TODO: validate headers: location, docker-content-digest (optional), oci-subject (depending on option)
+	digHeader := resp.Header.Get("Docker-Content-Digest")
+	if digHeader == "" {
+		return fmt.Errorf("warning: registry does not return a Docker-Content-Digest header")
+	}
+	if digHeader != "" && digHeader != dig.String() {
+		return fmt.Errorf("Docker-Content-Digest header value expected %q, received %q", dig.String(), digHeader)
+	}
 	td.repo = repo
 	return nil
 }
@@ -271,26 +274,34 @@ func apiWithAnd(opts []apiDoOpt) apiDoOpt {
 		ret.reqFn = reqFns[0]
 	} else if len(reqFns) > 0 {
 		ret.reqFn = func(r *http.Request) error {
+			errs := []error{}
 			for _, fn := range reqFns {
 				err := fn(r)
 				if err != nil {
-					return err
+					errs = append(errs, err)
 				}
 			}
-			return nil
+			if len(errs) == 1 {
+				return errs[0]
+			}
+			return errors.Join(errs...)
 		}
 	}
 	if len(respFns) == 1 {
 		ret.respFn = respFns[0]
 	} else if len(respFns) > 0 {
 		ret.respFn = func(r *http.Response) error {
+			errs := []error{}
 			for _, fn := range respFns {
 				err := fn(r)
 				if err != nil {
-					return err
+					errs = append(errs, err)
 				}
 			}
-			return nil
+			if len(errs) == 1 {
+				return errs[0]
+			}
+			return errors.Join(errs...)
 		}
 	}
 	return ret
@@ -301,22 +312,23 @@ func apiWithAnd(opts []apiDoOpt) apiDoOpt {
 func apiWithOr(optLists ...[]apiDoOpt) apiDoOpt {
 	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
-			var err error
+			errsOr := []error{}
 			for _, opts := range optLists {
-				err = nil
+				errsResp := []error{}
 				for _, opt := range opts {
 					if opt.respFn != nil {
-						err = opt.respFn(resp)
+						err := opt.respFn(resp)
 						if err != nil {
-							break
+							errsResp = append(errsResp, err)
 						}
 					}
 				}
-				if err == nil {
+				if len(errsResp) == 0 {
 					return nil
 				}
+				errsOr = append(errsOr, errors.Join(errsResp...))
 			}
-			return err
+			return fmt.Errorf("response did not match any condition: %w", errors.Join(errsOr...))
 		},
 	}
 }
@@ -363,10 +375,19 @@ func apiWithBody(body []byte) apiDoOpt {
 	}
 }
 
-func apiExpectHeaders(h *http.Header) apiDoOpt {
+func apiExpectHeader(key, val string) apiDoOpt {
 	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
-			*h = resp.Header
+			cur := resp.Header.Get(key)
+			if val == "" {
+				if cur == "" {
+					return fmt.Errorf("missing header %q", key)
+				}
+			} else {
+				if cur != val {
+					return fmt.Errorf("header value mismatch for %q, expected %q, received %q", key, val, cur)
+				}
+			}
 			return nil
 		},
 	}
@@ -383,10 +404,19 @@ func apiExpectStatus(statusCodes ...int) apiDoOpt {
 	}
 }
 
-func apiExpectJSONBody(data any) apiDoOpt {
+func apiReturnJSONBody(data any) apiDoOpt {
 	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
 			return json.NewDecoder(resp.Body).Decode(data)
+		},
+	}
+}
+
+func apiReturnResponse(ret *http.Response) apiDoOpt {
+	return apiDoOpt{
+		respFn: func(r *http.Response) error {
+			*ret = *r
+			return nil
 		},
 	}
 }
@@ -504,16 +534,23 @@ func (wt *wrapTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return resp, err
 }
 
-type detectMT struct {
-	MediaType string `json:"mediaType"`
+type detectManifest struct {
+	MediaType string      `json:"mediaType"`
+	Subject   *descriptor `json:"subject,omitempty"`
 }
 
-func getMediaType(body []byte) string {
-	dmt := detectMT{
+func detectMediaType(body []byte) string {
+	det := detectManifest{
 		MediaType: "application/vnd.oci.image.manifest.v1+json",
 	}
-	_ = json.Unmarshal(body, &dmt)
-	return dmt.MediaType
+	_ = json.Unmarshal(body, &det)
+	return det.MediaType
+}
+
+func detectSubject(body []byte) *descriptor {
+	det := detectManifest{}
+	_ = json.Unmarshal(body, &det)
+	return det.Subject
 }
 
 func cloneBodyReq(req *http.Request) ([]byte, error) {
