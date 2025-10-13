@@ -391,6 +391,13 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 
 func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
+	opts := []apiDoOpt{}
+	if r.Config.APIs.Referrer {
+		subj := detectSubject(td.manifests[dig])
+		if subj != nil {
+			opts = append(opts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
+		}
+	}
 	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
 		// push by tag
 		return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
@@ -399,7 +406,8 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				r.TestSkip(res, err)
 				return nil
 			}
-			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, apiSaveOutput(res.Output)); err != nil {
+			opts = append(opts, apiSaveOutput(res.Output))
+			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, opts...); err != nil {
 				r.TestFail(res, err, tdName, stateAPIManifestPutTag)
 				return nil
 			}
@@ -414,7 +422,8 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				r.TestSkip(res, err)
 				return nil
 			}
-			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, apiSaveOutput(res.Output)); err != nil {
+			opts = append(opts, apiSaveOutput(res.Output))
+			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, opts...); err != nil {
 				r.TestFail(res, err, tdName, stateAPIManifestPutDigest)
 				return nil
 			}
