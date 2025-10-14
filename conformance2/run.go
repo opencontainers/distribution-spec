@@ -23,6 +23,8 @@ const (
 	dataIndex = "02-index"
 )
 
+var errTestStatus = errors.New("API test tracked a failure")
+
 var blobAPIs = []stateAPIType{stateAPIBlobPostPut, stateAPIBlobPostOnly}
 
 type runner struct {
@@ -317,9 +319,9 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 		}
 		if _, err := r.API.TagList(r.Config.schemeReg, r.Config.Repo1, apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, "", stateAPITagList)
-		} else {
-			r.TestPass(res, "", stateAPITagList)
+			return fmt.Errorf("%.0w%w", errTestStatus, err)
 		}
+		r.TestPass(res, "", stateAPITagList)
 		return nil
 	})
 }
@@ -336,20 +338,20 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 			case stateAPIBlobPostPut:
 				err = r.TestPushBlobPostPut(res, tdName, dig)
 				if err != nil {
-					errs = append(errs, err)
+					errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
 				}
 			case stateAPIBlobPostOnly:
 				err = r.TestPushBlobPostOnly(res, tdName, dig)
 				if err != nil {
-					errs = append(errs, err)
+					errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
 				}
 			}
 			// TODO: fallback to any blob push method
 		}
-		for _, dig := range r.State.Data[tdName].manOrder {
+		for i, dig := range r.State.Data[tdName].manOrder {
 			err := r.TestPushManifest(res, tdName, dig)
 			if err != nil {
-				errs = append(errs, err)
+				errs = append(errs, fmt.Errorf("failed to push manifest %d, digest %s%.0w", i, dig.String(), err))
 			}
 		}
 		if len(errs) > 0 {
@@ -357,6 +359,14 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 		}
 		return nil
 	})
+}
+
+func (r *runner) TestPushBlobAny(parent *results, tdName string, dig digest.Digest) error {
+	// TODO: try each API, preferring untested APIs, then APIs untested with a given digest algo, then default to preferred API
+	// generate an ordered list of APIs to test
+	// return on the first successful API
+	// else return a join of all errors
+	return fmt.Errorf("not implemented")
 }
 
 func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.Digest) error {
@@ -367,7 +377,7 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 		}
 		if err := r.API.BlobPostPut(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPostPut)
-			return nil
+			return fmt.Errorf("%.0w%w", errTestStatus, err)
 		}
 		r.TestPass(res, tdName, stateAPIBlobPostPut)
 		return nil
@@ -382,7 +392,7 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 		}
 		if err := r.API.BlobPostOnly(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPostOnly)
-			return nil
+			return fmt.Errorf("%.0w%w", errTestStatus, err)
 		}
 		r.TestPass(res, tdName, stateAPIBlobPostOnly)
 		return nil
@@ -392,6 +402,7 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
 	opts := []apiDoOpt{}
+	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
 	if r.Config.APIs.Referrer {
 		subj := detectSubject(td.manifests[dig])
 		if subj != nil {
@@ -409,7 +420,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 			opts = append(opts, apiSaveOutput(res.Output))
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, opts...); err != nil {
 				r.TestFail(res, err, tdName, stateAPIManifestPutTag)
-				return nil
+				return fmt.Errorf("%.0w%w", errTestStatus, err)
 			}
 			r.TestPass(res, tdName, stateAPIManifestPutTag)
 			return nil
@@ -425,7 +436,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 			opts = append(opts, apiSaveOutput(res.Output))
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, opts...); err != nil {
 				r.TestFail(res, err, tdName, stateAPIManifestPutDigest)
-				return nil
+				return fmt.Errorf("%.0w%w", errTestStatus, err)
 			}
 			r.TestPass(res, tdName, stateAPIManifestPutDigest)
 			return nil
@@ -440,13 +451,13 @@ func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *result
 	}
 	err := fn(r, res)
 	res.Stop = time.Now()
-	if err != nil {
+	if err != nil && !errors.Is(err, errTestStatus) {
 		res.Errs = append(res.Errs, err)
 		res.Status = res.Status.Set(statusError)
 		res.Counts[statusError]++
 	}
 	if parent != nil {
-		for i := statusUnknown; i < statusMax; i++ {
+		for i := range statusMax {
 			parent.Counts[i] += res.Counts[i]
 		}
 		parent.Status = parent.Status.Set(res.Status)
