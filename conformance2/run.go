@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -23,9 +24,7 @@ const (
 	dataIndex = "02-index"
 )
 
-var errTestStatus = errors.New("API test tracked a failure")
-
-var blobAPIs = []stateAPIType{stateAPIBlobPostPut, stateAPIBlobPostOnly}
+var errTestAPIFail = errors.New("API test with a known failure")
 
 type runner struct {
 	Config  config
@@ -319,7 +318,7 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 		}
 		if _, err := r.API.TagList(r.Config.schemeReg, r.Config.Repo1, apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, "", stateAPITagList)
-			return fmt.Errorf("%.0w%w", errTestStatus, err)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
 		r.TestPass(res, "", stateAPITagList)
 		return nil
@@ -330,23 +329,11 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 	// add more APIs
 	return r.ChildRun("push", parent, func(r *runner, res *results) error {
 		errs := []error{}
-		curAPI := 0
 		for dig := range r.State.Data[tdName].blobs {
-			curAPI = (curAPI + 1) % len(blobAPIs)
-			var err error
-			switch blobAPIs[curAPI] {
-			case stateAPIBlobPostPut:
-				err = r.TestPushBlobPostPut(res, tdName, dig)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
-				}
-			case stateAPIBlobPostOnly:
-				err = r.TestPushBlobPostOnly(res, tdName, dig)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
-				}
+			err := r.TestPushBlobAny(res, tdName, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
 			}
-			// TODO: fallback to any blob push method
 		}
 		for i, dig := range r.State.Data[tdName].manOrder {
 			err := r.TestPushManifest(res, tdName, dig)
@@ -361,12 +348,51 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 	})
 }
 
+var (
+	blobAPIs             = []stateAPIType{stateAPIBlobPostPut, stateAPIBlobPostOnly, stateAPIBlobPatchStream, stateAPIBlobPatchChunk}
+	blobAPIsTested       = [stateAPIMax]bool{}
+	blobAPIsTestedByAlgo = map[digest.Algorithm]*[stateAPIMax]bool{}
+)
+
 func (r *runner) TestPushBlobAny(parent *results, tdName string, dig digest.Digest) error {
-	// TODO: try each API, preferring untested APIs, then APIs untested with a given digest algo, then default to preferred API
-	// generate an ordered list of APIs to test
+	// generate an ordered list of APIs to test, preferring untested, then untested with a digest, then following order
+	apis := []stateAPIType{}
+	if _, ok := blobAPIsTestedByAlgo[dig.Algorithm()]; !ok {
+		blobAPIsTestedByAlgo[dig.Algorithm()] = &[stateAPIMax]bool{}
+	}
+	for _, api := range blobAPIs {
+		if !blobAPIsTested[api] {
+			apis = append(apis, api)
+		}
+	}
+	for _, api := range blobAPIs {
+		if !blobAPIsTestedByAlgo[dig.Algorithm()][api] && !slices.Contains(apis, api) {
+			apis = append(apis, api)
+		}
+	}
+	for _, api := range blobAPIs {
+		if !slices.Contains(apis, api) {
+			apis = append(apis, api)
+		}
+	}
 	// return on the first successful API
-	// else return a join of all errors
-	return fmt.Errorf("not implemented")
+	errs := []error{}
+	for _, api := range apis {
+		err := errors.New("not implemented")
+		switch api {
+		case stateAPIBlobPostPut:
+			err = r.TestPushBlobPostPut(parent, tdName, dig)
+		case stateAPIBlobPostOnly:
+			err = r.TestPushBlobPostOnly(parent, tdName, dig)
+		}
+		blobAPIsTested[api] = true
+		blobAPIsTestedByAlgo[dig.Algorithm()][api] = true
+		if err == nil {
+			return nil
+		}
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.Digest) error {
@@ -377,7 +403,7 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 		}
 		if err := r.API.BlobPostPut(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPostPut)
-			return fmt.Errorf("%.0w%w", errTestStatus, err)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
 		r.TestPass(res, tdName, stateAPIBlobPostPut)
 		return nil
@@ -392,7 +418,7 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 		}
 		if err := r.API.BlobPostOnly(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPostOnly)
-			return fmt.Errorf("%.0w%w", errTestStatus, err)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
 		r.TestPass(res, tdName, stateAPIBlobPostOnly)
 		return nil
@@ -420,7 +446,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 			opts = append(opts, apiSaveOutput(res.Output))
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, opts...); err != nil {
 				r.TestFail(res, err, tdName, stateAPIManifestPutTag)
-				return fmt.Errorf("%.0w%w", errTestStatus, err)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 			}
 			r.TestPass(res, tdName, stateAPIManifestPutTag)
 			return nil
@@ -436,7 +462,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 			opts = append(opts, apiSaveOutput(res.Output))
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, opts...); err != nil {
 				r.TestFail(res, err, tdName, stateAPIManifestPutDigest)
-				return fmt.Errorf("%.0w%w", errTestStatus, err)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 			}
 			r.TestPass(res, tdName, stateAPIManifestPutDigest)
 			return nil
@@ -451,7 +477,7 @@ func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *result
 	}
 	err := fn(r, res)
 	res.Stop = time.Now()
-	if err != nil && !errors.Is(err, errTestStatus) {
+	if err != nil && !errors.Is(err, errTestAPIFail) {
 		res.Errs = append(res.Errs, err)
 		res.Status = res.Status.Set(statusError)
 		res.Counts[statusError]++
