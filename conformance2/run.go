@@ -349,7 +349,7 @@ func (r *runner) TestPush(parent *results, tdName string) error {
 }
 
 var (
-	blobAPIs             = []stateAPIType{stateAPIBlobPostPut, stateAPIBlobPostOnly, stateAPIBlobPatchStream, stateAPIBlobPatchChunk}
+	blobAPIs             = []stateAPIType{stateAPIBlobPostPut, stateAPIBlobPostOnly, stateAPIBlobPatchStream, stateAPIBlobPatchChunked}
 	blobAPIsTested       = [stateAPIMax]bool{}
 	blobAPIsTestedByAlgo = map[digest.Algorithm]*[stateAPIMax]bool{}
 )
@@ -384,6 +384,10 @@ func (r *runner) TestPushBlobAny(parent *results, tdName string, dig digest.Dige
 			err = r.TestPushBlobPostPut(parent, tdName, dig)
 		case stateAPIBlobPostOnly:
 			err = r.TestPushBlobPostOnly(parent, tdName, dig)
+		case stateAPIBlobPatchStream:
+			err = r.TestBlobPatchStream(parent, tdName, dig)
+		case stateAPIBlobPatchChunked:
+			err = r.TestBlobPatchChunked(parent, tdName, dig)
 		}
 		blobAPIsTested[api] = true
 		blobAPIsTestedByAlgo[dig.Algorithm()][api] = true
@@ -421,6 +425,35 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
 		r.TestPass(res, tdName, stateAPIBlobPostOnly)
+		return nil
+	})
+}
+
+func (r *runner) TestBlobPatchChunked(parent *results, tdName string, dig digest.Digest) error {
+	return r.ChildRun("blob-patch-chunked", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIBlobPatchChunked); err != nil {
+			r.TestSkip(res, err)
+			return nil
+		}
+		if err := r.API.BlobPatchChunked(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIBlobPatchChunked)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIBlobPatchChunked)
+		return nil
+	})
+}
+
+func (r *runner) TestBlobPatchStream(parent *results, tdName string, dig digest.Digest) error {
+	return r.ChildRun("blob-patch-stream", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIBlobPatchStream); err != nil {
+			r.TestSkip(res, err)
+			return nil
+		}
+		if err := r.API.BlobPatchStream(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIBlobPatchStream)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
 		return nil
 	})
 }
@@ -546,7 +579,7 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 			}
 		case stateAPIManifestPutTag, stateAPIManifestPutDigest, stateAPIManifestPutSubject,
 			stateAPIBlobPush, stateAPIBlobPostOnly, stateAPIBlobPostPut,
-			stateAPIBlobPatchChunk, stateAPIBlobPatchStream, stateAPIBlobMountSource, stateAPIBlobMountAnonymous:
+			stateAPIBlobPatchChunked, stateAPIBlobPatchStream, stateAPIBlobMountSource, stateAPIBlobMountAnonymous:
 			if !r.Config.APIs.Push {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
