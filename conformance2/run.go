@@ -409,7 +409,7 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 			r.TestFail(res, err, tdName, stateAPIBlobPostPut)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
-		r.TestPass(res, tdName, stateAPIBlobPostPut)
+		r.TestPass(res, tdName, stateAPIBlobPostPut, stateAPIBlobPush)
 		return nil
 	})
 }
@@ -424,7 +424,7 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 			r.TestFail(res, err, tdName, stateAPIBlobPostOnly)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
-		r.TestPass(res, tdName, stateAPIBlobPostOnly)
+		r.TestPass(res, tdName, stateAPIBlobPostOnly, stateAPIBlobPush)
 		return nil
 	})
 }
@@ -439,7 +439,7 @@ func (r *runner) TestBlobPatchChunked(parent *results, tdName string, dig digest
 			r.TestFail(res, err, tdName, stateAPIBlobPatchChunked)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
-		r.TestPass(res, tdName, stateAPIBlobPatchChunked)
+		r.TestPass(res, tdName, stateAPIBlobPatchChunked, stateAPIBlobPush)
 		return nil
 	})
 }
@@ -454,6 +454,7 @@ func (r *runner) TestBlobPatchStream(parent *results, tdName string, dig digest.
 			r.TestFail(res, err, tdName, stateAPIBlobPatchStream)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
+		r.TestPass(res, tdName, stateAPIBlobPatchStream, stateAPIBlobPush)
 		return nil
 	})
 }
@@ -461,11 +462,13 @@ func (r *runner) TestBlobPatchStream(parent *results, tdName string, dig digest.
 func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
 	opts := []apiDoOpt{}
+	apis := []stateAPIType{}
 	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
 	if r.Config.APIs.Referrer {
 		subj := detectSubject(td.manifests[dig])
 		if subj != nil {
 			opts = append(opts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
+			apis = append(apis, stateAPIManifestPutSubject)
 		}
 	}
 	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
@@ -476,12 +479,13 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				r.TestSkip(res, err)
 				return nil
 			}
+			apis = append(apis, stateAPIManifestPutTag)
 			opts = append(opts, apiSaveOutput(res.Output))
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, opts...); err != nil {
-				r.TestFail(res, err, tdName, stateAPIManifestPutTag)
+				r.TestFail(res, err, tdName, apis...)
 				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 			}
-			r.TestPass(res, tdName, stateAPIManifestPutTag)
+			r.TestPass(res, tdName, apis...)
 			return nil
 		})
 	} else {
@@ -492,12 +496,13 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 				r.TestSkip(res, err)
 				return nil
 			}
+			apis = append(apis, stateAPIManifestPutDigest)
 			opts = append(opts, apiSaveOutput(res.Output))
 			if err := r.API.ManifestPut(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, opts...); err != nil {
-				r.TestFail(res, err, tdName, stateAPIManifestPutDigest)
+				r.TestFail(res, err, tdName, apis...)
 				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 			}
-			r.TestPass(res, tdName, stateAPIManifestPutDigest)
+			r.TestPass(res, tdName, apis...)
 			return nil
 		})
 	}
