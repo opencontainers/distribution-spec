@@ -26,7 +26,7 @@ const (
 	stateAPIBlobPush              // any blob push API
 	stateAPIBlobPostOnly
 	stateAPIBlobPostPut
-	stateAPIBlobPatchChunk
+	stateAPIBlobPatchChunked
 	stateAPIBlobPatchStream
 	stateAPIBlobMountSource
 	stateAPIBlobMountAnonymous
@@ -56,7 +56,7 @@ func (a stateAPIType) String() string {
 		return "Blob post only"
 	case stateAPIBlobPostPut:
 		return "Blob post put"
-	case stateAPIBlobPatchChunk:
+	case stateAPIBlobPatchChunked:
 		return "Blob chunked"
 	case stateAPIBlobPatchStream:
 		return "Blob streaming"
@@ -110,7 +110,7 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 	case "Blob post put":
 		*a = stateAPIBlobPostPut
 	case "Blob chunked":
-		*a = stateAPIBlobPatchChunk
+		*a = stateAPIBlobPatchChunked
 	case "Blob streaming":
 		*a = stateAPIBlobPatchStream
 	case "Blob mount":
