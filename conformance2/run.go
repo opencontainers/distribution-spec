@@ -73,6 +73,13 @@ func (r *runner) TestAll() error {
 		errs = append(errs, err)
 	}
 
+	// TODO: add blob push tests:
+	// - various common and opaque blobs
+	// - zero byte blob
+	// - larger blob with a chunked upload if registry has a min chunk size
+	// - cross repo blob mount
+	// - anonymous blob mount
+
 	err = r.TestPush(r.Results, dataImage)
 	if err != nil {
 		errs = append(errs, err)
@@ -82,6 +89,17 @@ func (r *runner) TestAll() error {
 		errs = append(errs, err)
 	}
 	// TODO: add tests for different types of data
+
+	// cleanup all pushed data
+	for tdName, td := range r.State.Data {
+		// data sets the repo when pushed
+		if td.repo != "" {
+			err = r.TestDelete(r.Results, tdName)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
 
 	r.Results.Stop = time.Now()
 
@@ -313,7 +331,7 @@ func (r *runner) TestEmpty(parent *results) error {
 func (r *runner) TestEmptyTagList(parent *results) error {
 	return r.ChildRun("tag list", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPITagList); err != nil {
-			r.TestSkip(res, err)
+			r.TestSkip(res, err, "", stateAPITagList)
 			return nil
 		}
 		if _, err := r.API.TagList(r.Config.schemeReg, r.Config.Repo1, apiSaveOutput(res.Output)); err != nil {
@@ -402,7 +420,7 @@ func (r *runner) TestPushBlobAny(parent *results, tdName string, dig digest.Dige
 func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.Digest) error {
 	return r.ChildRun("blob-post-put", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPostPut); err != nil {
-			r.TestSkip(res, err)
+			r.TestSkip(res, err, tdName, stateAPIBlobPostPut)
 			return nil
 		}
 		if err := r.API.BlobPostPut(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
@@ -417,7 +435,7 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, dig digest.
 func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest.Digest) error {
 	return r.ChildRun("blob-post-only", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPostOnly); err != nil {
-			r.TestSkip(res, err)
+			r.TestSkip(res, err, tdName, stateAPIBlobPostOnly)
 			return nil
 		}
 		if err := r.API.BlobPostOnly(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
@@ -432,7 +450,7 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 func (r *runner) TestBlobPatchChunked(parent *results, tdName string, dig digest.Digest) error {
 	return r.ChildRun("blob-patch-chunked", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPatchChunked); err != nil {
-			r.TestSkip(res, err)
+			r.TestSkip(res, err, tdName, stateAPIBlobPatchChunked)
 			return nil
 		}
 		if err := r.API.BlobPatchChunked(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
@@ -447,7 +465,7 @@ func (r *runner) TestBlobPatchChunked(parent *results, tdName string, dig digest
 func (r *runner) TestBlobPatchStream(parent *results, tdName string, dig digest.Digest) error {
 	return r.ChildRun("blob-patch-stream", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPatchStream); err != nil {
-			r.TestSkip(res, err)
+			r.TestSkip(res, err, tdName, stateAPIBlobPatchStream)
 			return nil
 		}
 		if err := r.API.BlobPatchStream(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
@@ -476,7 +494,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 		return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
 			if err := r.APIRequire(stateAPIManifestPutTag); err != nil {
 				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.TestSkip(res, err)
+				r.TestSkip(res, err, tdName, stateAPIManifestPutTag)
 				return nil
 			}
 			apis = append(apis, stateAPIManifestPutTag)
@@ -493,7 +511,7 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 		return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
 			if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
 				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.TestSkip(res, err)
+				r.TestSkip(res, err, tdName, stateAPIManifestPutDigest)
 				return nil
 			}
 			apis = append(apis, stateAPIManifestPutDigest)
@@ -506,6 +524,88 @@ func (r *runner) TestPushManifest(parent *results, tdName string, dig digest.Dig
 			return nil
 		})
 	}
+}
+
+func (r *runner) TestDelete(parent *results, tdName string) error {
+	return r.ChildRun("delete", parent, func(r *runner, res *results) error {
+		errs := []error{}
+		delOrder := slices.Clone(r.State.Data[tdName].manOrder)
+		slices.Reverse(delOrder)
+		for i, dig := range delOrder {
+			err := r.TestDeleteManifest(res, tdName, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to delete manifest %d, digest %s%.0w", i, dig.String(), err))
+			}
+		}
+		for dig := range r.State.Data[tdName].blobs {
+			err := r.TestDeleteBlob(res, tdName, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to delete blob %s%.0w", dig.String(), err))
+			}
+		}
+		if len(errs) > 0 {
+			return errors.Join(errs...)
+		}
+		return nil
+	})
+}
+
+func (r *runner) TestDeleteManifest(parent *results, tdName string, dig digest.Digest) error {
+	td := r.State.Data[tdName]
+	errs := []error{}
+	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
+		// delete tag
+		err := r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestDeleteTag); err != nil {
+				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+				r.TestSkip(res, err, tdName, stateAPIManifestDeleteTag)
+				return nil
+			}
+			if err := r.API.ManifestDelete(r.Config.schemeReg, td.repo, td.tag, dig, td, apiSaveOutput(res.Output)); err != nil {
+				r.TestFail(res, err, tdName, stateAPIManifestDeleteTag)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+			}
+			r.TestPass(res, tdName, stateAPIManifestDeleteTag)
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// delete digest
+	err := r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIManifestDeleteDigest); err != nil {
+			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+			r.TestSkip(res, err, tdName, stateAPIManifestDeleteDigest)
+			return nil
+		}
+		if err := r.API.ManifestDelete(r.Config.schemeReg, td.repo, dig.String(), dig, td, apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIManifestDeleteDigest)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIManifestDeleteDigest)
+		return nil
+	})
+	if err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+func (r *runner) TestDeleteBlob(parent *results, tdName string, dig digest.Digest) error {
+	return r.ChildRun("blob-delete", parent, func(r *runner, res *results) error {
+		td := r.State.Data[tdName]
+		if err := r.APIRequire(stateAPIBlobDelete); err != nil {
+			r.TestSkip(res, err, tdName, stateAPIBlobDelete)
+			return nil
+		}
+		if err := r.API.BlobDelete(r.Config.schemeReg, td.repo, dig, td, apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIBlobDelete)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIBlobDelete, stateAPIBlobPush)
+		return nil
+	})
 }
 
 func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *results) error) error {
@@ -529,13 +629,19 @@ func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *result
 	return err
 }
 
-func (r *runner) TestSkip(res *results, err error) {
+func (r *runner) TestSkip(res *results, err error, tdName string, apis ...stateAPIType) {
 	s := statusSkip
 	if errors.Is(err, ErrDisabled) {
 		s = statusDisabled
 	}
 	res.Status = res.Status.Set(s)
 	res.Counts[s]++
+	if tdName != "" {
+		r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(s)
+	}
+	for _, a := range apis {
+		r.State.APIStatus[a] = r.State.APIStatus[a].Set(s)
+	}
 	fmt.Fprintf(res.Output, "%s: skipping test:\n  %s\n", res.Name,
 		strings.ReplaceAll(err.Error(), "\n", "\n  "))
 	r.Log.Info("skipping test", "name", res.Name, "error", err.Error())
