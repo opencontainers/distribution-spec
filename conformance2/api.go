@@ -368,6 +368,22 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	return nil
 }
 
+func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
+	if err != nil {
+		return err
+	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("DELETE"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusAccepted, http.StatusNotFound),
+	)
+	if err != nil {
+		return fmt.Errorf("blob delete failed: %v", err)
+	}
+	return nil
+}
+
 func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.manifests[dig]
 	if !ok {
@@ -399,6 +415,22 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 		return fmt.Errorf("Docker-Content-Digest header value expected %q, received %q", dig.String(), digHeader)
 	}
 	td.repo = repo
+	return nil
+}
+
+func (a *api) ManifestDelete(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
+	if err != nil {
+		return err
+	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("DELETE"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusAccepted, http.StatusNotFound),
+	)
+	if err != nil {
+		return fmt.Errorf("manifest delete failed: %v", err)
+	}
 	return nil
 }
 
