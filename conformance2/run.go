@@ -265,10 +265,10 @@ func (r *runner) ReportHTML(w io.Writer) error {
 	data := reportData{
 		Config:          r.Config,
 		Results:         r.Results,
-		NumTotal:        r.Results.Counts[statusPass] + r.Results.Counts[statusFail] + r.Results.Counts[statusSkip],
+		NumTotal:        r.Results.Counts[statusPass] + r.Results.Counts[statusFail] + r.Results.Counts[statusSkip] + r.Results.Counts[statusDisabled],
 		NumPassed:       r.Results.Counts[statusPass],
 		NumFailed:       r.Results.Counts[statusFail],
-		NumSkipped:      r.Results.Counts[statusSkip],
+		NumSkipped:      r.Results.Counts[statusSkip] + r.Results.Counts[statusDisabled],
 		StartTimeString: r.Results.Start.Format("Jan 2 15:04:05.000 -0700 MST"),
 		EndTimeString:   r.Results.Stop.Format("Jan 2 15:04:05.000 -0700 MST"),
 		RunTime:         r.Results.Stop.Sub(r.Results.Start).String(),
