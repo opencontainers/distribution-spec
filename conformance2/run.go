@@ -80,24 +80,30 @@ func (r *runner) TestAll() error {
 	// - cross repo blob mount
 	// - anonymous blob mount
 
-	err = r.TestPush(r.Results, dataImage)
-	if err != nil {
-		errs = append(errs, err)
-	}
-	err = r.TestPush(r.Results, dataIndex)
-	if err != nil {
-		errs = append(errs, err)
-	}
-	// TODO: add tests for different types of data
-
-	// cleanup all pushed data
-	for tdName, td := range r.State.Data {
-		// data sets the repo when pushed
-		if td.repo != "" {
-			err = r.TestDelete(r.Results, tdName)
+	// loop over different types of data
+	for _, tdName := range []string{dataImage, dataIndex} {
+		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
+			errs := []error{}
+			// push content
+			err := r.TestPush(res, tdName)
 			if err != nil {
 				errs = append(errs, err)
 			}
+			// TODO: add APIs to list/discover content
+
+			// cleanup
+			err = r.TestDelete(res, tdName)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			r.State.Data[tdName].repo = ""
+
+			// TODO: verify tag listing show tag was deleted if delete API enabled
+
+			return errors.Join(errs...)
+		})
+		if err != nil {
+			errs = append(errs, err)
 		}
 	}
 
@@ -341,6 +347,11 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 		r.TestPass(res, "", stateAPITagList)
 		return nil
 	})
+}
+
+func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algorithm) error {
+
+	return fmt.Errorf("not implemented")
 }
 
 func (r *runner) TestPush(parent *results, tdName string) error {
