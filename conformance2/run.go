@@ -73,12 +73,12 @@ func (r *runner) TestAll() error {
 		errs = append(errs, err)
 	}
 
-	// TODO: add blob push tests:
-	// - various common and opaque blobs
-	// - zero byte blob
-	// - larger blob with a chunked upload if registry has a min chunk size
-	// - cross repo blob mount
-	// - anonymous blob mount
+	for _, algo := range []digest.Algorithm{digest.SHA256, digest.SHA512} {
+		err = r.TestBlobAPIs(r.Results, "blobs-"+algo.String(), algo)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
 
 	// loop over different types of data
 	for _, tdName := range []string{dataImage, dataIndex} {
@@ -350,8 +350,51 @@ func (r *runner) TestEmptyTagList(parent *results) error {
 }
 
 func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algorithm) error {
+	return r.ChildRun(algo.String()+" blobs", parent, func(r *runner, res *results) error {
+		errs := []error{}
+		// setup testdata
+		r.State.DataStatus[tdName] = statusUnknown
+		r.State.Data[tdName] = newTestData(tdName, "")
+		digests := map[string]digest.Digest{}
+		testBlobs := map[string][]byte{
+			"empty":     []byte(""),
+			"emptyJSON": []byte("{}"),
+		}
+		for name, val := range testBlobs {
+			dig := algo.FromBytes(val)
+			digests[name] = dig
+			r.State.Data[tdName].blobs[dig] = val
+		}
+		for name, dig := range digests {
+			err := r.ChildRun(name, res, func(r *runner, res *results) error {
+				err := r.TestPushBlobAny(res, tdName, dig)
+				if err != nil {
+					errs = append(errs, err)
+				}
+				// TODO: test pull
+				err = r.TestDeleteBlob(res, tdName, dig)
+				if err != nil {
+					errs = append(errs, err)
+				}
+				return errors.Join(errs...)
+			})
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
 
-	return fmt.Errorf("not implemented")
+		// TODO
+		// push by chunked with 1 chunk
+		// extract min chunk size from above and test a chunked push with at least 3 chunks
+		// streaming blob push with one patch
+		// streaming blob push with multiple chunks?
+		// cross repository blob mount
+		// anonymous blob mount
+		// test pull command on pushed blobs
+		// cleanup
+
+		return errors.Join(errs...)
+	})
 }
 
 func (r *runner) TestPush(parent *results, tdName string) error {
