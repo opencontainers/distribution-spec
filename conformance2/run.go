@@ -12,6 +12,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -360,13 +361,100 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 			"empty":     []byte(""),
 			"emptyJSON": []byte("{}"),
 		}
+		dataTests := []string{"empty", "emptyJSON"}
 		for name, val := range testBlobs {
 			dig := algo.FromBytes(val)
 			digests[name] = dig
 			r.State.Data[tdName].blobs[dig] = val
 		}
-		for name, dig := range digests {
+		// test the various blob push APIs
+		if _, ok := blobAPIsTestedByAlgo[algo]; !ok {
+			blobAPIsTestedByAlgo[algo] = &[stateAPIMax]bool{}
+		}
+		apiTests := []string{"post only", "post+put", "chunked single", "stream"}
+		for _, name := range apiTests {
+			dig, _, err := r.State.Data[tdName].genBlob(algo, 512)
+			if err != nil {
+				return fmt.Errorf("failed to generate blob: %w", err)
+			}
+			digests[name] = dig
+		}
+		apiTests = append(apiTests, "chunked multi")
+		minChunkSize := int64(chunkMin)
+		minHeader := ""
+		for _, testName := range apiTests {
+			err := r.ChildRun(testName, res, func(r *runner, res *results) error {
+				var err error
+				errs := []error{}
+				dig := digests[testName]
+				var api stateAPIType
+				switch testName {
+				case "post only":
+					api = stateAPIBlobPostOnly
+					err = r.TestPushBlobPostOnly(res, tdName, dig)
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "post+put":
+					api = stateAPIBlobPostPut
+					err = r.TestPushBlobPostPut(res, tdName, dig)
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "chunked single":
+					api = stateAPIBlobPatchChunked
+					// extract the min chunk length from a chunked push with a single chunk
+					err = r.TestPushBlobPatchChunked(res, tdName, dig, apiReturnHeader("OCI-Chunk-Min-Length", &minHeader))
+					if err != nil {
+						errs = append(errs, err)
+					}
+					if minHeader != "" {
+						minParse, err := strconv.Atoi(minHeader)
+						if err == nil && int64(minParse) > minChunkSize {
+							minChunkSize = int64(minParse)
+						}
+					}
+				case "chunked multi":
+					api = stateAPIBlobPatchChunked
+					// generate a blob large enough to span three chunks
+					dig, _, err = r.State.Data[tdName].genBlob(algo, minChunkSize*3-5)
+					if err != nil {
+						return fmt.Errorf("failed to generate chunked blob of size %d: %w", minChunkSize*3-5, err)
+					}
+					digests[testName] = dig
+					err = r.TestPushBlobPatchChunked(res, tdName, dig)
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "stream":
+					api = stateAPIBlobPatchStream
+					err = r.TestPushBlobPatchStream(res, tdName, dig)
+					if err != nil {
+						errs = append(errs, err)
+					}
+				default:
+					return fmt.Errorf("unknown api test %s", testName)
+				}
+				// track the used APIs so TestPushBlobAny doesn't rerun tests
+				blobAPIsTested[api] = true
+				blobAPIsTestedByAlgo[dig.Algorithm()][api] = true
+				// TODO: pull each blob
+
+				// cleanup
+				err = r.TestDeleteBlob(res, tdName, dig)
+				if err != nil {
+					errs = append(errs, err)
+				}
+				return errors.Join(errs...)
+			})
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		// test various well known blob contents
+		for _, name := range dataTests {
 			err := r.ChildRun(name, res, func(r *runner, res *results) error {
+				dig := digests[name]
 				err := r.TestPushBlobAny(res, tdName, dig)
 				if err != nil {
 					errs = append(errs, err)
@@ -384,10 +472,6 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 		}
 
 		// TODO
-		// push by chunked with 1 chunk
-		// extract min chunk size from above and test a chunked push with at least 3 chunks
-		// streaming blob push with one patch
-		// streaming blob push with multiple chunks?
 		// cross repository blob mount
 		// anonymous blob mount
 		// test pull command on pushed blobs
@@ -457,9 +541,9 @@ func (r *runner) TestPushBlobAny(parent *results, tdName string, dig digest.Dige
 		case stateAPIBlobPostOnly:
 			err = r.TestPushBlobPostOnly(parent, tdName, dig)
 		case stateAPIBlobPatchStream:
-			err = r.TestBlobPatchStream(parent, tdName, dig)
+			err = r.TestPushBlobPatchStream(parent, tdName, dig)
 		case stateAPIBlobPatchChunked:
-			err = r.TestBlobPatchChunked(parent, tdName, dig)
+			err = r.TestPushBlobPatchChunked(parent, tdName, dig)
 		}
 		blobAPIsTested[api] = true
 		blobAPIsTestedByAlgo[dig.Algorithm()][api] = true
@@ -501,13 +585,14 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, dig digest
 	})
 }
 
-func (r *runner) TestBlobPatchChunked(parent *results, tdName string, dig digest.Digest) error {
+func (r *runner) TestPushBlobPatchChunked(parent *results, tdName string, dig digest.Digest, opts ...apiDoOpt) error {
 	return r.ChildRun("blob-patch-chunked", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPatchChunked); err != nil {
 			r.TestSkip(res, err, tdName, stateAPIBlobPatchChunked)
 			return nil
 		}
-		if err := r.API.BlobPatchChunked(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+		opts = append(opts, apiSaveOutput(res.Output))
+		if err := r.API.BlobPatchChunked(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], opts...); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPatchChunked)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -516,7 +601,7 @@ func (r *runner) TestBlobPatchChunked(parent *results, tdName string, dig digest
 	})
 }
 
-func (r *runner) TestBlobPatchStream(parent *results, tdName string, dig digest.Digest) error {
+func (r *runner) TestPushBlobPatchStream(parent *results, tdName string, dig digest.Digest) error {
 	return r.ChildRun("blob-patch-stream", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPatchStream); err != nil {
 			r.TestSkip(res, err, tdName, stateAPIBlobPatchStream)

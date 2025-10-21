@@ -185,6 +185,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	if err != nil {
 		return err
 	}
+	// TODO: add digest algorithm if not sha256
 	loc := ""
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
@@ -230,6 +231,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	if err != nil {
 		return err
 	}
+	// TODO: add digest algorithm if not sha256
 	loc := ""
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
@@ -291,6 +293,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	if err != nil {
 		return err
 	}
+	// TODO: add digest algorithm if not sha256
 	minStr := ""
 	loc := ""
 	err = a.Do(apiWithAnd(opts),
@@ -313,6 +316,9 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 		if min > chunkSize {
 			chunkSize = min
 		}
+	}
+	if chunkSize < chunkMin {
+		chunkSize = chunkMin
 	}
 	if chunkSize > len(bodyBytes) {
 		chunkSize = len(bodyBytes)

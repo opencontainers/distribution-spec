@@ -4,10 +4,12 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand/v2"
+	"math"
+	"math/big"
 
 	digest "github.com/opencontainers/go-digest"
 )
@@ -31,6 +33,17 @@ func newTestData(name, tag string) *testData {
 	}
 }
 
+func (td *testData) genBlob(algo digest.Algorithm, size int64) (digest.Digest, []byte, error) {
+	b := make([]byte, size)
+	_, err := rand.Read(b)
+	if err != nil {
+		return digest.Digest(""), nil, err
+	}
+	dig := algo.FromBytes(b)
+	td.blobs[dig] = b
+	return dig, b, nil
+}
+
 // genLayer returns a new layer with:
 // - compressed digest
 // - uncompressed digest
@@ -43,9 +56,13 @@ func (td *testData) genLayer(fileNum int) (digest.Digest, digest.Digest, []byte,
 	gw := gzip.NewWriter(mwComp)
 	mwUncomp := io.MultiWriter(gw, digUncomp.Hash())
 	tw := tar.NewWriter(mwUncomp)
-	randNum := rand.Int()
+	bigRandNum, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
+	if err != nil {
+		return digest.Digest(""), digest.Digest(""), nil, err
+	}
+	randNum := bigRandNum.Int64()
 	file := fmt.Sprintf("Conformance test file contents for file number %d.\nTodays lucky number is %d\n", fileNum, randNum)
-	err := tw.WriteHeader(&tar.Header{
+	err = tw.WriteHeader(&tar.Header{
 		Name: fmt.Sprintf("./conformance-%d.txt", fileNum),
 		Size: int64(len(file)),
 		Mode: 0644,

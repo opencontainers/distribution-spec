@@ -18,6 +18,7 @@ const (
 	envOCIConfFile = "OCI_CONFIGURATION"
 	envOCIVersion  = "OCI_VERSION"
 	defaultOCIConf = "oci-conformance.yml"
+	chunkMin       = 1024
 	truncateBody   = 4096
 	biVCSCommit    = "vcs.revision"
 )
