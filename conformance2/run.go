@@ -90,6 +90,10 @@ func (r *runner) TestAll() error {
 			if err != nil {
 				errs = append(errs, err)
 			}
+			err = r.TestPull(res, tdName)
+			if err != nil {
+				errs = append(errs, err)
+			}
 			// TODO: add APIs to list/discover content
 
 			// cleanup
@@ -438,8 +442,11 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 				// track the used APIs so TestPushBlobAny doesn't rerun tests
 				blobAPIsTested[api] = true
 				blobAPIsTestedByAlgo[dig.Algorithm()][api] = true
-				// TODO: pull each blob
-
+				// pull each blob
+				err = r.TestPullBlob(res, tdName, dig)
+				if err != nil {
+					errs = append(errs, err)
+				}
 				// cleanup
 				err = r.TestDeleteBlob(res, tdName, dig)
 				if err != nil {
@@ -459,7 +466,10 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 				if err != nil {
 					errs = append(errs, err)
 				}
-				// TODO: test pull
+				err = r.TestPullBlob(res, tdName, dig)
+				if err != nil {
+					errs = append(errs, err)
+				}
 				err = r.TestDeleteBlob(res, tdName, dig)
 				if err != nil {
 					errs = append(errs, err)
@@ -481,8 +491,92 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 	})
 }
 
+func (r *runner) TestPull(parent *results, tdName string) error {
+	return r.ChildRun("pull", parent, func(r *runner, res *results) error {
+		errs := []error{}
+		for i, dig := range r.State.Data[tdName].manOrder {
+			err := r.TestPullManifest(res, tdName, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to pull manifest %d, digest %s%.0w", i, dig.String(), err))
+			}
+		}
+		for dig := range r.State.Data[tdName].blobs {
+			err := r.TestPullBlob(res, tdName, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to pull blob %s%.0w", dig.String(), err))
+			}
+		}
+		if len(errs) > 0 {
+			return errors.Join(errs...)
+		}
+		return nil
+	})
+}
+
+func (r *runner) TestPullBlob(parent *results, tdName string, dig digest.Digest) error {
+	return r.ChildRun("blob-get", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIBlobGetFull); err != nil {
+			r.TestSkip(res, err, tdName, stateAPIBlobGetFull)
+			return nil
+		}
+		if err := r.API.BlobGetFull(r.Config.schemeReg, r.Config.Repo1, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIBlobGetFull)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIBlobGetFull)
+		return nil
+	})
+}
+
+func (r *runner) TestPullManifest(parent *results, tdName string, dig digest.Digest) error {
+	td := r.State.Data[tdName]
+	opts := []apiDoOpt{}
+	apis := []stateAPIType{}
+	errs := []error{}
+	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
+		// pull by tag
+		err := r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestGetTag); err != nil {
+				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+				r.TestSkip(res, err, tdName, stateAPIManifestGetTag)
+				return nil
+			}
+			apis = append(apis, stateAPIManifestGetTag)
+			opts = append(opts, apiSaveOutput(res.Output))
+			if err := r.API.ManifestGet(r.Config.schemeReg, r.Config.Repo1, td.tag, dig, td, opts...); err != nil {
+				r.TestFail(res, err, tdName, apis...)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+			}
+			r.TestPass(res, tdName, apis...)
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	// push by digest
+	err := r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIManifestGetDigest); err != nil {
+			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+			r.TestSkip(res, err, tdName, stateAPIManifestGetDigest)
+			return nil
+		}
+		apis = append(apis, stateAPIManifestGetDigest)
+		opts = append(opts, apiSaveOutput(res.Output))
+		if err := r.API.ManifestGet(r.Config.schemeReg, r.Config.Repo1, dig.String(), dig, td, opts...); err != nil {
+			r.TestFail(res, err, tdName, apis...)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, apis...)
+		return nil
+	})
+	if err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
 func (r *runner) TestPush(parent *results, tdName string) error {
-	// add more APIs
 	return r.ChildRun("push", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		for dig := range r.State.Data[tdName].blobs {
