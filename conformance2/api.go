@@ -374,6 +374,25 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	return nil
 }
 
+func (a *api) BlobGetFull(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
+	if err != nil {
+		return err
+	}
+	if val, ok := td.blobs[dig]; ok {
+		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("GET"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusOK),
+	)
+	if err != nil {
+		return fmt.Errorf("blob get failed: %v", err)
+	}
+	return nil
+}
+
 func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
 	if err != nil {
@@ -421,6 +440,27 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 		return fmt.Errorf("Docker-Content-Digest header value expected %q, received %q", dig.String(), digHeader)
 	}
 	td.repo = repo
+	return nil
+}
+
+func (a *api) ManifestGet(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
+	if err != nil {
+		return err
+	}
+	if val, ok := td.manifests[dig]; ok {
+		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("GET"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusOK),
+		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
+		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
+	)
+	if err != nil {
+		return fmt.Errorf("manifest get failed: %v", err)
+	}
 	return nil
 }
 
@@ -556,6 +596,32 @@ func apiWithBody(body []byte) apiDoOpt {
 				return io.NopCloser(bytes.NewReader(body)), nil
 			}
 			return nil
+		},
+	}
+}
+
+func apiExpectBody(bodyExpect []byte) apiDoOpt {
+	return apiDoOpt{
+		respFn: func(resp *http.Response) error {
+			// read body and replace with a buf reader
+			bodyReceived, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("failed to read body: %w", err)
+			}
+			resp.Body = io.NopCloser(bytes.NewReader(bodyReceived))
+			if bytes.Equal(bodyExpect, bodyReceived) {
+				return nil
+			}
+			var bufExpect, bufReceived bytes.Buffer
+			err = printBody(bodyReceived, &bufReceived)
+			if err != nil {
+				return fmt.Errorf("failed to print received body: %w", err)
+			}
+			err = printBody(bodyExpect, &bufExpect)
+			if err != nil {
+				return fmt.Errorf("failed to print expected body: %w", err)
+			}
+			return fmt.Errorf("body contents mismatch, expected %s, received %s", bufExpect.String(), bufReceived.String())
 		},
 	}
 }
