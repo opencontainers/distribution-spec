@@ -67,7 +67,7 @@ type descriptor struct {
 	// NewUnspecifiedField is not covered by image-spec.
 	// Registry implementations should still successfully store and serve
 	// manifests containing this data.
-	NewUnspecifiedField []byte `json:"newUnspecifiedField"`
+	NewUnspecifiedField string `json:"newUnspecifiedField,omitempty"`
 }
 
 // platform describes the platform which the image in the manifest runs on.
