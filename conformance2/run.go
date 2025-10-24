@@ -442,10 +442,12 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 				// track the used APIs so TestPushBlobAny doesn't rerun tests
 				blobAPIsTested[api] = true
 				blobAPIsTestedByAlgo[dig.Algorithm()][api] = true
-				// pull each blob
-				err = r.TestPullBlob(res, tdName, dig)
-				if err != nil {
-					errs = append(errs, err)
+				if err == nil {
+					// pull each blob
+					err = r.TestPullBlob(res, tdName, dig)
+					if err != nil {
+						errs = append(errs, err)
+					}
 				}
 				// cleanup
 				err = r.TestDeleteBlob(res, tdName, dig)
@@ -605,21 +607,29 @@ var (
 )
 
 func (r *runner) TestPushBlobAny(parent *results, tdName string, dig digest.Digest) error {
-	// generate an ordered list of APIs to test, preferring untested, then untested with a digest, then following order
 	apis := []stateAPIType{}
 	if _, ok := blobAPIsTestedByAlgo[dig.Algorithm()]; !ok {
 		blobAPIsTestedByAlgo[dig.Algorithm()] = &[stateAPIMax]bool{}
 	}
+	// first try untested APIs
 	for _, api := range blobAPIs {
 		if !blobAPIsTested[api] {
 			apis = append(apis, api)
 		}
 	}
+	// then untested with a given algorithm
 	for _, api := range blobAPIs {
 		if !blobAPIsTestedByAlgo[dig.Algorithm()][api] && !slices.Contains(apis, api) {
 			apis = append(apis, api)
 		}
 	}
+	// next use APIs that are known successful
+	for _, api := range blobAPIs {
+		if r.State.APIStatus[api] == statusPass && !slices.Contains(apis, api) {
+			apis = append(apis, api)
+		}
+	}
+	// lastly use APIs in preferred order
 	for _, api := range blobAPIs {
 		if !slices.Contains(apis, api) {
 			apis = append(apis, api)
@@ -881,14 +891,18 @@ func (r *runner) TestSkip(res *results, err error, tdName string, apis ...stateA
 }
 
 func (r *runner) TestFail(res *results, err error, tdName string, apis ...stateAPIType) {
-	res.Status = res.Status.Set(statusFail)
-	res.Counts[statusFail]++
+	s := statusFail
+	if errors.Is(err, ErrRegUnsupported) {
+		s = statusDisabled
+	}
+	res.Status = res.Status.Set(s)
+	res.Counts[s]++
 	res.Errs = append(res.Errs, err)
 	if tdName != "" {
-		r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusFail)
+		r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(s)
 	}
 	for _, a := range apis {
-		r.State.APIStatus[a] = r.State.APIStatus[a].Set(statusFail)
+		r.State.APIStatus[a] = r.State.APIStatus[a].Set(s)
 	}
 	r.Log.Warn("failed test", "name", res.Name, "error", err.Error())
 	r.Log.Debug("failed test output", "name", res.Name, "output", res.Output.String())
