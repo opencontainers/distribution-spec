@@ -160,17 +160,22 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	qa := u.Query()
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
+	var status int
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
 		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
-		apiExpectStatus(http.StatusCreated),
+		apiExpectStatus(http.StatusCreated, http.StatusAccepted),
 		apiExpectHeader("Location", ""),
+		apiReturnStatus(&status),
 	)
 	if err != nil {
 		return fmt.Errorf("blob post failed: %v", err)
+	}
+	if status != http.StatusCreated {
+		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
 	}
 	td.repo = repo
 	return nil
@@ -398,13 +403,18 @@ func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData,
 	if err != nil {
 		return err
 	}
+	var status int
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("DELETE"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusAccepted, http.StatusNotFound),
+		apiExpectStatus(http.StatusAccepted, http.StatusNotFound, http.StatusBadRequest, http.StatusMethodNotAllowed),
+		apiReturnStatus(&status),
 	)
 	if err != nil {
 		return fmt.Errorf("blob delete failed: %v", err)
+	}
+	if status == http.StatusBadRequest || status == http.StatusMethodNotAllowed {
+		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
 	}
 	return nil
 }
@@ -469,13 +479,18 @@ func (a *api) ManifestDelete(registry, repo, ref string, dig digest.Digest, td *
 	if err != nil {
 		return err
 	}
+	var status int
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("DELETE"),
 		apiWithURL(u),
 		apiExpectStatus(http.StatusAccepted, http.StatusNotFound),
+		apiReturnStatus(&status),
 	)
 	if err != nil {
 		return fmt.Errorf("manifest delete failed: %v", err)
+	}
+	if status == http.StatusBadRequest || status == http.StatusMethodNotAllowed {
+		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
 	}
 	return nil
 }
@@ -679,6 +694,15 @@ func apiReturnResponse(ret *http.Response) apiDoOpt {
 	return apiDoOpt{
 		respFn: func(r *http.Response) error {
 			*ret = *r
+			return nil
+		},
+	}
+}
+
+func apiReturnStatus(status *int) apiDoOpt {
+	return apiDoOpt{
+		respFn: func(resp *http.Response) error {
+			*status = resp.StatusCode
 			return nil
 		},
 	}
