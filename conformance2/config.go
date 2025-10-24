@@ -146,6 +146,7 @@ func configLoad() (config, error) {
 			SubjectList:      true,
 			Nondistributable: false,
 		}
+		c.Version = "1.1"
 	case "1.0":
 		c.APIs = configAPI{
 			Pull:     true,
@@ -170,6 +171,7 @@ func configLoad() (config, error) {
 			SubjectList:      true,
 			Nondistributable: true,
 		}
+		c.Version = "1.0"
 	default:
 		return config{}, fmt.Errorf("unsupported config version %s", configVersion)
 	}
@@ -551,8 +553,12 @@ var confHTMLTemplates = map[string]string{
         <td>{{ .RunTime }}</td>
       </tr>
       <tr>
-        <td class="bullet-left">Test Version</td>
-        <td>{{ .Version }}</td>
+        <td class="bullet-left">Tested Spec</td>
+        <td>{{ .Config.Version }}</td>
+      </tr>
+      <tr>
+        <td class="bullet-left">Conformance Commit</td>
+        <td>{{ .Config.Commit }}</td>
       </tr>
       <tr>
         <td class="bullet-left">Configuration</td>
