@@ -177,7 +177,6 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	if status != http.StatusCreated {
 		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
 	}
-	td.repo = repo
 	return nil
 }
 
@@ -223,7 +222,6 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	if err != nil {
 		return fmt.Errorf("blob put failed: %v", err)
 	}
-	td.repo = repo
 	return nil
 }
 
@@ -285,7 +283,6 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	if err != nil {
 		return fmt.Errorf("blob put failed: %v", err)
 	}
-	td.repo = repo
 	return nil
 }
 
@@ -375,7 +372,6 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	if err != nil {
 		return fmt.Errorf("blob put failed: %v", err)
 	}
-	td.repo = repo
 	return nil
 }
 
@@ -449,7 +445,6 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	if digHeader != "" && digHeader != dig.String() {
 		return fmt.Errorf("Docker-Content-Digest header value expected %q, received %q", dig.String(), digHeader)
 	}
-	td.repo = repo
 	return nil
 }
 
