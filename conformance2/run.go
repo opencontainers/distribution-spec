@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	testName  = "OCI Conformance Test"
-	dataImage = "01-image"
-	dataIndex = "02-index"
+	testName     = "OCI Conformance Test"
+	dataImage    = "01-image"
+	dataIndex    = "02-index"
+	dataArtifact = "03-artifact"
 )
 
 var errTestAPIFail = errors.New("API test with a known failure")
@@ -83,7 +84,7 @@ func (r *runner) TestAll() error {
 	}
 
 	// loop over different types of data
-	for _, tdName := range []string{dataImage, dataIndex} {
+	for _, tdName := range []string{dataImage, dataIndex, dataArtifact} {
 		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
 			errs := []error{}
 			// push content
@@ -178,7 +179,25 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-
+	// artifact with subject
+	tdName = dataArtifact
+	r.State.DataStatus[tdName] = statusUnknown
+	r.State.Data[tdName] = newTestData("OCI Artifact", "artifact")
+	abDig, _, err := r.State.Data[tdName].genBlob(2048)
+	if err != nil {
+		return fmt.Errorf("failed to generate test artifact blob: %w", err)
+	}
+	emptyConfDig, err := r.State.Data[tdName].addBlob([]byte("{}"), genWithMediaType("application/vnd.oci.empty.v1+json"), genSetData())
+	if err != nil {
+		return fmt.Errorf("failed to add test artifact config: %w", err)
+	}
+	aDig, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
+		genWithArtifactType("application/vnd.example.oci.conformance"),
+		genWithSubject(*r.State.Data[dataImage].desc[mDig]))
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	_ = aDig
 	return nil
 }
 
@@ -725,11 +744,11 @@ func (r *runner) TestPushManifest(parent *results, tdName string, repo string, d
 	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
 	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
-	if r.Config.APIs.Referrer {
-		subj := detectSubject(td.manifests[dig])
-		if subj != nil {
+	subj := detectSubject(td.manifests[dig])
+	if subj != nil {
+		apis = append(apis, stateAPIManifestPutSubject)
+		if r.Config.APIs.Referrer {
 			opts = append(opts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
-			apis = append(apis, stateAPIManifestPutSubject)
 		}
 	}
 	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
@@ -904,8 +923,10 @@ func (r *runner) TestFail(res *results, err error, tdName string, apis ...stateA
 	for _, a := range apis {
 		r.State.APIStatus[a] = r.State.APIStatus[a].Set(s)
 	}
-	r.Log.Warn("failed test", "name", res.Name, "error", err.Error())
-	r.Log.Debug("failed test output", "name", res.Name, "output", res.Output.String())
+	if s == statusFail {
+		r.Log.Warn("failed test", "name", res.Name, "error", err.Error())
+		r.Log.Debug("failed test output", "name", res.Name, "output", res.Output.String())
+	}
 }
 
 func (r *runner) TestPass(res *results, tdName string, apis ...stateAPIType) {
