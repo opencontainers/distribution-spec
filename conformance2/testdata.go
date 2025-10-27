@@ -42,9 +42,12 @@ const (
 )
 
 type genOptS struct {
-	algo    digest.Algorithm
-	comp    genComp
-	subject *descriptor
+	algo         digest.Algorithm
+	artifactType string
+	comp         genComp
+	mediaType    string
+	setData      bool
+	subject      *descriptor
 }
 
 type genOpt func(*genOptS)
@@ -55,9 +58,27 @@ func genWithAlgo(algo digest.Algorithm) genOpt {
 	}
 }
 
+func genWithArtifactType(artifactType string) genOpt {
+	return func(opt *genOptS) {
+		opt.artifactType = artifactType
+	}
+}
+
 func genWithCompress(comp genComp) genOpt {
 	return func(opt *genOptS) {
 		opt.comp = comp
+	}
+}
+
+func genWithMediaType(mediaType string) genOpt {
+	return func(opt *genOptS) {
+		opt.mediaType = mediaType
+	}
+}
+
+func genSetData() genOpt {
+	return func(opt *genOptS) {
+		opt.setData = true
 	}
 }
 
@@ -67,21 +88,35 @@ func genWithSubject(subject descriptor) genOpt {
 	}
 }
 
-func (td *testData) genBlob(size int64, opts ...genOpt) (digest.Digest, []byte, error) {
+func (td *testData) addBlob(b []byte, opts ...genOpt) (digest.Digest, error) {
 	gOpt := genOptS{
-		algo: digest.Canonical,
+		algo:      digest.Canonical,
+		mediaType: "application/octet-stream",
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
 	}
+	dig := gOpt.algo.FromBytes(b)
+	td.blobs[dig] = b
+	td.desc[dig] = &descriptor{
+		MediaType: gOpt.mediaType,
+		Digest:    dig,
+		Size:      int64(len(b)),
+	}
+	if gOpt.setData {
+		td.desc[dig].Data = b
+	}
+	return dig, nil
+}
+
+func (td *testData) genBlob(size int64, opts ...genOpt) (digest.Digest, []byte, error) {
 	b := make([]byte, size)
 	_, err := rand.Read(b)
 	if err != nil {
 		return digest.Digest(""), nil, err
 	}
-	dig := gOpt.algo.FromBytes(b)
-	td.blobs[dig] = b
-	return dig, b, nil
+	dig, err := td.addBlob(b, opts...)
+	return dig, b, err
 }
 
 // genLayer returns a new layer containing a tar file returning:
@@ -147,10 +182,16 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 		Digest:    digComp,
 		Size:      int64(len(bodyComp)),
 	}
+	if gOpt.setData {
+		td.desc[digComp].Data = bodyComp
+	}
 	td.desc[digUncomp] = &descriptor{
 		MediaType: "application/vnd.oci.image.layer.v1.tar",
 		Digest:    digUncomp,
 		Size:      int64(len(bodyUncomp)),
+	}
+	if gOpt.setData {
+		td.desc[digUncomp].Data = bodyUncomp
 	}
 	return digComp, digUncomp, bodyComp, nil
 }
@@ -158,7 +199,8 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 // genConfig returns a config for the given platform and list of uncompressed layer digests.
 func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
-		algo: digest.Canonical,
+		algo:      digest.Canonical,
+		mediaType: "application/vnd.oci.image.config.v1+json",
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -177,34 +219,36 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 	}
 	dig := gOpt.algo.FromBytes(body)
 	td.blobs[dig] = body
+	td.desc[dig] = &descriptor{
+		MediaType: gOpt.mediaType,
+		Digest:    dig,
+		Size:      int64(len(body)),
+	}
+	if gOpt.setData {
+		td.desc[dig].Data = body
+	}
 	return dig, body, nil
 }
 
 // genManifest returns an image manifest with the selected config and compressed layer digests.
 func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
-		algo: digest.Canonical,
+		algo:      digest.Canonical,
+		mediaType: "application/vnd.oci.image.manifest.v1+json",
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
 	}
 	m := manifest{
 		SchemaVersion: 2,
-		MediaType:     "application/vnd.oci.image.manifest.v1+json",
-		Config: descriptor{
-			MediaType: "application/vnd.oci.image.config.v1+json",
-			Digest:    conf,
-			Size:      int64(len(td.blobs[conf])),
-		},
-		Layers:  make([]descriptor, len(layers)),
-		Subject: gOpt.subject,
+		MediaType:     gOpt.mediaType,
+		ArtifactType:  gOpt.artifactType,
+		Config:        *td.desc[conf],
+		Layers:        make([]descriptor, len(layers)),
+		Subject:       gOpt.subject,
 	}
 	for i, l := range layers {
-		m.Layers[i] = descriptor{
-			MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
-			Digest:    l,
-			Size:      int64(len(td.blobs[l])),
-		}
+		m.Layers[i] = *td.desc[l]
 	}
 	body, err := json.Marshal(m)
 	if err != nil {
@@ -214,9 +258,12 @@ func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
 	td.desc[dig] = &descriptor{
-		MediaType: "application/vnd.oci.image.manifest.v1+json",
+		MediaType: gOpt.mediaType,
 		Digest:    dig,
 		Size:      int64(len(body)),
+	}
+	if gOpt.setData {
+		td.desc[dig].Data = body
 	}
 	return dig, body, nil
 }
@@ -224,7 +271,8 @@ func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts
 // genIndex returns an index manifest with the specified layers and platforms.
 func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
-		algo: digest.Canonical,
+		algo:      digest.Canonical,
+		mediaType: "application/vnd.oci.image.index.v1+json",
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -234,17 +282,15 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	}
 	ind := index{
 		SchemaVersion: 2,
-		MediaType:     "application/vnd.oci.image.index.v1+json",
+		MediaType:     gOpt.mediaType,
+		ArtifactType:  gOpt.artifactType,
 		Manifests:     make([]descriptor, len(manifests)),
 		Subject:       gOpt.subject,
 	}
 	for i, l := range manifests {
-		ind.Manifests[i] = descriptor{
-			MediaType: "application/vnd.oci.image.manifest.v1+json",
-			Digest:    l,
-			Size:      int64(len(td.manifests[l])),
-			Platform:  platforms[i],
-		}
+		d := *td.desc[l]
+		d.Platform = platforms[i]
+		ind.Manifests[i] = d
 	}
 	body, err := json.Marshal(ind)
 	if err != nil {
@@ -254,9 +300,12 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
 	td.desc[dig] = &descriptor{
-		MediaType: "application/vnd.oci.image.index.v1+json",
+		MediaType: gOpt.mediaType,
 		Digest:    dig,
 		Size:      int64(len(body)),
+	}
+	if gOpt.setData {
+		td.desc[dig].Data = body
 	}
 	return dig, body, nil
 }
