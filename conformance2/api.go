@@ -127,161 +127,42 @@ func (a *api) Do(opts ...apiDoOpt) error {
 	return nil
 }
 
-func (a *api) TagList(registry, repo string, opts ...apiDoOpt) (specs.TagList, error) {
-	tl := specs.TagList{}
-	u, err := url.Parse(registry + "/v2/" + repo + "/tags/list")
-	if err != nil {
-		return tl, err
-	}
-	err = a.Do(apiWithAnd(opts),
-		apiWithURL(u),
-		apiWithOr(
-			[]apiDoOpt{
-				apiExpectStatus(http.StatusOK),
-				apiReturnJSONBody(&tl),
-			},
-			[]apiDoOpt{
-				apiExpectStatus(http.StatusNotFound),
-			},
-		),
-	)
-	return tl, err
-}
-
-func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
-	bodyBytes, ok := td.blobs[dig]
-	if !ok {
-		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s", dig.String())
-	}
-	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
+func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
 	if err != nil {
 		return err
 	}
-	qa := u.Query()
-	qa.Set("digest", dig.String())
-	u.RawQuery = qa.Encode()
 	var status int
 	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("POST"),
+		apiWithMethod("DELETE"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiWithBody(bodyBytes),
-		apiExpectStatus(http.StatusCreated, http.StatusAccepted),
-		apiExpectHeader("Location", ""),
+		apiExpectStatus(http.StatusAccepted, http.StatusNotFound, http.StatusBadRequest, http.StatusMethodNotAllowed),
 		apiReturnStatus(&status),
 	)
 	if err != nil {
-		return fmt.Errorf("blob post failed: %v", err)
+		return fmt.Errorf("blob delete failed: %v", err)
 	}
-	if status != http.StatusCreated {
+	if status == http.StatusBadRequest || status == http.StatusMethodNotAllowed {
 		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
 	}
 	return nil
 }
 
-func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
-	bodyBytes, ok := td.blobs[dig]
-	if !ok {
-		return fmt.Errorf("BlobPostPut missing expected digest to send: %s", dig.String())
-	}
-	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
+func (a *api) BlobGetFull(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
 	if err != nil {
 		return err
 	}
-	// TODO: add digest algorithm if not sha256
-	loc := ""
-	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("POST"),
-		apiWithURL(u),
-		apiExpectStatus(http.StatusAccepted),
-		apiReturnHeader("Location", &loc),
-	)
-	if err != nil {
-		return fmt.Errorf("blob post failed: %v", err)
-	}
-	if loc == "" {
-		return fmt.Errorf("blob post did not return a location")
-	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("blob post could not parse location header: %v", err)
-	}
-	qa := u.Query()
-	qa.Set("digest", dig.String())
-	u.RawQuery = qa.Encode()
-	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("PUT"),
-		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiWithBody(bodyBytes),
-		apiExpectStatus(http.StatusCreated),
-		apiExpectHeader("Location", ""),
-	)
-	if err != nil {
-		return fmt.Errorf("blob put failed: %v", err)
-	}
-	return nil
-}
-
-func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
-	bodyBytes, ok := td.blobs[dig]
-	if !ok {
-		return fmt.Errorf("BlobPatchStream missing expected digest to send: %s", dig.String())
-	}
-	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
-	if err != nil {
-		return err
-	}
-	// TODO: add digest algorithm if not sha256
-	loc := ""
-	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("POST"),
-		apiWithURL(u),
-		apiExpectStatus(http.StatusAccepted),
-		apiReturnHeader("Location", &loc),
-	)
-	if err != nil {
-		return fmt.Errorf("blob post failed: %v", err)
-	}
-	if loc == "" {
-		return fmt.Errorf("blob post did not return a location")
-	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("blob post could not parse location header: %v", err)
+	if val, ok := td.blobs[dig]; ok {
+		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
 	}
 	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("PATCH"),
+		apiWithMethod("GET"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiWithBody(bodyBytes),
-		apiExpectStatus(http.StatusAccepted),
-		apiReturnHeader("Location", &loc),
+		apiExpectStatus(http.StatusOK),
 	)
 	if err != nil {
-		return fmt.Errorf("blob patch failed: %v", err)
-	}
-	if loc == "" {
-		return fmt.Errorf("blob patch did not return a location")
-	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("blob patch could not parse location header: %v", err)
-	}
-	qa := u.Query()
-	qa.Set("digest", dig.String())
-	u.RawQuery = qa.Encode()
-	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("PUT"),
-		apiWithURL(u),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiExpectStatus(http.StatusCreated),
-		apiExpectHeader("Location", ""),
-	)
-	if err != nil {
-		return fmt.Errorf("blob put failed: %v", err)
+		return fmt.Errorf("blob get failed: %v", err)
 	}
 	return nil
 }
@@ -375,27 +256,146 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	return nil
 }
 
-func (a *api) BlobGetFull(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
-	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
+func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	bodyBytes, ok := td.blobs[dig]
+	if !ok {
+		return fmt.Errorf("BlobPatchStream missing expected digest to send: %s", dig.String())
+	}
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
 		return err
 	}
-	if val, ok := td.blobs[dig]; ok {
-		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
-	}
+	// TODO: add digest algorithm if not sha256
+	loc := ""
 	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("GET"),
+		apiWithMethod("POST"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusOK),
+		apiExpectStatus(http.StatusAccepted),
+		apiReturnHeader("Location", &loc),
 	)
 	if err != nil {
-		return fmt.Errorf("blob get failed: %v", err)
+		return fmt.Errorf("blob post failed: %v", err)
+	}
+	if loc == "" {
+		return fmt.Errorf("blob post did not return a location")
+	}
+	u, err = u.Parse(loc)
+	if err != nil {
+		return fmt.Errorf("blob post could not parse location header: %v", err)
+	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("PATCH"),
+		apiWithURL(u),
+		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithBody(bodyBytes),
+		apiExpectStatus(http.StatusAccepted),
+		apiReturnHeader("Location", &loc),
+	)
+	if err != nil {
+		return fmt.Errorf("blob patch failed: %v", err)
+	}
+	if loc == "" {
+		return fmt.Errorf("blob patch did not return a location")
+	}
+	u, err = u.Parse(loc)
+	if err != nil {
+		return fmt.Errorf("blob patch could not parse location header: %v", err)
+	}
+	qa := u.Query()
+	qa.Set("digest", dig.String())
+	u.RawQuery = qa.Encode()
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("PUT"),
+		apiWithURL(u),
+		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiExpectStatus(http.StatusCreated),
+		apiExpectHeader("Location", ""),
+	)
+	if err != nil {
+		return fmt.Errorf("blob put failed: %v", err)
 	}
 	return nil
 }
 
-func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
-	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
+func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	bodyBytes, ok := td.blobs[dig]
+	if !ok {
+		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s", dig.String())
+	}
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
+	if err != nil {
+		return err
+	}
+	qa := u.Query()
+	qa.Set("digest", dig.String())
+	u.RawQuery = qa.Encode()
+	var status int
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("POST"),
+		apiWithURL(u),
+		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithBody(bodyBytes),
+		apiExpectStatus(http.StatusCreated, http.StatusAccepted),
+		apiExpectHeader("Location", ""),
+		apiReturnStatus(&status),
+	)
+	if err != nil {
+		return fmt.Errorf("blob post failed: %v", err)
+	}
+	if status != http.StatusCreated {
+		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
+	}
+	return nil
+}
+
+func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	bodyBytes, ok := td.blobs[dig]
+	if !ok {
+		return fmt.Errorf("BlobPostPut missing expected digest to send: %s", dig.String())
+	}
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
+	if err != nil {
+		return err
+	}
+	// TODO: add digest algorithm if not sha256
+	loc := ""
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("POST"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusAccepted),
+		apiReturnHeader("Location", &loc),
+	)
+	if err != nil {
+		return fmt.Errorf("blob post failed: %v", err)
+	}
+	if loc == "" {
+		return fmt.Errorf("blob post did not return a location")
+	}
+	u, err = u.Parse(loc)
+	if err != nil {
+		return fmt.Errorf("blob post could not parse location header: %v", err)
+	}
+	qa := u.Query()
+	qa.Set("digest", dig.String())
+	u.RawQuery = qa.Encode()
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("PUT"),
+		apiWithURL(u),
+		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithBody(bodyBytes),
+		apiExpectStatus(http.StatusCreated),
+		apiExpectHeader("Location", ""),
+	)
+	if err != nil {
+		return fmt.Errorf("blob put failed: %v", err)
+	}
+	return nil
+}
+
+func (a *api) ManifestDelete(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
 	if err != nil {
 		return err
 	}
@@ -403,14 +403,35 @@ func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData,
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("DELETE"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusAccepted, http.StatusNotFound, http.StatusBadRequest, http.StatusMethodNotAllowed),
+		apiExpectStatus(http.StatusAccepted, http.StatusNotFound),
 		apiReturnStatus(&status),
 	)
 	if err != nil {
-		return fmt.Errorf("blob delete failed: %v", err)
+		return fmt.Errorf("manifest delete failed: %v", err)
 	}
 	if status == http.StatusBadRequest || status == http.StatusMethodNotAllowed {
 		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
+	}
+	return nil
+}
+
+func (a *api) ManifestGet(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
+	if err != nil {
+		return err
+	}
+	if val, ok := td.manifests[dig]; ok {
+		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("GET"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusOK),
+		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
+		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
+	)
+	if err != nil {
+		return fmt.Errorf("manifest get failed: %v", err)
 	}
 	return nil
 }
@@ -448,46 +469,40 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	return nil
 }
 
-func (a *api) ManifestGet(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
-	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
+func (a *api) ReferrersList(registry, repo string, dig digest.Digest, opts ...apiDoOpt) (index, error) {
+	rl := index{}
+	u, err := url.Parse(registry + "/v2/" + repo + "/referrers/" + dig.String())
 	if err != nil {
-		return err
-	}
-	if val, ok := td.manifests[dig]; ok {
-		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+		return rl, err
 	}
 	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("GET"),
 		apiWithURL(u),
+		apiExpectHeader("Content-Type", "application/vnd.oci.image.index.v1+json"),
 		apiExpectStatus(http.StatusOK),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
+		apiReturnJSONBody(&rl),
 	)
-	if err != nil {
-		return fmt.Errorf("manifest get failed: %v", err)
-	}
-	return nil
+	return rl, err
 }
 
-func (a *api) ManifestDelete(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
-	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
+func (a *api) TagList(registry, repo string, opts ...apiDoOpt) (specs.TagList, error) {
+	tl := specs.TagList{}
+	u, err := url.Parse(registry + "/v2/" + repo + "/tags/list")
 	if err != nil {
-		return err
+		return tl, err
 	}
-	var status int
 	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("DELETE"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusAccepted, http.StatusNotFound),
-		apiReturnStatus(&status),
+		apiWithOr(
+			[]apiDoOpt{
+				apiExpectStatus(http.StatusOK),
+				apiReturnJSONBody(&tl),
+			},
+			[]apiDoOpt{
+				apiExpectStatus(http.StatusNotFound),
+			},
+		),
 	)
-	if err != nil {
-		return fmt.Errorf("manifest delete failed: %v", err)
-	}
-	if status == http.StatusBadRequest || status == http.StatusMethodNotAllowed {
-		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
-	}
-	return nil
+	return tl, err
 }
 
 func apiWithAnd(opts []apiDoOpt) apiDoOpt {

@@ -21,6 +21,7 @@ type testData struct {
 	blobs     map[digest.Digest][]byte
 	manifests map[digest.Digest][]byte
 	manOrder  []digest.Digest // ordered list to push manifests, the last is optionally tagged
+	referrers map[digest.Digest][]digest.Digest
 }
 
 func newTestData(name, tag string) *testData {
@@ -31,6 +32,7 @@ func newTestData(name, tag string) *testData {
 		blobs:     map[digest.Digest][]byte{},
 		manifests: map[digest.Digest][]byte{},
 		manOrder:  []digest.Digest{},
+		referrers: map[digest.Digest][]digest.Digest{},
 	}
 }
 
@@ -264,6 +266,9 @@ func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts
 	}
 	if gOpt.setData {
 		td.desc[dig].Data = body
+	}
+	if gOpt.subject != nil {
+		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], dig)
 	}
 	return dig, body, nil
 }
