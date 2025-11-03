@@ -20,10 +20,11 @@ import (
 )
 
 const (
-	testName     = "OCI Conformance Test"
-	dataImage    = "01-image"
-	dataIndex    = "02-index"
-	dataArtifact = "03-artifact"
+	testName          = "OCI Conformance Test"
+	dataImage         = "01-image"
+	dataIndex         = "02-index"
+	dataArtifact      = "03-artifact"
+	dataArtifactIndex = "04-artifact-index"
 )
 
 var errTestAPIFail = errors.New("API test with a known failure")
@@ -119,10 +120,28 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-	// artifact with subject
+	// two artifacts with subject image
 	tdName = dataArtifact
 	r.State.DataStatus[tdName] = statusUnknown
 	r.State.Data[tdName] = newTestData("OCI Artifact", "artifact")
+	digCList = []digest.Digest{}
+	digUCList = []digest.Digest{}
+	for l := range blobAPIs {
+		digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
+		}
+		digCList = append(digCList, digC)
+		digUCList = append(digUCList, digUC)
+	}
+	cDig, _, err = r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	subjDig, _, err := r.State.Data[tdName].genManifest(cDig, digCList)
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
 	abDig, _, err := r.State.Data[tdName].genBlob(2048)
 	if err != nil {
 		return fmt.Errorf("failed to generate test artifact blob: %w", err)
@@ -131,9 +150,70 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to add test artifact config: %w", err)
 	}
-	aDig, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
+	aDig1, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
 		genWithArtifactType("application/vnd.example.oci.conformance"),
-		genWithSubject(*r.State.Data[dataImage].desc[mDig]))
+		genWithSubject(*r.State.Data[tdName].desc[subjDig]))
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	abDig, _, err = r.State.Data[tdName].genBlob(2048)
+	if err != nil {
+		return fmt.Errorf("failed to generate test artifact blob: %w", err)
+	}
+	aDig2, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
+		genWithArtifactType("application/vnd.example.oci.conformance"),
+		genWithSubject(*r.State.Data[tdName].desc[subjDig]))
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	_, _ = aDig1, aDig2
+	// artifact packaged as an index with subject image
+	tdName = dataArtifactIndex
+	r.State.DataStatus[tdName] = statusUnknown
+	r.State.Data[tdName] = newTestData("OCI Artifact Index", "artifact-index")
+	digCList = []digest.Digest{}
+	digUCList = []digest.Digest{}
+	for l := range blobAPIs {
+		digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
+		}
+		digCList = append(digCList, digC)
+		digUCList = append(digUCList, digUC)
+	}
+	cDig, _, err = r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	subjDig, _, err = r.State.Data[tdName].genManifest(cDig, digCList)
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	platList = []*platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digImgList = []digest.Digest{}
+	emptyConfDig, err = r.State.Data[tdName].addBlob([]byte("{}"), genWithMediaType("application/vnd.oci.empty.v1+json"), genSetData())
+	if err != nil {
+		return fmt.Errorf("failed to add test artifact config: %w", err)
+	}
+	for range platList {
+		abDig, _, err := r.State.Data[tdName].genBlob(2048)
+		if err != nil {
+			return fmt.Errorf("failed to generate test artifact blob: %w", err)
+		}
+		aDig, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
+			genWithArtifactType("application/vnd.example.oci.conformance.image"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		digImgList = append(digImgList, aDig)
+	}
+	aDig, _, err := r.State.Data[tdName].genIndex(platList, digImgList,
+		genWithArtifactType("application/vnd.example.oci.conformance.index"),
+		genWithSubject(*r.State.Data[tdName].desc[subjDig]))
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
@@ -308,7 +388,7 @@ func (r *runner) TestAll() error {
 	}
 
 	// loop over different types of data
-	for _, tdName := range []string{dataImage, dataIndex, dataArtifact} {
+	for _, tdName := range []string{dataImage, dataIndex, dataArtifact, dataArtifactIndex} {
 		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
 			errs := []error{}
 			// push content
