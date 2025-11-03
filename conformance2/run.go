@@ -66,7 +66,7 @@ func (r *runner) GenerateData() error {
 	// standard image with a layer per blob test
 	tdName := dataImage
 	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Image", "image")
+	r.State.Data[tdName] = newTestData("OCI Image")
 	digCList := []digest.Digest{}
 	digUCList := []digest.Digest{}
 	for l := range blobAPIs {
@@ -85,11 +85,11 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-	_ = mDig
+	r.State.Data[tdName].tags["image"] = mDig
 	// multi-platform index
 	tdName = dataIndex
 	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Index", "index")
+	r.State.Data[tdName] = newTestData("OCI Index")
 	platList := []*platform{
 		{OS: "linux", Architecture: "amd64"},
 		{OS: "linux", Architecture: "arm64"},
@@ -116,14 +116,15 @@ func (r *runner) GenerateData() error {
 		}
 		digImgList = append(digImgList, mDig)
 	}
-	_, _, err = r.State.Data[tdName].genIndex(platList, digImgList)
+	iDig, _, err := r.State.Data[tdName].genIndex(platList, digImgList)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
+	r.State.Data[tdName].tags["index"] = iDig
 	// two artifacts with subject image
 	tdName = dataArtifact
 	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Artifact", "artifact")
+	r.State.Data[tdName] = newTestData("OCI Artifact")
 	digCList = []digest.Digest{}
 	digUCList = []digest.Digest{}
 	for l := range blobAPIs {
@@ -142,6 +143,7 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
+	r.State.Data[tdName].tags["subject"] = subjDig
 	abDig, _, err := r.State.Data[tdName].genBlob(2048)
 	if err != nil {
 		return fmt.Errorf("failed to generate test artifact blob: %w", err)
@@ -156,6 +158,7 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
+	r.State.Data[tdName].tags["artifact1"] = aDig1
 	abDig, _, err = r.State.Data[tdName].genBlob(2048)
 	if err != nil {
 		return fmt.Errorf("failed to generate test artifact blob: %w", err)
@@ -166,11 +169,11 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-	_, _ = aDig1, aDig2
+	r.State.Data[tdName].tags["artifact2"] = aDig2
 	// artifact packaged as an index with subject image
 	tdName = dataArtifactIndex
 	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Artifact Index", "artifact-index")
+	r.State.Data[tdName] = newTestData("OCI Artifact Index")
 	digCList = []digest.Digest{}
 	digUCList = []digest.Digest{}
 	for l := range blobAPIs {
@@ -189,6 +192,7 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
+	r.State.Data[tdName].tags["subject"] = subjDig
 	platList = []*platform{
 		{OS: "linux", Architecture: "amd64"},
 		{OS: "linux", Architecture: "arm64"},
@@ -217,7 +221,7 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-	_ = aDig
+	r.State.Data[tdName].tags["artifact"] = aDig
 	return nil
 }
 
@@ -435,8 +439,14 @@ func (r *runner) TestDelete(parent *results, tdName string, repo string) error {
 		errs := []error{}
 		delOrder := slices.Clone(r.State.Data[tdName].manOrder)
 		slices.Reverse(delOrder)
+		for tag, dig := range r.State.Data[tdName].tags {
+			err := r.TestDeleteManifestTag(res, tdName, repo, tag, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to delete manifest tag %s%.0w", tag, err))
+			}
+		}
 		for i, dig := range delOrder {
-			err := r.TestDeleteManifest(res, tdName, repo, dig)
+			err := r.TestDeleteManifestDigest(res, tdName, repo, dig)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to delete manifest %d, digest %s%.0w", i, dig.String(), err))
 			}
@@ -454,30 +464,9 @@ func (r *runner) TestDelete(parent *results, tdName string, repo string) error {
 	})
 }
 
-func (r *runner) TestDeleteManifest(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestDeleteManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
-	errs := []error{}
-	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
-		// delete tag
-		err := r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
-			if err := r.APIRequire(stateAPIManifestDeleteTag); err != nil {
-				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.TestSkip(res, err, tdName, stateAPIManifestDeleteTag)
-				return nil
-			}
-			if err := r.API.ManifestDelete(r.Config.schemeReg, repo, td.tag, dig, td, apiSaveOutput(res.Output)); err != nil {
-				r.TestFail(res, err, tdName, stateAPIManifestDeleteTag)
-				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
-			}
-			r.TestPass(res, tdName, stateAPIManifestDeleteTag)
-			return nil
-		})
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-	// delete digest
-	err := r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
+	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestDeleteDigest); err != nil {
 			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
 			r.TestSkip(res, err, tdName, stateAPIManifestDeleteDigest)
@@ -490,10 +479,23 @@ func (r *runner) TestDeleteManifest(parent *results, tdName string, repo string,
 		r.TestPass(res, tdName, stateAPIManifestDeleteDigest)
 		return nil
 	})
-	if err != nil {
-		errs = append(errs, err)
-	}
-	return errors.Join(errs...)
+}
+
+func (r *runner) TestDeleteManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
+	td := r.State.Data[tdName]
+	return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIManifestDeleteTag); err != nil {
+			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+			r.TestSkip(res, err, tdName, stateAPIManifestDeleteTag)
+			return nil
+		}
+		if err := r.API.ManifestDelete(r.Config.schemeReg, repo, tag, dig, td, apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIManifestDeleteTag)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIManifestDeleteTag)
+		return nil
+	})
 }
 
 func (r *runner) TestDeleteBlob(parent *results, tdName string, repo string, dig digest.Digest) error {
@@ -545,7 +547,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 		errs := []error{}
 		// setup testdata
 		r.State.DataStatus[tdName] = statusUnknown
-		r.State.Data[tdName] = newTestData(tdName, "")
+		r.State.Data[tdName] = newTestData(tdName)
 		digests := map[string]digest.Digest{}
 		testBlobs := map[string][]byte{
 			"empty":     []byte(""),
@@ -682,8 +684,14 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 func (r *runner) TestPull(parent *results, tdName string, repo string) error {
 	return r.ChildRun("pull", parent, func(r *runner, res *results) error {
 		errs := []error{}
+		for tag, dig := range r.State.Data[tdName].tags {
+			err := r.TestPullManifestTag(res, tdName, repo, tag, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to pull manifest by tag %s%.0w", tag, err))
+			}
+		}
 		for i, dig := range r.State.Data[tdName].manOrder {
-			err := r.TestPullManifest(res, tdName, repo, dig)
+			err := r.TestPullManifestDigest(res, tdName, repo, dig)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to pull manifest %d, digest %s%.0w", i, dig.String(), err))
 			}
@@ -716,34 +724,11 @@ func (r *runner) TestPullBlob(parent *results, tdName string, repo string, dig d
 	})
 }
 
-func (r *runner) TestPullManifest(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
 	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
-	errs := []error{}
-	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
-		// pull by tag
-		err := r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
-			if err := r.APIRequire(stateAPIManifestGetTag); err != nil {
-				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.TestSkip(res, err, tdName, stateAPIManifestGetTag)
-				return nil
-			}
-			apis = append(apis, stateAPIManifestGetTag)
-			opts = append(opts, apiSaveOutput(res.Output))
-			if err := r.API.ManifestGet(r.Config.schemeReg, repo, td.tag, dig, td, opts...); err != nil {
-				r.TestFail(res, err, tdName, apis...)
-				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
-			}
-			r.TestPass(res, tdName, apis...)
-			return nil
-		})
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-	// push by digest
-	err := r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
+	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestGetDigest); err != nil {
 			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
 			r.TestSkip(res, err, tdName, stateAPIManifestGetDigest)
@@ -758,10 +743,27 @@ func (r *runner) TestPullManifest(parent *results, tdName string, repo string, d
 		r.TestPass(res, tdName, apis...)
 		return nil
 	})
-	if err != nil {
-		errs = append(errs, err)
-	}
-	return errors.Join(errs...)
+}
+
+func (r *runner) TestPullManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
+	td := r.State.Data[tdName]
+	opts := []apiDoOpt{}
+	apis := []stateAPIType{}
+	return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIManifestGetTag); err != nil {
+			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+			r.TestSkip(res, err, tdName, stateAPIManifestGetTag)
+			return nil
+		}
+		apis = append(apis, stateAPIManifestGetTag)
+		opts = append(opts, apiSaveOutput(res.Output))
+		if err := r.API.ManifestGet(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
+			r.TestFail(res, err, tdName, apis...)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, apis...)
+		return nil
+	})
 }
 
 func (r *runner) TestPush(parent *results, tdName string, repo string) error {
@@ -774,9 +776,15 @@ func (r *runner) TestPush(parent *results, tdName string, repo string) error {
 			}
 		}
 		for i, dig := range r.State.Data[tdName].manOrder {
-			err := r.TestPushManifest(res, tdName, repo, dig)
+			err := r.TestPushManifestDigest(res, tdName, repo, dig)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to push manifest %d, digest %s%.0w", i, dig.String(), err))
+			}
+		}
+		for tag, dig := range r.State.Data[tdName].tags {
+			err := r.TestPushManifestTag(res, tdName, repo, tag, dig)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to push manifest tag %s%.0w", tag, err))
 			}
 		}
 		if len(errs) > 0 {
@@ -906,7 +914,7 @@ func (r *runner) TestPushBlobPatchStream(parent *results, tdName string, repo st
 	})
 }
 
-func (r *runner) TestPushManifest(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
 	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
@@ -918,41 +926,50 @@ func (r *runner) TestPushManifest(parent *results, tdName string, repo string, d
 			opts = append(opts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
 		}
 	}
-	if td.manOrder[len(td.manOrder)-1] == dig && td.tag != "" {
-		// push by tag
-		return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
-			if err := r.APIRequire(stateAPIManifestPutTag); err != nil {
-				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.TestSkip(res, err, tdName, stateAPIManifestPutTag)
-				return nil
-			}
-			apis = append(apis, stateAPIManifestPutTag)
-			opts = append(opts, apiSaveOutput(res.Output))
-			if err := r.API.ManifestPut(r.Config.schemeReg, repo, td.tag, dig, td, opts...); err != nil {
-				r.TestFail(res, err, tdName, apis...)
-				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
-			}
-			r.TestPass(res, tdName, apis...)
+	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
+			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+			r.TestSkip(res, err, tdName, stateAPIManifestPutDigest)
 			return nil
-		})
-	} else {
-		// push by digest
-		return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
-			if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
-				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-				r.TestSkip(res, err, tdName, stateAPIManifestPutDigest)
-				return nil
-			}
-			apis = append(apis, stateAPIManifestPutDigest)
-			opts = append(opts, apiSaveOutput(res.Output))
-			if err := r.API.ManifestPut(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
-				r.TestFail(res, err, tdName, apis...)
-				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
-			}
-			r.TestPass(res, tdName, apis...)
-			return nil
-		})
+		}
+		apis = append(apis, stateAPIManifestPutDigest)
+		opts = append(opts, apiSaveOutput(res.Output))
+		if err := r.API.ManifestPut(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
+			r.TestFail(res, err, tdName, apis...)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, apis...)
+		return nil
+	})
+}
+
+func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
+	td := r.State.Data[tdName]
+	opts := []apiDoOpt{}
+	apis := []stateAPIType{}
+	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
+	subj := detectSubject(td.manifests[dig])
+	if subj != nil {
+		apis = append(apis, stateAPIManifestPutSubject)
+		if r.Config.APIs.Referrer {
+			opts = append(opts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
+		}
 	}
+	return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIManifestPutTag); err != nil {
+			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+			r.TestSkip(res, err, tdName, stateAPIManifestPutTag)
+			return nil
+		}
+		apis = append(apis, stateAPIManifestPutTag)
+		opts = append(opts, apiSaveOutput(res.Output))
+		if err := r.API.ManifestPut(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
+			r.TestFail(res, err, tdName, apis...)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, apis...)
+		return nil
+	})
 }
 
 func (r *runner) TestReferrers(parent *results, tdName string, repo string) error {
