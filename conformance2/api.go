@@ -421,14 +421,19 @@ func (a *api) ManifestGet(registry, repo, ref string, dig digest.Digest, td *tes
 		return err
 	}
 	if val, ok := td.manifests[dig]; ok {
-		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+		mediaType := detectMediaType(val)
+		opts = append(opts,
+			apiExpectBody(val),
+			apiExpectHeader("Content-Type", mediaType),
+			apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))),
+		)
 	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("GET"),
 		apiWithURL(u),
 		apiExpectStatus(http.StatusOK),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
 		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
+		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
 	)
 	if err != nil {
 		return fmt.Errorf("manifest get failed: %v", err)
