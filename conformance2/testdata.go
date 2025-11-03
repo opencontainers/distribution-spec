@@ -16,7 +16,7 @@ import (
 
 type testData struct {
 	name      string // name of data set for logs
-	tag       string // specifies the tag used for last manifest push
+	tags      map[string]digest.Digest
 	desc      map[digest.Digest]*descriptor
 	blobs     map[digest.Digest][]byte
 	manifests map[digest.Digest][]byte
@@ -24,10 +24,10 @@ type testData struct {
 	referrers map[digest.Digest][]digest.Digest
 }
 
-func newTestData(name, tag string) *testData {
+func newTestData(name string) *testData {
 	return &testData{
 		name:      name,
-		tag:       tag,
+		tags:      map[string]digest.Digest{},
 		desc:      map[digest.Digest]*descriptor{},
 		blobs:     map[digest.Digest][]byte{},
 		manifests: map[digest.Digest][]byte{},
