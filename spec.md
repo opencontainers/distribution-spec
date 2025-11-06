@@ -368,7 +368,7 @@ The `<length>` is the content-length, in bytes, of the current chunk.
 If the registry provides an `OCI-Chunk-Min-Length` header in the `POST` response, the size of each chunk, except for the final chunk, SHOULD be greater or equal to that value.
 The final chunk MAY have any length.
 
-Each successful chunk upload MUST have a `202 Accepted` response code, and MUST have the following headers:
+The response for each successful chunk upload MUST be `202 Accepted`, and MUST have the following headers:
 
 ```
 Location: <location>
@@ -377,7 +377,7 @@ Range: 0-<end-of-range>
 
 Each consecutive chunk upload SHOULD use the `<location>` provided in the response to the previous chunk upload.
 
-The `<end-of-range>` value is the position of the last uploaded byte.
+The `<end-of-range>` value is the position of the last uploaded byte of the blob, matching the end value of the `Content-Range` in the request.
 
 Chunks MUST be uploaded in order, with the first byte of a chunk being the last chunk's `<end-of-range>` plus one.
 If a chunk is uploaded out of order, the registry MUST respond with a `416 Requested Range Not Satisfiable` code.
@@ -424,7 +424,7 @@ Range: 0-<end-of-range>
 
 The following chunk upload SHOULD use the `<location>` provided in the response.
 
-The `<end-of-range>` value is the position of the last uploaded byte.
+The `<end-of-range>` value is the position of the last uploaded byte of the blob.
 
 ##### Mounting a blob from another repository
 
