@@ -49,17 +49,26 @@ const (
 )
 
 type configAPI struct {
-	Pull     bool          `conformance:"PULL" yaml:"pull"`
-	Push     bool          `conformance:"PUSH" yaml:"push"`
-	Tags     bool          `conformance:"TAG_LIST" yaml:"tags"`
-	Referrer bool          `conformance:"REFERRER" yaml:"referrer"`
-	Delete   configObjects `conformance:"DELETE" yaml:"delete"`
+	Pull      bool            `conformance:"PULL" yaml:"pull"`
+	Push      bool            `conformance:"PUSH" yaml:"push"`
+	Blobs     configBlobs     `conformance:"BLOBS" yaml:"blobs"`
+	Manifests configManifests `conformance:"MANIFESTS" yaml:"manifests"`
+	Tags      configTags      `conformance:"TAG" yaml:"tags"`
+	Referrer  bool            `conformance:"REFERRER" yaml:"referrer"`
 }
 
-type configObjects struct {
-	Tag      bool `conformance:"TAG" yaml:"tag"`
-	Manifest bool `conformance:"MANIFEST" yaml:"manifest"`
-	Blob     bool `conformance:"BLOB" yaml:"blob"`
+type configBlobs struct {
+	Delete         bool `config:"DELETE" yaml:"delete"`
+	MountAnonymous bool `config:"MOUNT_ANONYMOUS" yaml:"mountAnonymous"`
+}
+
+type configManifests struct {
+	Delete bool `config:"DELETE" yaml:"delete"`
+}
+
+type configTags struct {
+	Delete bool `config:"DELETE" yaml:"delete"`
+	List   bool `config:"LIST" yaml:"list"`
 }
 
 type configData struct {
@@ -124,15 +133,20 @@ func configLoad() (config, error) {
 	switch configVersion {
 	case "", "1.1":
 		c.APIs = configAPI{
-			Pull:     true,
-			Push:     true,
-			Tags:     true,
-			Referrer: true,
-			Delete: configObjects{
-				Tag:      true,
-				Manifest: true,
-				Blob:     true,
+			Pull: true,
+			Push: true,
+			Blobs: configBlobs{
+				Delete:         true,
+				MountAnonymous: true,
 			},
+			Manifests: configManifests{
+				Delete: true,
+			},
+			Tags: configTags{
+				Delete: true,
+				List:   true,
+			},
+			Referrer: true,
 		}
 		c.Data = configData{
 			Image:            true,
@@ -149,15 +163,20 @@ func configLoad() (config, error) {
 		c.Version = "1.1"
 	case "1.0":
 		c.APIs = configAPI{
-			Pull:     true,
-			Push:     true,
-			Tags:     true,
-			Referrer: false,
-			Delete: configObjects{
-				Tag:      true,
-				Manifest: true,
-				Blob:     true,
+			Pull: true,
+			Push: true,
+			Blobs: configBlobs{
+				Delete:         true,
+				MountAnonymous: false,
 			},
+			Manifests: configManifests{
+				Delete: true,
+			},
+			Tags: configTags{
+				Delete: true,
+				List:   true,
+			},
+			Referrer: false,
 		}
 		c.Data = configData{
 			Image:            true,
