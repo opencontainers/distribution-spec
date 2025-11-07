@@ -167,6 +167,64 @@ func (a *api) BlobGetFull(registry, repo string, dig digest.Digest, td *testData
 	return nil
 }
 
+func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	bodyBytes, ok := td.blobs[dig]
+	if !ok {
+		return fmt.Errorf("BlobPostPut missing expected digest to send: %s", dig.String())
+	}
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
+	if err != nil {
+		return err
+	}
+	qa := u.Query()
+	qa.Set("mount", dig.String())
+	if source != "" {
+		qa.Set("from", source)
+	}
+	u.RawQuery = qa.Encode()
+	// TODO: add digest algorithm if not sha256
+	loc := ""
+	status := 0
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("POST"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusCreated, http.StatusAccepted),
+		apiReturnHeader("Location", &loc),
+		apiReturnStatus(&status),
+	)
+	if err != nil {
+		return fmt.Errorf("blob post failed: %v", err)
+	}
+	if loc == "" {
+		return fmt.Errorf("blob post did not return a location")
+	}
+	if status == http.StatusCreated {
+		// successful mount
+		return nil
+	}
+	// fallback to post+put
+	u, err = u.Parse(loc)
+	if err != nil {
+		return fmt.Errorf("blob post could not parse location header: %v", err)
+	}
+	qa = u.Query()
+	qa.Set("digest", dig.String())
+	u.RawQuery = qa.Encode()
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("PUT"),
+		apiWithURL(u),
+		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithBody(bodyBytes),
+		apiExpectStatus(http.StatusCreated),
+		apiExpectHeader("Location", ""),
+	)
+	if err != nil {
+		return fmt.Errorf("blob put failed: %v", err)
+	}
+	return fmt.Errorf("registry returned status %d, fell back to blob POST+PUT%.0w", status, ErrRegUnsupported)
+}
+
 func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
