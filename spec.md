@@ -16,6 +16,7 @@
 		2. [Push](#push)
 		3. [Content Discovery](#content-discovery)
 		4. [Content Management](#content-management)
+- [Proxying](#registry-proxying)
 - [Backwards Compatibility](#backwards-compatibility)
   - [Unavailable Referrers API](#unavailable-referrers-api)
 - [Upgrade Procedures](#upgrade-procedures)
@@ -25,7 +26,6 @@
 	- [Error Codes](#error-codes)
 	- [Warnings](#warnings)
 - [Appendix](#appendix)
-
 
 ## Overview
 
@@ -708,6 +708,26 @@ To delete a blob, perform a `DELETE` request to a path in the following format: 
 Upon success, the registry MUST respond with code `202 Accepted`.
 If the blob is not found, a `404 Not Found` code MUST be returned.
 If blob deletion is disabled, the registry MUST respond with either a `400 Bad Request` or a `405 Method Not Allowed`.
+
+### Registry Proxying
+
+A registry MAY operate as a proxy to another registry to delegate functionality or implement additional functionality.
+An example of delegating functionality is proxying pull operations to another registry.
+An example of adding functionality is implementing a pull-through cache of pulls to another registry.
+When operating as a proxy, the `Host` header passed to the registry will be the host of the PROXY and NOT the host in the repository name used by the client.
+A `ns` query parameter on pull operations is OPTIONAL, but when used specifies the host in a repository name used by a client.
+The host in the repository name SHOULD be the first component of the full repository name used by a client.
+This host component in a repository name SHOULD be the registry host a client considers the primary source for a repository, however, a client MAY be configured to use a different host.
+This original host component used by the client is referred to as the source host in the API documentation.
+A proxy registry MAY use the `ns` query parameter to resolve an upstream registry host.
+A registry MAY choose to ignore the `ns` query parameter.
+A registry that uses the `ns` query parameter to scope the request SHOULD return the `ns` query parameter value in the `OCI-Namespace` header.
+
+A client SHOULD be aware of whether a registry host is a proxy, such as when the `ns` query parameter differs from the `Host` header.
+A client SHOULD avoid sending `ns` query parameters to non-proxy registries.
+
+_Implementers note:_
+Authorization credentials for an upstream registry SHOULD NOT be sent to a proxy registry unless explicitly configured or instructed to do so by the credential owner.
 
 ### Backwards Compatibility
 
