@@ -32,12 +32,15 @@ const (
 	stateAPIBlobMountAnonymous
 	stateAPIBlobGetFull
 	stateAPIBlobGetRange
+	stateAPIBlobHead
 	stateAPIBlobDelete
 	stateAPIManifestPutDigest
 	stateAPIManifestPutTag
 	stateAPIManifestPutSubject
 	stateAPIManifestGetDigest
 	stateAPIManifestGetTag
+	stateAPIManifestHeadDigest
+	stateAPIManifestHeadTag
 	stateAPIManifestDeleteTag
 	stateAPIManifestDeleteDigest
 	stateAPIReferrers
@@ -68,6 +71,8 @@ func (a stateAPIType) String() string {
 		return "Blob get"
 	case stateAPIBlobGetRange:
 		return "Blob get range"
+	case stateAPIBlobHead:
+		return "Blob head"
 	case stateAPIBlobDelete:
 		return "Blob delete"
 	case stateAPIManifestPutDigest:
@@ -80,6 +85,10 @@ func (a stateAPIType) String() string {
 		return "Manifest get by digest"
 	case stateAPIManifestGetTag:
 		return "Manifest get by tag"
+	case stateAPIManifestHeadDigest:
+		return "Manifest head by digest"
+	case stateAPIManifestHeadTag:
+		return "Manifest head by tag"
 	case stateAPIManifestDeleteTag:
 		return "Manifest delete by tag"
 	case stateAPIManifestDeleteDigest:
@@ -121,6 +130,8 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPIBlobGetFull
 	case "Blob get range":
 		*a = stateAPIBlobGetRange
+	case "Blob head":
+		*a = stateAPIBlobHead
 	case "Blob delete":
 		*a = stateAPIBlobDelete
 	case "Manifest put by digest":
@@ -133,6 +144,10 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPIManifestGetDigest
 	case "Manifest get by tag":
 		*a = stateAPIManifestGetTag
+	case "Manifest head by digest":
+		*a = stateAPIManifestHeadDigest
+	case "Manifest head by tag":
+		*a = stateAPIManifestHeadTag
 	case "Manifest delete by tag":
 		*a = stateAPIManifestDeleteTag
 	case "Manifest delete by digest":
