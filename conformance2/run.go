@@ -399,8 +399,13 @@ func (r *runner) TestAll() error {
 	for _, tdName := range []string{dataImage, dataIndex, dataArtifact, dataArtifactIndex} {
 		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
 			errs := []error{}
-			// push content
+			// push
 			err := r.TestPush(res, tdName, repo)
+			if err != nil {
+				errs = append(errs, err)
+			}
+			// list, pull, and query
+			err = r.TestList(res, tdName, repo)
 			if err != nil {
 				errs = append(errs, err)
 			}
@@ -412,20 +417,15 @@ func (r *runner) TestAll() error {
 			if err != nil {
 				errs = append(errs, err)
 			}
-			// TODO: add APIs to list/discover content
 			err = r.TestReferrers(res, tdName, repo)
 			if err != nil {
 				errs = append(errs, err)
 			}
-
-			// cleanup
+			// delete
 			err = r.TestDelete(res, tdName, repo)
 			if err != nil {
 				errs = append(errs, err)
 			}
-
-			// TODO: verify tag listing show tag was deleted if delete API enabled
-
 			return errors.Join(errs...)
 		})
 		if err != nil {
@@ -623,6 +623,7 @@ func (r *runner) TestDelete(parent *results, tdName string, repo string) error {
 		errs := []error{}
 		delOrder := slices.Clone(r.State.Data[tdName].manOrder)
 		slices.Reverse(delOrder)
+		// TODO: after each delete, test a head, get, or list
 		for tag, dig := range r.State.Data[tdName].tags {
 			err := r.TestDeleteManifestTag(res, tdName, repo, tag, dig)
 			if err != nil {
@@ -807,6 +808,32 @@ func (r *runner) TestHeadManifestTag(parent *results, tdName string, repo string
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
 		r.TestPass(res, tdName, apis...)
+		return nil
+	})
+}
+
+func (r *runner) TestList(parent *results, tdName string, repo string) error {
+	return r.ChildRun("tag-list", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPITagList); err != nil {
+			r.TestSkip(res, err, tdName, stateAPITagList)
+			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+		}
+		tagList, err := r.API.TagList(r.Config.schemeReg, repo, apiSaveOutput(res.Output))
+		if err != nil {
+			r.TestFail(res, err, tdName, stateAPITagList)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		errs := []error{}
+		for tag := range r.State.Data[tdName].tags {
+			if !slices.Contains(tagList.Tags, tag) {
+				errs = append(errs, fmt.Errorf("missing tag %q from listing", tag))
+			}
+		}
+		if len(errs) > 0 {
+			r.TestFail(res, err, tdName, stateAPITagList)
+			return errors.Join(errs...)
+		}
+		r.TestPass(res, tdName, stateAPITagList)
 		return nil
 	})
 }
