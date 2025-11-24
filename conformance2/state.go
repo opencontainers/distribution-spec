@@ -22,8 +22,10 @@ func stateNew() *state {
 type stateAPIType int
 
 const (
-	stateAPITagList  stateAPIType = iota
-	stateAPIBlobPush              // any blob push API
+	stateAPITagList stateAPIType = iota
+	stateAPITagDelete
+	stateAPITagDeleteAtomic
+	stateAPIBlobPush // any blob push API
 	stateAPIBlobPostOnly
 	stateAPIBlobPostPut
 	stateAPIBlobPatchChunked
@@ -34,6 +36,7 @@ const (
 	stateAPIBlobGetRange
 	stateAPIBlobHead
 	stateAPIBlobDelete
+	stateAPIBlobDeleteAtomic
 	stateAPIManifestPutDigest
 	stateAPIManifestPutTag
 	stateAPIManifestPutSubject
@@ -41,8 +44,8 @@ const (
 	stateAPIManifestGetTag
 	stateAPIManifestHeadDigest
 	stateAPIManifestHeadTag
-	stateAPIManifestDeleteTag
-	stateAPIManifestDeleteDigest
+	stateAPIManifestDelete
+	stateAPIManifestDeleteAtomic
 	stateAPIReferrers
 	stateAPIMax // number of APIs for iterating
 )
@@ -53,6 +56,10 @@ func (a stateAPIType) String() string {
 		return "Unknown"
 	case stateAPITagList:
 		return "Tag listing"
+	case stateAPITagDelete:
+		return "Tag delete"
+	case stateAPITagDeleteAtomic:
+		return "Tag delete atomic"
 	case stateAPIBlobPush:
 		return "Blob push"
 	case stateAPIBlobPostOnly:
@@ -75,6 +82,8 @@ func (a stateAPIType) String() string {
 		return "Blob head"
 	case stateAPIBlobDelete:
 		return "Blob delete"
+	case stateAPIBlobDeleteAtomic:
+		return "Blob delete atomic"
 	case stateAPIManifestPutDigest:
 		return "Manifest put by digest"
 	case stateAPIManifestPutTag:
@@ -89,10 +98,10 @@ func (a stateAPIType) String() string {
 		return "Manifest head by digest"
 	case stateAPIManifestHeadTag:
 		return "Manifest head by tag"
-	case stateAPIManifestDeleteTag:
-		return "Manifest delete by tag"
-	case stateAPIManifestDeleteDigest:
-		return "Manifest delete by digest"
+	case stateAPIManifestDelete:
+		return "Manifest delete"
+	case stateAPIManifestDeleteAtomic:
+		return "Manifest delete atomic"
 	case stateAPIReferrers:
 		return "Referrers"
 	}
@@ -112,6 +121,10 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		return fmt.Errorf("unknown API %s", b)
 	case "Tag listing":
 		*a = stateAPITagList
+	case "Tag delete":
+		*a = stateAPITagDelete
+	case "Tag delete atomic":
+		*a = stateAPITagDeleteAtomic
 	case "Blob push":
 		*a = stateAPIBlobPush
 	case "Blob post only":
@@ -134,6 +147,8 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPIBlobHead
 	case "Blob delete":
 		*a = stateAPIBlobDelete
+	case "Blob delete atomic":
+		*a = stateAPIBlobDeleteAtomic
 	case "Manifest put by digest":
 		*a = stateAPIManifestPutDigest
 	case "Manifest put by tag":
@@ -148,10 +163,10 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPIManifestHeadDigest
 	case "Manifest head by tag":
 		*a = stateAPIManifestHeadTag
-	case "Manifest delete by tag":
-		*a = stateAPIManifestDeleteTag
-	case "Manifest delete by digest":
-		*a = stateAPIManifestDeleteDigest
+	case "Manifest delete":
+		*a = stateAPIManifestDelete
+	case "Manifest delete atomic":
+		*a = stateAPIManifestDeleteAtomic
 	case "Referrers":
 		*a = stateAPIReferrers
 	}

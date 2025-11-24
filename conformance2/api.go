@@ -148,18 +148,14 @@ func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData,
 	return nil
 }
 
-func (a *api) BlobGetFull(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+func (a *api) BlobGetReq(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
 	if err != nil {
 		return err
 	}
-	if val, ok := td.blobs[dig]; ok {
-		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
-	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("GET"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusOK),
 	)
 	if err != nil {
 		return fmt.Errorf("blob get failed: %v", err)
@@ -167,24 +163,40 @@ func (a *api) BlobGetFull(registry, repo string, dig digest.Digest, td *testData
 	return nil
 }
 
-func (a *api) BlobHead(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+func (a *api) BlobGetExistsFull(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	opts = append(opts,
+		apiExpectStatus(http.StatusOK),
+	)
+	if val, ok := td.blobs[dig]; ok {
+		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+	}
+	return a.BlobGetReq(registry, repo, dig, td, opts...)
+}
+
+func (a *api) BlobHeadReq(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
 	if err != nil {
 		return err
 	}
-	if val, ok := td.blobs[dig]; ok {
-		opts = append(opts, apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
-	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("HEAD"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusOK),
-		apiExpectBody([]byte{}),
 	)
 	if err != nil {
 		return fmt.Errorf("blob head failed: %v", err)
 	}
 	return nil
+}
+
+func (a *api) BlobHeadExists(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	opts = append(opts,
+		apiExpectStatus(http.StatusOK),
+		apiExpectBody([]byte{}),
+	)
+	if val, ok := td.blobs[dig]; ok {
+		opts = append(opts, apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+	}
+	return a.BlobHeadReq(registry, repo, dig, td, opts...)
 }
 
 func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
@@ -493,23 +505,14 @@ func (a *api) ManifestDelete(registry, repo, ref string, dig digest.Digest, td *
 	return nil
 }
 
-func (a *api) ManifestGet(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+func (a *api) ManifestGetReq(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
 	if err != nil {
 		return err
 	}
-	if val, ok := td.manifests[dig]; ok {
-		mediaType := detectMediaType(val)
-		opts = append(opts,
-			apiExpectBody(val),
-			apiExpectHeader("Content-Type", mediaType),
-			apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))),
-		)
-	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("GET"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusOK),
 		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
 		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
 	)
@@ -519,11 +522,43 @@ func (a *api) ManifestGet(registry, repo, ref string, dig digest.Digest, td *tes
 	return nil
 }
 
-func (a *api) ManifestHead(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+func (a *api) ManifestGetExists(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	opts = append(opts,
+		apiExpectStatus(http.StatusOK),
+	)
+	if val, ok := td.manifests[dig]; ok {
+		mediaType := detectMediaType(val)
+		opts = append(opts,
+			apiExpectBody(val),
+			apiExpectHeader("Content-Type", mediaType),
+			apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))),
+		)
+	}
+	return a.ManifestGetReq(registry, repo, ref, dig, td, opts...)
+}
+
+func (a *api) ManifestHeadReq(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
 	if err != nil {
 		return err
 	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("HEAD"),
+		apiWithURL(u),
+		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
+		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
+	)
+	if err != nil {
+		return fmt.Errorf("manifest head failed: %v", err)
+	}
+	return nil
+}
+
+func (a *api) ManifestHeadExists(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	opts = append(opts,
+		apiExpectStatus(http.StatusOK),
+		apiExpectBody([]byte{}),
+	)
 	if val, ok := td.manifests[dig]; ok {
 		mediaType := detectMediaType(val)
 		opts = append(opts,
@@ -531,18 +566,7 @@ func (a *api) ManifestHead(registry, repo, ref string, dig digest.Digest, td *te
 			apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))),
 		)
 	}
-	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("HEAD"),
-		apiWithURL(u),
-		apiExpectStatus(http.StatusOK),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
-		apiExpectBody([]byte{}),
-	)
-	if err != nil {
-		return fmt.Errorf("manifest head failed: %v", err)
-	}
-	return nil
+	return a.ManifestHeadReq(registry, repo, ref, dig, td, opts...)
 }
 
 func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
