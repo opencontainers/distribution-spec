@@ -623,15 +623,14 @@ func (r *runner) TestDelete(parent *results, tdName string, repo string) error {
 		errs := []error{}
 		delOrder := slices.Clone(r.State.Data[tdName].manOrder)
 		slices.Reverse(delOrder)
-		// TODO: after each delete, test a head, get, or list
 		for tag, dig := range r.State.Data[tdName].tags {
-			err := r.TestDeleteManifestTag(res, tdName, repo, tag, dig)
+			err := r.TestDeleteTag(res, tdName, repo, tag, dig)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to delete manifest tag %s%.0w", tag, err))
 			}
 		}
 		for i, dig := range delOrder {
-			err := r.TestDeleteManifestDigest(res, tdName, repo, dig)
+			err := r.TestDeleteManifest(res, tdName, repo, dig)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to delete manifest %d, digest %s%.0w", i, dig.String(), err))
 			}
@@ -649,36 +648,58 @@ func (r *runner) TestDelete(parent *results, tdName string, repo string) error {
 	})
 }
 
-func (r *runner) TestDeleteManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestDeleteTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
-	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
-		if err := r.APIRequire(stateAPIManifestDeleteDigest); err != nil {
+	return r.ChildRun("tag-delete", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPITagDelete); err != nil {
 			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-			r.TestSkip(res, err, tdName, stateAPIManifestDeleteDigest)
+			r.TestSkip(res, err, tdName, stateAPITagDelete, stateAPITagDeleteAtomic)
 			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
 		}
-		if err := r.API.ManifestDelete(r.Config.schemeReg, repo, dig.String(), dig, td, apiSaveOutput(res.Output)); err != nil {
-			r.TestFail(res, err, tdName, stateAPIManifestDeleteDigest)
+		if err := r.API.ManifestDelete(r.Config.schemeReg, repo, tag, dig, td, apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPITagDelete)
+			r.TestSkip(res, err, tdName, stateAPITagDeleteAtomic)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
-		r.TestPass(res, tdName, stateAPIManifestDeleteDigest)
+		r.TestPass(res, tdName, stateAPITagDelete)
+		// verify tag delete finished immediately
+		if err := r.APIRequire(stateAPITagDeleteAtomic); err != nil {
+			r.TestSkip(res, err, tdName, stateAPITagDeleteAtomic)
+			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+		}
+		if err := r.API.ManifestHeadReq(r.Config.schemeReg, repo, tag, dig, td, apiSaveOutput(res.Output), apiExpectStatus(http.StatusNotFound)); err != nil {
+			r.TestFail(res, err, tdName, stateAPITagDeleteAtomic)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPITagDeleteAtomic)
 		return nil
 	})
 }
 
-func (r *runner) TestDeleteManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
+func (r *runner) TestDeleteManifest(parent *results, tdName string, repo string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
-	return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
-		if err := r.APIRequire(stateAPIManifestDeleteTag); err != nil {
+	return r.ChildRun("manifest-delete", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIManifestDelete); err != nil {
 			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-			r.TestSkip(res, err, tdName, stateAPIManifestDeleteTag)
+			r.TestSkip(res, err, tdName, stateAPIManifestDelete, stateAPIManifestDeleteAtomic)
 			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
 		}
-		if err := r.API.ManifestDelete(r.Config.schemeReg, repo, tag, dig, td, apiSaveOutput(res.Output)); err != nil {
-			r.TestFail(res, err, tdName, stateAPIManifestDeleteTag)
+		if err := r.API.ManifestDelete(r.Config.schemeReg, repo, dig.String(), dig, td, apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIManifestDelete)
+			r.TestSkip(res, err, tdName, stateAPIManifestDeleteAtomic)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
-		r.TestPass(res, tdName, stateAPIManifestDeleteTag)
+		r.TestPass(res, tdName, stateAPIManifestDelete)
+		// verify manifest delete finished immediately
+		if err := r.APIRequire(stateAPIManifestDeleteAtomic); err != nil {
+			r.TestSkip(res, err, tdName, stateAPIManifestDeleteAtomic)
+			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+		}
+		if err := r.API.ManifestHeadReq(r.Config.schemeReg, repo, dig.String(), dig, td, apiSaveOutput(res.Output), apiExpectStatus(http.StatusNotFound)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIManifestDeleteAtomic)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIManifestDeleteAtomic)
 		return nil
 	})
 }
@@ -687,14 +708,25 @@ func (r *runner) TestDeleteBlob(parent *results, tdName string, repo string, dig
 	return r.ChildRun("blob-delete", parent, func(r *runner, res *results) error {
 		td := r.State.Data[tdName]
 		if err := r.APIRequire(stateAPIBlobDelete); err != nil {
-			r.TestSkip(res, err, tdName, stateAPIBlobDelete)
+			r.TestSkip(res, err, tdName, stateAPIBlobDelete, stateAPIBlobDeleteAtomic)
 			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
 		}
 		if err := r.API.BlobDelete(r.Config.schemeReg, repo, dig, td, apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobDelete)
+			r.TestSkip(res, err, tdName, stateAPIBlobDeleteAtomic)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
-		r.TestPass(res, tdName, stateAPIBlobDelete, stateAPIBlobPush)
+		r.TestPass(res, tdName, stateAPIBlobDelete)
+		// verify blob delete finished immediately
+		if err := r.APIRequire(stateAPIBlobDeleteAtomic); err != nil {
+			r.TestSkip(res, err, tdName, stateAPIBlobDeleteAtomic)
+			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+		}
+		if err := r.API.BlobHeadReq(r.Config.schemeReg, repo, dig, td, apiSaveOutput(res.Output), apiExpectStatus(http.StatusNotFound)); err != nil {
+			r.TestFail(res, err, tdName, stateAPIBlobDeleteAtomic)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIBlobDeleteAtomic)
 		return nil
 	})
 }
@@ -761,7 +793,7 @@ func (r *runner) TestHeadBlob(parent *results, tdName string, repo string, dig d
 			r.TestSkip(res, err, tdName, stateAPIBlobHead)
 			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
 		}
-		if err := r.API.BlobHead(r.Config.schemeReg, repo, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+		if err := r.API.BlobHeadExists(r.Config.schemeReg, repo, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobHead)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -782,7 +814,7 @@ func (r *runner) TestHeadManifestDigest(parent *results, tdName string, repo str
 		}
 		apis = append(apis, stateAPIManifestHeadDigest)
 		opts = append(opts, apiSaveOutput(res.Output))
-		if err := r.API.ManifestHead(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
+		if err := r.API.ManifestHeadExists(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -803,7 +835,7 @@ func (r *runner) TestHeadManifestTag(parent *results, tdName string, repo string
 		}
 		apis = append(apis, stateAPIManifestHeadTag)
 		opts = append(opts, apiSaveOutput(res.Output))
-		if err := r.API.ManifestHead(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
+		if err := r.API.ManifestHeadExists(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -872,7 +904,7 @@ func (r *runner) TestPullBlob(parent *results, tdName string, repo string, dig d
 			r.TestSkip(res, err, tdName, stateAPIBlobGetFull)
 			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
 		}
-		if err := r.API.BlobGetFull(r.Config.schemeReg, repo, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+		if err := r.API.BlobGetExistsFull(r.Config.schemeReg, repo, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobGetFull)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -893,7 +925,7 @@ func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo str
 		}
 		apis = append(apis, stateAPIManifestGetDigest)
 		opts = append(opts, apiSaveOutput(res.Output))
-		if err := r.API.ManifestGet(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
+		if err := r.API.ManifestGetExists(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -914,7 +946,7 @@ func (r *runner) TestPullManifestTag(parent *results, tdName string, repo string
 		}
 		apis = append(apis, stateAPIManifestGetTag)
 		opts = append(opts, apiSaveOutput(res.Output))
-		if err := r.API.ManifestGet(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
+		if err := r.API.ManifestGetExists(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -1296,6 +1328,10 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 			if !r.Config.APIs.Tags.List {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
+		case stateAPIManifestGetTag, stateAPIManifestGetDigest, stateAPIBlobGetFull, stateAPIBlobGetRange:
+			if !r.Config.APIs.Pull {
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+			}
 		case stateAPIManifestPutTag, stateAPIManifestPutDigest, stateAPIManifestPutSubject,
 			stateAPIBlobPush, stateAPIBlobPostOnly, stateAPIBlobPostPut,
 			stateAPIBlobPatchChunked, stateAPIBlobPatchStream, stateAPIBlobMountSource:
@@ -1306,20 +1342,28 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 			if !r.Config.APIs.Push || !r.Config.APIs.Blobs.MountAnonymous {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case stateAPIManifestGetTag, stateAPIManifestGetDigest, stateAPIBlobGetFull, stateAPIBlobGetRange:
-			if !r.Config.APIs.Pull {
+		case stateAPITagDelete:
+			if !r.Config.APIs.Tags.Delete {
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+			}
+		case stateAPITagDeleteAtomic:
+			if !r.Config.APIs.Tags.Delete || !r.Config.APIs.Tags.Atomic {
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+			}
+		case stateAPIManifestDelete:
+			if !r.Config.APIs.Manifests.Delete {
+				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+			}
+		case stateAPIManifestDeleteAtomic:
+			if !r.Config.APIs.Manifests.Atomic {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIBlobDelete:
 			if !r.Config.APIs.Blobs.Delete {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
-		case stateAPIManifestDeleteTag:
-			if !r.Config.APIs.Tags.Delete {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
-			}
-		case stateAPIManifestDeleteDigest:
-			if !r.Config.APIs.Manifests.Delete {
+		case stateAPIBlobDeleteAtomic:
+			if !r.Config.APIs.Blobs.Atomic {
 				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 			}
 		case stateAPIReferrers:
