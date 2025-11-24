@@ -58,15 +58,18 @@ type configAPI struct {
 }
 
 type configBlobs struct {
+	Atomic         bool `config:"ATOMIC" yaml:"atomic"`
 	Delete         bool `config:"DELETE" yaml:"delete"`
 	MountAnonymous bool `config:"MOUNT_ANONYMOUS" yaml:"mountAnonymous"`
 }
 
 type configManifests struct {
+	Atomic bool `config:"ATOMIC" yaml:"atomic"`
 	Delete bool `config:"DELETE" yaml:"delete"`
 }
 
 type configTags struct {
+	Atomic bool `config:"ATOMIC" yaml:"atomic"`
 	Delete bool `config:"DELETE" yaml:"delete"`
 	List   bool `config:"LIST" yaml:"list"`
 }
@@ -136,13 +139,16 @@ func configLoad() (config, error) {
 			Pull: true,
 			Push: true,
 			Blobs: configBlobs{
+				Atomic:         true,
 				Delete:         true,
 				MountAnonymous: true,
 			},
 			Manifests: configManifests{
+				Atomic: true,
 				Delete: true,
 			},
 			Tags: configTags{
+				Atomic: true,
 				Delete: true,
 				List:   true,
 			},
@@ -166,13 +172,16 @@ func configLoad() (config, error) {
 			Pull: true,
 			Push: true,
 			Blobs: configBlobs{
+				Atomic:         true,
 				Delete:         true,
 				MountAnonymous: false,
 			},
 			Manifests: configManifests{
+				Atomic: true,
 				Delete: true,
 			},
 			Tags: configTags{
+				Atomic: true,
 				Delete: true,
 				List:   true,
 			},
