@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"strings"
 
 	digest "github.com/opencontainers/go-digest"
 )
@@ -44,12 +45,20 @@ const (
 )
 
 type genOptS struct {
-	algo         digest.Algorithm
-	artifactType string
-	comp         genComp
-	mediaType    string
-	setData      bool
-	subject      *descriptor
+	algo                digest.Algorithm
+	artifactType        string
+	blobSize            int64
+	comp                genComp
+	configBytes         []byte
+	configMediaType     string
+	descriptorMediaType string
+	layerCount          int
+	layerMediaType      string
+	platform            platform
+	platforms           []*platform
+	setData             bool
+	subject             *descriptor
+	tag                 string
 }
 
 type genOpt func(*genOptS)
@@ -72,15 +81,57 @@ func genWithCompress(comp genComp) genOpt {
 	}
 }
 
-func genWithMediaType(mediaType string) genOpt {
+func genWithConfigBytes(b []byte) genOpt {
 	return func(opt *genOptS) {
-		opt.mediaType = mediaType
+		opt.configBytes = b
 	}
 }
 
-func genSetData() genOpt {
+func genWithConfigMediaType(mediaType string) genOpt {
+	return func(opt *genOptS) {
+		opt.configMediaType = mediaType
+	}
+}
+
+func genWithDescriptorData() genOpt {
 	return func(opt *genOptS) {
 		opt.setData = true
+	}
+}
+
+func genWithDescriptorMediaType(mediaType string) genOpt {
+	return func(opt *genOptS) {
+		opt.descriptorMediaType = mediaType
+	}
+}
+
+func genWithLayerCount(count int) genOpt {
+	return func(opt *genOptS) {
+		opt.layerCount = count
+	}
+}
+
+func genWithLayerMediaType(mediaType string) genOpt {
+	return func(opt *genOptS) {
+		opt.layerMediaType = mediaType
+	}
+}
+
+func genWithPlatform(p platform) genOpt {
+	return func(opt *genOptS) {
+		opt.platform = p
+	}
+}
+
+func genWithPlatforms(platforms []*platform) genOpt {
+	return func(opt *genOptS) {
+		opt.platforms = platforms
+	}
+}
+
+func genWithBlobSize(size int64) genOpt {
+	return func(opt *genOptS) {
+		opt.blobSize = size
 	}
 }
 
@@ -90,10 +141,16 @@ func genWithSubject(subject descriptor) genOpt {
 	}
 }
 
+func genWithTag(tag string) genOpt {
+	return func(opt *genOptS) {
+		opt.tag = tag
+	}
+}
+
 func (td *testData) addBlob(b []byte, opts ...genOpt) (digest.Digest, error) {
 	gOpt := genOptS{
-		algo:      digest.Canonical,
-		mediaType: "application/octet-stream",
+		algo:                digest.Canonical,
+		descriptorMediaType: "application/octet-stream",
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -101,7 +158,7 @@ func (td *testData) addBlob(b []byte, opts ...genOpt) (digest.Digest, error) {
 	dig := gOpt.algo.FromBytes(b)
 	td.blobs[dig] = b
 	td.desc[dig] = &descriptor{
-		MediaType: gOpt.mediaType,
+		MediaType: gOpt.descriptorMediaType,
 		Digest:    dig,
 		Size:      int64(len(b)),
 	}
@@ -111,8 +168,14 @@ func (td *testData) addBlob(b []byte, opts ...genOpt) (digest.Digest, error) {
 	return dig, nil
 }
 
-func (td *testData) genBlob(size int64, opts ...genOpt) (digest.Digest, []byte, error) {
-	b := make([]byte, size)
+func (td *testData) genBlob(opts ...genOpt) (digest.Digest, []byte, error) {
+	gOpt := genOptS{
+		blobSize: 2048,
+	}
+	for _, opt := range opts {
+		opt(&gOpt)
+	}
+	b := make([]byte, gOpt.blobSize)
 	_, err := rand.Read(b)
 	if err != nil {
 		return digest.Digest(""), nil, err
@@ -201,8 +264,8 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 // genConfig returns a config for the given platform and list of uncompressed layer digests.
 func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
-		algo:      digest.Canonical,
-		mediaType: "application/vnd.oci.image.config.v1+json",
+		algo:            digest.Canonical,
+		configMediaType: "application/vnd.oci.image.config.v1+json",
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -222,7 +285,7 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 	dig := gOpt.algo.FromBytes(body)
 	td.blobs[dig] = body
 	td.desc[dig] = &descriptor{
-		MediaType: gOpt.mediaType,
+		MediaType: gOpt.configMediaType,
 		Digest:    dig,
 		Size:      int64(len(body)),
 	}
@@ -235,15 +298,15 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 // genManifest returns an image manifest with the selected config and compressed layer digests.
 func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
-		algo:      digest.Canonical,
-		mediaType: "application/vnd.oci.image.manifest.v1+json",
+		algo: digest.Canonical,
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
 	}
+	mt := "application/vnd.oci.image.manifest.v1+json"
 	m := manifest{
 		SchemaVersion: 2,
-		MediaType:     gOpt.mediaType,
+		MediaType:     mt,
 		ArtifactType:  gOpt.artifactType,
 		Config:        *td.desc[conf],
 		Layers:        make([]descriptor, len(layers)),
@@ -260,9 +323,10 @@ func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
 	td.desc[dig] = &descriptor{
-		MediaType: gOpt.mediaType,
-		Digest:    dig,
-		Size:      int64(len(body)),
+		MediaType:    mt,
+		ArtifactType: gOpt.artifactType,
+		Digest:       dig,
+		Size:         int64(len(body)),
 	}
 	if gOpt.setData {
 		td.desc[dig].Data = body
@@ -273,11 +337,75 @@ func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts
 	return dig, body, nil
 }
 
+// genManifestFull creates an image with layers and a config
+func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
+	gOpt := genOptS{
+		layerCount: 2,
+		platform:   platform{OS: "linux", Architecture: "amd64"},
+	}
+	for _, opt := range opts {
+		opt(&gOpt)
+	}
+	digCList := []digest.Digest{}
+	digUCList := []digest.Digest{}
+	for l := range gOpt.layerCount {
+		if gOpt.layerMediaType == "" || strings.HasPrefix(gOpt.layerMediaType, "application/vnd.oci.image.layer.v1") {
+			// image
+			digC, digUC, _, err := td.genLayer(l, opts...)
+			if err != nil {
+				return "", fmt.Errorf("failed to generate test data layer %d: %w", l, err)
+			}
+			digCList = append(digCList, digC)
+			digUCList = append(digUCList, digUC)
+		} else {
+			// artifact
+			lOpts := []genOpt{
+				genWithDescriptorMediaType(gOpt.layerMediaType),
+			}
+			lOpts = append(lOpts, opts...)
+			dig, _, err := td.genBlob(lOpts...)
+			if err != nil {
+				return "", fmt.Errorf("failed to generate test artifact blob: %w", err)
+			}
+			digCList = append(digCList, dig)
+			digUCList = append(digUCList, dig)
+		}
+	}
+	cDig := digest.Digest("")
+	if gOpt.configMediaType == "" || gOpt.configMediaType == "application/vnd.oci.image.config.v1+json" {
+		// image config
+		dig, _, err := td.genConfig(gOpt.platform, digUCList)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate test data: %w", err)
+		}
+		cDig = dig
+	} else {
+		// artifact
+		bOpts := []genOpt{
+			genWithDescriptorMediaType(gOpt.configMediaType),
+		}
+		bOpts = append(bOpts, opts...)
+		dig, err := td.addBlob(gOpt.configBytes, bOpts...)
+		if err != nil {
+			return "", fmt.Errorf("failed to generate test artifact config: %w", err)
+		}
+		cDig = dig
+	}
+	mDig, _, err := td.genManifest(cDig, digCList, opts...)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate test data: %w", err)
+	}
+	if gOpt.tag != "" {
+		td.tags[gOpt.tag] = mDig
+	}
+	return mDig, nil
+}
+
 // genIndex returns an index manifest with the specified layers and platforms.
 func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
+	mt := "application/vnd.oci.image.index.v1+json"
 	gOpt := genOptS{
-		algo:      digest.Canonical,
-		mediaType: "application/vnd.oci.image.index.v1+json",
+		algo: digest.Canonical,
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -287,7 +415,7 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	}
 	ind := index{
 		SchemaVersion: 2,
-		MediaType:     gOpt.mediaType,
+		MediaType:     mt,
 		ArtifactType:  gOpt.artifactType,
 		Manifests:     make([]descriptor, len(manifests)),
 		Subject:       gOpt.subject,
@@ -305,12 +433,50 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
 	td.desc[dig] = &descriptor{
-		MediaType: gOpt.mediaType,
-		Digest:    dig,
-		Size:      int64(len(body)),
+		MediaType:    mt,
+		ArtifactType: gOpt.artifactType,
+		Digest:       dig,
+		Size:         int64(len(body)),
 	}
 	if gOpt.setData {
 		td.desc[dig].Data = body
 	}
+	if gOpt.subject != nil {
+		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], dig)
+	}
 	return dig, body, nil
+}
+
+// genIndexFull creates an index with multiple images, including the image layers and configs
+func (td *testData) genIndexFull(opts ...genOpt) (digest.Digest, error) {
+	gOpt := genOptS{
+		platforms: []*platform{
+			{OS: "linux", Architecture: "amd64"},
+			{OS: "linux", Architecture: "arm64"},
+		},
+	}
+	for _, opt := range opts {
+		opt(&gOpt)
+	}
+	digImgList := []digest.Digest{}
+	for _, p := range gOpt.platforms {
+		iOpts := []genOpt{
+			genWithPlatform(*p),
+		}
+		iOpts = append(iOpts, opts...)
+		mDig, err := td.genManifestFull(iOpts...)
+		if err != nil {
+			return "", err
+		}
+		digImgList = append(digImgList, mDig)
+	}
+	iDig, _, err := td.genIndex(gOpt.platforms, digImgList, opts...)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate test data: %w", err)
+	}
+	td.tags["index"] = iDig
+	if gOpt.tag != "" {
+		td.tags[gOpt.tag] = iDig
+	}
+	return iDig, nil
 }

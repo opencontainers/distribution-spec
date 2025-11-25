@@ -111,7 +111,7 @@ func (s status) String() string {
 	case statusDisabled:
 		return "Disabled"
 	case statusFail:
-		return "Fail"
+		return "FAIL"
 	case statusError:
 		return "Error"
 	default:
