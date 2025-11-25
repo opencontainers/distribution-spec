@@ -20,16 +20,13 @@ import (
 )
 
 const (
-	testName          = "OCI Conformance Test"
-	dataImage         = "01-image"
-	dataIndex         = "02-index"
-	dataArtifact      = "03-artifact"
-	dataArtifactIndex = "04-artifact-index"
+	testName = "OCI Conformance Test"
 )
 
 var (
 	errTestAPIFail = errors.New("API test with a known failure")
 	errTestAPISkip = errors.New("API test was skipped")
+	dataTests      = []string{}
 )
 
 type runner struct {
@@ -66,165 +63,189 @@ func runnerNew(c config) (*runner, error) {
 }
 
 func (r *runner) GenerateData() error {
+	var tdName string
+	if !r.Config.Data.Image {
+		// all data tests require the image manifest
+		return nil
+	}
 	// standard image with a layer per blob test
-	tdName := dataImage
+	tdName = "image"
+	r.State.Data[tdName] = newTestData("Image")
 	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Image")
-	digCList := []digest.Digest{}
-	digUCList := []digest.Digest{}
-	for l := range blobAPIs {
-		digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
-		if err != nil {
-			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
-		}
-		digCList = append(digCList, digC)
-		digUCList = append(digUCList, digUC)
-	}
-	cDig, _, err := r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
+	dataTests = append(dataTests, tdName)
+	_, err := r.State.Data[tdName].genManifestFull(
+		genWithTag("image"),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
-	mDig, _, err := r.State.Data[tdName].genManifest(cDig, digCList)
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	r.State.Data[tdName].tags["image"] = mDig
 	// multi-platform index
-	tdName = dataIndex
-	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Index")
-	platList := []*platform{
-		{OS: "linux", Architecture: "amd64"},
-		{OS: "linux", Architecture: "arm64"},
-	}
-	digImgList := []digest.Digest{}
-	for _, p := range platList {
-		digCList = []digest.Digest{}
-		digUCList = []digest.Digest{}
-		for l := range blobAPIs {
-			digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
-			if err != nil {
-				return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
-			}
-			digCList = append(digCList, digC)
-			digUCList = append(digUCList, digUC)
-		}
-		cDig, _, err := r.State.Data[tdName].genConfig(*p, digUCList)
-		if err != nil {
-			return fmt.Errorf("failed to generate test data: %w", err)
-		}
-		mDig, _, err := r.State.Data[tdName].genManifest(cDig, digCList)
-		if err != nil {
-			return fmt.Errorf("failed to generate test data: %w", err)
-		}
-		digImgList = append(digImgList, mDig)
-	}
-	iDig, _, err := r.State.Data[tdName].genIndex(platList, digImgList)
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	r.State.Data[tdName].tags["index"] = iDig
-	// two artifacts with subject image
-	tdName = dataArtifact
-	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Artifact")
-	digCList = []digest.Digest{}
-	digUCList = []digest.Digest{}
-	for l := range blobAPIs {
-		digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
-		if err != nil {
-			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
-		}
-		digCList = append(digCList, digC)
-		digUCList = append(digUCList, digUC)
-	}
-	cDig, _, err = r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	subjDig, _, err := r.State.Data[tdName].genManifest(cDig, digCList)
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	r.State.Data[tdName].tags["subject"] = subjDig
-	abDig, _, err := r.State.Data[tdName].genBlob(2048)
-	if err != nil {
-		return fmt.Errorf("failed to generate test artifact blob: %w", err)
-	}
-	emptyConfDig, err := r.State.Data[tdName].addBlob([]byte("{}"), genWithMediaType("application/vnd.oci.empty.v1+json"), genSetData())
-	if err != nil {
-		return fmt.Errorf("failed to add test artifact config: %w", err)
-	}
-	aDig1, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
-		genWithArtifactType("application/vnd.example.oci.conformance"),
-		genWithSubject(*r.State.Data[tdName].desc[subjDig]))
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	r.State.Data[tdName].tags["artifact1"] = aDig1
-	abDig, _, err = r.State.Data[tdName].genBlob(2048)
-	if err != nil {
-		return fmt.Errorf("failed to generate test artifact blob: %w", err)
-	}
-	aDig2, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
-		genWithArtifactType("application/vnd.example.oci.conformance"),
-		genWithSubject(*r.State.Data[tdName].desc[subjDig]))
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	r.State.Data[tdName].tags["artifact2"] = aDig2
-	// artifact packaged as an index with subject image
-	tdName = dataArtifactIndex
-	r.State.DataStatus[tdName] = statusUnknown
-	r.State.Data[tdName] = newTestData("OCI Artifact Index")
-	digCList = []digest.Digest{}
-	digUCList = []digest.Digest{}
-	for l := range blobAPIs {
-		digC, digUC, _, err := r.State.Data[tdName].genLayer(l)
-		if err != nil {
-			return fmt.Errorf("failed to generate test data layer %d: %w", l, err)
-		}
-		digCList = append(digCList, digC)
-		digUCList = append(digUCList, digUC)
-	}
-	cDig, _, err = r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, digUCList)
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	subjDig, _, err = r.State.Data[tdName].genManifest(cDig, digCList)
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
-	}
-	r.State.Data[tdName].tags["subject"] = subjDig
-	platList = []*platform{
-		{OS: "linux", Architecture: "amd64"},
-		{OS: "linux", Architecture: "arm64"},
-	}
-	digImgList = []digest.Digest{}
-	emptyConfDig, err = r.State.Data[tdName].addBlob([]byte("{}"), genWithMediaType("application/vnd.oci.empty.v1+json"), genSetData())
-	if err != nil {
-		return fmt.Errorf("failed to add test artifact config: %w", err)
-	}
-	for range platList {
-		abDig, _, err := r.State.Data[tdName].genBlob(2048)
-		if err != nil {
-			return fmt.Errorf("failed to generate test artifact blob: %w", err)
-		}
-		aDig, _, err := r.State.Data[tdName].genManifest(emptyConfDig, []digest.Digest{abDig},
-			genWithArtifactType("application/vnd.example.oci.conformance.image"),
+	if r.Config.Data.Index {
+		tdName = "index"
+		r.State.Data[tdName] = newTestData("Index")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err = r.State.Data[tdName].genIndexFull(
+			genWithTag("index"),
+			genWithPlatforms([]*platform{
+				{OS: "linux", Architecture: "amd64"},
+				{OS: "linux", Architecture: "arm64"},
+			}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
-		digImgList = append(digImgList, aDig)
 	}
-	aDig, _, err := r.State.Data[tdName].genIndex(platList, digImgList,
-		genWithArtifactType("application/vnd.example.oci.conformance.index"),
-		genWithSubject(*r.State.Data[tdName].desc[subjDig]))
-	if err != nil {
-		return fmt.Errorf("failed to generate test data: %w", err)
+	// index containing an index
+	if r.Config.Data.Index && r.Config.Data.IndexList {
+		tdName = "nested-index"
+		r.State.Data[tdName] = newTestData("Nested Index")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		dig1, err := r.State.Data[tdName].genIndexFull(
+			genWithPlatforms([]*platform{
+				{OS: "linux", Architecture: "amd64"},
+				{OS: "linux", Architecture: "arm64"},
+			}),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		dig2, err := r.State.Data[tdName].genIndexFull(
+			genWithPlatforms([]*platform{
+				{OS: "linux", Architecture: "amd64"},
+				{OS: "linux", Architecture: "arm64"},
+			}),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		_, _, err = r.State.Data[tdName].genIndex([]*platform{{}, {}}, []digest.Digest{dig1, dig2},
+			genWithTag("index-of-index"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
 	}
-	r.State.Data[tdName].tags["artifact"] = aDig
+	// artifact manifest
+	if r.Config.Data.Artifact {
+		tdName = "artifact"
+		r.State.Data[tdName] = newTestData("Artifact")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err = r.State.Data[tdName].genManifestFull(
+			genWithTag("artifact"),
+			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigBytes([]byte("{}")),
+			genWithLayerCount(1),
+			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
+	// artifact index
+	if r.Config.Data.ArtifactList {
+		tdName = "artifact-index"
+		r.State.Data[tdName] = newTestData("Artifact Index")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err = r.State.Data[tdName].genIndexFull(
+			genWithTag("artifact-index"),
+			genWithPlatforms([]*platform{
+				{OS: "linux", Architecture: "amd64"},
+				{OS: "linux", Architecture: "arm64"},
+			}),
+			genWithArtifactType("application/vnd.example.oci.conformance.artifactType"),
+			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigBytes([]byte("{}")),
+			genWithLayerCount(1),
+			genWithLayerMediaType("application/vnd.example.oci.conformance.layer"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
+	// image and two referrers
+	if r.Config.Data.Subject {
+		tdName = "artifacts-with-subject"
+		r.State.Data[tdName] = newTestData("Artifacts with Subject")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		subjDig, err := r.State.Data[tdName].genManifestFull(
+			genWithTag("image"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		subjDesc := *r.State.Data[tdName].desc[subjDig]
+		_, err = r.State.Data[tdName].genManifestFull(
+			genWithSubject(subjDesc),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		_, err = r.State.Data[tdName].genManifestFull(
+			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigBytes([]byte("{}")),
+			genWithLayerCount(1),
+			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithSubject(subjDesc),
+			genWithTag("tagged-artifact"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
+	// TODO: index and artifact-index with a subject
+
+	// artifact with missing subject
+	if r.Config.Data.SubjectMissing {
+		tdName = "missing-subject"
+		r.State.Data[tdName] = newTestData("Missing Subject")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		subjDesc := descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Size:      123,
+			Digest:    digest.FromString("missing content"),
+		}
+		_, err = r.State.Data[tdName].genManifestFull(
+			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigBytes([]byte("{}")),
+			genWithLayerCount(1),
+			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithSubject(subjDesc),
+			genWithTag("tagged-artifact"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
+	// data field in descriptor
+	if r.Config.Data.DataField {
+		tdName = "data-field"
+		r.State.Data[tdName] = newTestData("Data Field")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err := r.State.Data[tdName].genManifestFull(
+			genWithTag("data-field"),
+			genWithDescriptorData(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
+
+	// TODO: image with non-distributable layers
+
+	// TODO: add randomized unknown fields to manifest, descriptors, and config
+
+	// TODO: sha512 digest
+
 	return nil
 }
 
@@ -388,15 +409,19 @@ func (r *runner) TestAll() error {
 		errs = append(errs, err)
 	}
 
-	for _, algo := range []digest.Algorithm{digest.SHA256, digest.SHA512} {
-		err = r.TestBlobAPIs(r.Results, "blobs-"+algo.String(), algo, repo, repo2)
+	algos := []digest.Algorithm{digest.SHA256}
+	if r.Config.Data.Sha512 {
+		algos = append(algos, digest.SHA512)
+	}
+	for _, algo := range algos {
+		err = r.TestBlobAPIs(r.Results, "blobs-"+algo.String(), "Blobs "+algo.String(), algo, repo, repo2)
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
 
 	// loop over different types of data
-	for _, tdName := range []string{dataImage, dataIndex, dataArtifact, dataArtifactIndex} {
+	for _, tdName := range dataTests {
 		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
 			errs := []error{}
 			// push
@@ -441,18 +466,18 @@ func (r *runner) TestAll() error {
 	return nil
 }
 
-func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algorithm, repo, repo2 string) error {
+func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo digest.Algorithm, repo, repo2 string) error {
 	return r.ChildRun(algo.String()+" blobs", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		// setup testdata
+		r.State.Data[tdName] = newTestData(tdDesc)
 		r.State.DataStatus[tdName] = statusUnknown
-		r.State.Data[tdName] = newTestData(tdName)
 		digests := map[string]digest.Digest{}
 		testBlobs := map[string][]byte{
 			"empty":     []byte(""),
 			"emptyJSON": []byte("{}"),
 		}
-		dataTests := []string{"empty", "emptyJSON"}
+		blobDataTests := []string{"empty", "emptyJSON"}
 		for name, val := range testBlobs {
 			dig := algo.FromBytes(val)
 			digests[name] = dig
@@ -462,18 +487,18 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 		if _, ok := blobAPIsTestedByAlgo[algo]; !ok {
 			blobAPIsTestedByAlgo[algo] = &[stateAPIMax]bool{}
 		}
-		apiTests := []string{"post only", "post+put", "chunked single", "stream", "mount", "mount anonymous", "mount missing"}
-		for _, name := range apiTests {
-			dig, _, err := r.State.Data[tdName].genBlob(512, genWithAlgo(algo))
+		blobAPITests := []string{"post only", "post+put", "chunked single", "stream", "mount", "mount anonymous", "mount missing"}
+		for _, name := range blobAPITests {
+			dig, _, err := r.State.Data[tdName].genBlob(genWithBlobSize(512), genWithAlgo(algo))
 			if err != nil {
 				return fmt.Errorf("failed to generate blob: %w", err)
 			}
 			digests[name] = dig
 		}
-		apiTests = append(apiTests, "chunked multi")
+		blobAPITests = append(blobAPITests, "chunked multi")
 		minChunkSize := int64(chunkMin)
 		minHeader := ""
-		for _, testName := range apiTests {
+		for _, testName := range blobAPITests {
 			err := r.ChildRun(testName, res, func(r *runner, res *results) error {
 				var err error
 				errs := []error{}
@@ -508,7 +533,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 				case "chunked multi":
 					api = stateAPIBlobPatchChunked
 					// generate a blob large enough to span three chunks
-					dig, _, err = r.State.Data[tdName].genBlob(minChunkSize*3-5, genWithAlgo(algo))
+					dig, _, err = r.State.Data[tdName].genBlob(genWithBlobSize(minChunkSize*3-5), genWithAlgo(algo))
 					if err != nil {
 						return fmt.Errorf("failed to generate chunked blob of size %d: %w", minChunkSize*3-5, err)
 					}
@@ -589,7 +614,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName string, algo digest.Algori
 			}
 		}
 		// test various well known blob contents
-		for _, name := range dataTests {
+		for _, name := range blobDataTests {
 			err := r.ChildRun(name, res, func(r *runner, res *results) error {
 				dig := digests[name]
 				err := r.TestPushBlobAny(res, tdName, repo, dig)
@@ -862,7 +887,7 @@ func (r *runner) TestList(parent *results, tdName string, repo string) error {
 			}
 		}
 		if len(errs) > 0 {
-			r.TestFail(res, err, tdName, stateAPITagList)
+			r.TestFail(res, errors.Join(errs...), tdName, stateAPITagList)
 			return errors.Join(errs...)
 		}
 		r.TestPass(res, tdName, stateAPITagList)
