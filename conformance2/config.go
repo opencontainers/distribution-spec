@@ -81,11 +81,11 @@ type configData struct {
 	Sparse           bool `conformance:"SPARSE" yaml:"sparse"`                     // TODO: multi-platform manifest with missing entries
 	Artifact         bool `conformance:"ARTIFACT" yaml:"artifact"`                 // OCI artifact
 	Subject          bool `conformance:"SUBJECT" yaml:"subject"`                   // artifact with the subject defined
-	SubjectMissing   bool `conformance:"SUBJECT_MISSING" yaml:"subjectMissing"`    // TODO: artifact with a missing subject
+	SubjectMissing   bool `conformance:"SUBJECT_MISSING" yaml:"subjectMissing"`    // artifact with a missing subject
 	ArtifactList     bool `conformance:"ARTIFACT_LIST" yaml:"artifactList"`        // index of artifacts
-	SubjectList      bool `conformance:"SUBJECT_LIST" yaml:"subjectList"`          // TODO: index with a subject
+	SubjectList      bool `conformance:"SUBJECT_LIST" yaml:"subjectList"`          // index with a subject
 	DataField        bool `conformance:"DATA_FIELD" yaml:"dataField"`              // data field in descriptor
-	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // TODO: nondistributable image, deprecated in spec 1.1
+	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated in spec 1.1
 	Sha512           bool `conformance:"SHA512" yaml:"sha512"`                     // sha512 digest algorithm
 }
 
@@ -167,7 +167,7 @@ func configLoad() (config, error) {
 			ArtifactList:     true,
 			SubjectList:      true,
 			DataField:        true,
-			Nondistributable: false,
+			Nondistributable: true,
 			Sha512:           true,
 		}
 		c.Version = "1.1"
