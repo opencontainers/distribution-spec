@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -157,11 +158,11 @@ func (r *runner) GenerateData() error {
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
-			genWithArtifactType("application/vnd.example.oci.conformance.artifactType"),
+			genWithArtifactType("application/vnd.example.oci.conformance"),
 			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType("application/vnd.example.oci.conformance.layer"),
+			genWithLayerMediaType("application/vnd.example.oci.conformance"),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
@@ -199,8 +200,32 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
-	// TODO: index and artifact-index with a subject
-
+	// index and artifact-index with a subject
+	if r.Config.Data.SubjectList {
+		tdName = "index-with-subject"
+		r.State.Data[tdName] = newTestData("Index with Subject")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		subjDig, err := r.State.Data[tdName].genIndexFull(
+			genWithTag("index"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		subjDesc := *r.State.Data[tdName].desc[subjDig]
+		_, err = r.State.Data[tdName].genIndexFull(
+			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigBytes([]byte("{}")),
+			genWithLayerCount(1),
+			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithSubject(subjDesc),
+			genWithTag("tagged-artifact"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
 	// artifact with missing subject
 	if r.Config.Data.SubjectMissing {
 		tdName = "missing-subject"
@@ -239,8 +264,66 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
+	// image with non-distributable layers
+	if r.Config.Data.Nondistributable {
+		tdName = "non-distributable-layers"
+		r.State.Data[tdName] = newTestData("Non-distributable Layers")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
 
-	// TODO: image with non-distributable layers
+		b := make([]byte, 256)
+		layers := make([]descriptor, 3)
+		confDig := make([]digest.Digest, 3)
+		// first layer is compressed + non-distributable
+		_, err := rand.Read(b)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		confDig[0] = digest.Canonical.FromBytes(b)
+		_, err = rand.Read(b)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		dig := digest.Canonical.FromBytes(b)
+		layers[0] = descriptor{
+			MediaType: "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip",
+			Digest:    dig,
+			Size:      123456,
+			URLs:      []string{"https://store.example.com/blobs/sha256/" + dig.Encoded()},
+		}
+		// second layer is uncompressed + non-distributable
+		_, err = rand.Read(b)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		dig = digest.Canonical.FromBytes(b)
+		confDig[1] = dig
+		layers[1] = descriptor{
+			MediaType: "application/vnd.oci.image.layer.nondistributable.v1.tar",
+			Digest:    dig,
+			Size:      12345,
+			URLs:      []string{"https://store.example.com/blobs/sha256/" + dig.Encoded()},
+		}
+		// third layer is normal
+		cDig, ucDig, _, err := r.State.Data[tdName].genLayer(1)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		confDig[2] = ucDig
+		layers[2] = *r.State.Data[tdName].desc[cDig]
+		// generate the config
+		cDig, _, err = r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, confDig)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		// generate the manifest
+		_, _, err = r.State.Data[tdName].genManifest(*r.State.Data[tdName].desc[cDig], layers,
+			genWithTag("non-distributable-image"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
 
 	// TODO: add randomized unknown fields to manifest, descriptors, and config
 

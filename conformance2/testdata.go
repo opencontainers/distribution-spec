@@ -296,7 +296,7 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 }
 
 // genManifest returns an image manifest with the selected config and compressed layer digests.
-func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
+func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
 		algo: digest.Canonical,
 	}
@@ -308,12 +308,9 @@ func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts
 		SchemaVersion: 2,
 		MediaType:     mt,
 		ArtifactType:  gOpt.artifactType,
-		Config:        *td.desc[conf],
-		Layers:        make([]descriptor, len(layers)),
+		Config:        conf,
+		Layers:        layers,
 		Subject:       gOpt.subject,
-	}
-	for i, l := range layers {
-		m.Layers[i] = *td.desc[l]
 	}
 	body, err := json.Marshal(m)
 	if err != nil {
@@ -333,6 +330,9 @@ func (td *testData) genManifest(conf digest.Digest, layers []digest.Digest, opts
 	}
 	if gOpt.subject != nil {
 		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], dig)
+	}
+	if gOpt.tag != "" {
+		td.tags[gOpt.tag] = dig
 	}
 	return dig, body, nil
 }
@@ -374,7 +374,7 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 	cDig := digest.Digest("")
 	if gOpt.configMediaType == "" || gOpt.configMediaType == "application/vnd.oci.image.config.v1+json" {
 		// image config
-		dig, _, err := td.genConfig(gOpt.platform, digUCList)
+		dig, _, err := td.genConfig(gOpt.platform, digUCList, opts...)
 		if err != nil {
 			return "", fmt.Errorf("failed to generate test data: %w", err)
 		}
@@ -391,12 +391,13 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 		}
 		cDig = dig
 	}
-	mDig, _, err := td.genManifest(cDig, digCList, opts...)
+	layers := make([]descriptor, len(digCList))
+	for i, lDig := range digCList {
+		layers[i] = *td.desc[lDig]
+	}
+	mDig, _, err := td.genManifest(*td.desc[cDig], layers, opts...)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate test data: %w", err)
-	}
-	if gOpt.tag != "" {
-		td.tags[gOpt.tag] = mDig
 	}
 	return mDig, nil
 }
@@ -444,6 +445,9 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	if gOpt.subject != nil {
 		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], dig)
 	}
+	if gOpt.tag != "" {
+		td.tags[gOpt.tag] = dig
+	}
 	return dig, body, nil
 }
 
@@ -475,8 +479,5 @@ func (td *testData) genIndexFull(opts ...genOpt) (digest.Digest, error) {
 		return "", fmt.Errorf("failed to generate test data: %w", err)
 	}
 	td.tags["index"] = iDig
-	if gOpt.tag != "" {
-		td.tags[gOpt.tag] = iDig
-	}
 	return iDig, nil
 }
