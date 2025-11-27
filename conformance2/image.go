@@ -4,10 +4,8 @@ import (
 	digest "github.com/opencontainers/go-digest"
 )
 
+// TODO: revert to the image-spec structures
 // These types are copied from github.com/opencontainers/image-spec/specs-go/v1
-// Modifications have been made to remove fields that aren't used in these
-// conformance tests, and to add new unspecified fields, to test registry
-// conformance in handling unknown fields.
 
 // manifest provides `application/vnd.oci.image.manifest.v1+json` mediatype structure when marshalled to JSON.
 type manifest struct {
@@ -63,11 +61,6 @@ type descriptor struct {
 
 	// ArtifactType is the IANA media type of this artifact.
 	ArtifactType string `json:"artifactType,omitempty"`
-
-	// NewUnspecifiedField is not covered by image-spec.
-	// Registry implementations should still successfully store and serve
-	// manifests containing this data.
-	NewUnspecifiedField string `json:"newUnspecifiedField,omitempty"`
 }
 
 // platform describes the platform which the image in the manifest runs on.

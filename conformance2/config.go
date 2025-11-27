@@ -86,6 +86,7 @@ type configData struct {
 	SubjectList      bool `conformance:"SUBJECT_LIST" yaml:"subjectList"`          // index with a subject
 	DataField        bool `conformance:"DATA_FIELD" yaml:"dataField"`              // data field in descriptor
 	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated in spec 1.1
+	CustomFields     bool `conformance:"CUSTOM_FIELDS" yaml:"customFields"`        // fields added beyond the OCI spec
 	Sha512           bool `conformance:"SHA512" yaml:"sha512"`                     // sha512 digest algorithm
 }
 
@@ -134,10 +135,7 @@ func configLoad() (config, error) {
 		LogLevel:   "warn",
 		LogWriter:  os.Stderr,
 		ResultsDir: "./results",
-	}
-	switch configVersion {
-	case "", "1.1":
-		c.APIs = configAPI{
+		APIs: configAPI{
 			Pull: true,
 			Push: true,
 			Blobs: configBlobs{
@@ -155,8 +153,8 @@ func configLoad() (config, error) {
 				List:   true,
 			},
 			Referrer: true,
-		}
-		c.Data = configData{
+		},
+		Data: configData{
 			Image:            true,
 			Index:            true,
 			IndexList:        true,
@@ -168,43 +166,15 @@ func configLoad() (config, error) {
 			SubjectList:      true,
 			DataField:        true,
 			Nondistributable: true,
+			CustomFields:     true,
 			Sha512:           true,
-		}
+		},
+	}
+	switch configVersion {
+	case "", "1.1":
 		c.Version = "1.1"
 	case "1.0":
-		c.APIs = configAPI{
-			Pull: true,
-			Push: true,
-			Blobs: configBlobs{
-				Atomic:         true,
-				Delete:         true,
-				MountAnonymous: false,
-			},
-			Manifests: configManifests{
-				Atomic: true,
-				Delete: true,
-			},
-			Tags: configTags{
-				Atomic: true,
-				Delete: true,
-				List:   true,
-			},
-			Referrer: false,
-		}
-		c.Data = configData{
-			Image:            true,
-			Index:            true,
-			IndexList:        true,
-			Sparse:           false,
-			Artifact:         true,
-			Subject:          true,
-			SubjectMissing:   true,
-			ArtifactList:     true,
-			SubjectList:      true,
-			DataField:        true,
-			Nondistributable: true,
-			Sha512:           true,
-		}
+		c.APIs.Referrer = false
 		c.Version = "1.0"
 	default:
 		return config{}, fmt.Errorf("unsupported config version %s", configVersion)

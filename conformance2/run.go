@@ -347,8 +347,24 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
-
-	// TODO: add randomized unknown fields to manifest, descriptors, and config
+	// add a randomized unknown field to manifests and config
+	if r.Config.Data.CustomFields {
+		tdName = "custom-fields"
+		r.State.Data[tdName] = newTestData("Custom Fields")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err = r.State.Data[tdName].genIndexFull(
+			genWithTag("custom-fields"),
+			genWithPlatforms([]*platform{
+				{OS: "linux", Architecture: "amd64"},
+				{OS: "linux", Architecture: "arm64"},
+			}),
+			genWithExtraField(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
 
 	// TODO: sha512 digest
 
