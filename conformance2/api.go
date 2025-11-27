@@ -17,6 +17,7 @@ import (
 
 	specs "github.com/opencontainers/distribution-spec/specs-go/v1"
 	digest "github.com/opencontainers/go-digest"
+	image "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type api struct {
@@ -602,8 +603,8 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	return nil
 }
 
-func (a *api) ReferrersList(registry, repo string, dig digest.Digest, opts ...apiDoOpt) (index, error) {
-	rl := index{}
+func (a *api) ReferrersList(registry, repo string, dig digest.Digest, opts ...apiDoOpt) (image.Index, error) {
+	rl := image.Index{}
 	u, err := url.Parse(registry + "/v2/" + repo + "/referrers/" + dig.String())
 	if err != nil {
 		return rl, err
@@ -965,8 +966,8 @@ func (wt *wrapTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 type detectManifest struct {
-	MediaType string      `json:"mediaType"`
-	Subject   *descriptor `json:"subject,omitempty"`
+	MediaType string            `json:"mediaType"`
+	Subject   *image.Descriptor `json:"subject,omitempty"`
 }
 
 func detectMediaType(body []byte) string {
@@ -977,7 +978,7 @@ func detectMediaType(body []byte) string {
 	return det.MediaType
 }
 
-func detectSubject(body []byte) *descriptor {
+func detectSubject(body []byte) *image.Descriptor {
 	det := detectManifest{}
 	_ = json.Unmarshal(body, &det)
 	return det.Subject
