@@ -621,7 +621,7 @@ var confHTMLTemplates = map[string]string{
   `,
 	"status-color": `
   {{- if eq .String "Pass" }}green
-  {{- else if eq .String "Fail" }}red
+  {{- else if eq .String "FAIL" }}red
   {{- else if eq .String "Error" }}red
   {{- else if eq .String "Skip" }}grey
   {{- else if eq .String "Disabled" }}grey
