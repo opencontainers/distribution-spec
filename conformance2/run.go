@@ -18,6 +18,7 @@ import (
 	"time"
 
 	digest "github.com/opencontainers/go-digest"
+	image "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
@@ -99,7 +100,7 @@ func (r *runner) GenerateData() error {
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genIndexFull(
 			genWithTag("index"),
-			genWithPlatforms([]*platform{
+			genWithPlatforms([]*image.Platform{
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
@@ -115,7 +116,7 @@ func (r *runner) GenerateData() error {
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		dig1, err := r.State.Data[tdName].genIndexFull(
-			genWithPlatforms([]*platform{
+			genWithPlatforms([]*image.Platform{
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
@@ -124,7 +125,7 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 		dig2, err := r.State.Data[tdName].genIndexFull(
-			genWithPlatforms([]*platform{
+			genWithPlatforms([]*image.Platform{
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
@@ -132,7 +133,7 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
-		_, _, err = r.State.Data[tdName].genIndex([]*platform{{}, {}}, []digest.Digest{dig1, dig2},
+		_, _, err = r.State.Data[tdName].genIndex([]*image.Platform{{}, {}}, []digest.Digest{dig1, dig2},
 			genWithTag("index-of-index"),
 		)
 		if err != nil {
@@ -165,7 +166,7 @@ func (r *runner) GenerateData() error {
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genIndexFull(
 			genWithTag("artifact-index"),
-			genWithPlatforms([]*platform{
+			genWithPlatforms([]*image.Platform{
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
@@ -251,7 +252,7 @@ func (r *runner) GenerateData() error {
 		r.State.Data[tdName] = newTestData("Missing Subject")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
-		subjDesc := descriptor{
+		subjDesc := image.Descriptor{
 			MediaType: "application/vnd.oci.image.manifest.v1+json",
 			Size:      123,
 			Digest:    digest.FromString("missing content"),
@@ -295,7 +296,7 @@ func (r *runner) GenerateData() error {
 		dataTests = append(dataTests, tdName)
 
 		b := make([]byte, 256)
-		layers := make([]descriptor, 3)
+		layers := make([]image.Descriptor, 3)
 		confDig := make([]digest.Digest, 3)
 		// first layer is compressed + non-distributable
 		_, err := rand.Read(b)
@@ -308,7 +309,7 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 		dig := digest.Canonical.FromBytes(b)
-		layers[0] = descriptor{
+		layers[0] = image.Descriptor{
 			MediaType: "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip",
 			Digest:    dig,
 			Size:      123456,
@@ -321,7 +322,7 @@ func (r *runner) GenerateData() error {
 		}
 		dig = digest.Canonical.FromBytes(b)
 		confDig[1] = dig
-		layers[1] = descriptor{
+		layers[1] = image.Descriptor{
 			MediaType: "application/vnd.oci.image.layer.nondistributable.v1.tar",
 			Digest:    dig,
 			Size:      12345,
@@ -335,7 +336,7 @@ func (r *runner) GenerateData() error {
 		confDig[2] = ucDig
 		layers[2] = *r.State.Data[tdName].desc[cDig]
 		// generate the config
-		cDig, _, err = r.State.Data[tdName].genConfig(platform{OS: "linux", Architecture: "amd64"}, confDig)
+		cDig, _, err = r.State.Data[tdName].genConfig(image.Platform{OS: "linux", Architecture: "amd64"}, confDig)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
@@ -355,7 +356,7 @@ func (r *runner) GenerateData() error {
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genIndexFull(
 			genWithTag("custom-fields"),
-			genWithPlatforms([]*platform{
+			genWithPlatforms([]*image.Platform{
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
@@ -1374,7 +1375,7 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 			}
 			if err == nil {
 				for _, goal := range referrerGoal {
-					if !slices.ContainsFunc(referrerResp.Manifests, func(resp descriptor) bool {
+					if !slices.ContainsFunc(referrerResp.Manifests, func(resp image.Descriptor) bool {
 						return resp.Digest == goal.Digest &&
 							resp.ArtifactType == goal.ArtifactType &&
 							mapContainsAll(resp.Annotations, goal.Annotations)
