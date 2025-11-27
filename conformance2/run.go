@@ -80,6 +80,17 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
+	tdName = "image-uncompressed"
+	r.State.Data[tdName] = newTestData("Image Uncompressed")
+	r.State.DataStatus[tdName] = statusUnknown
+	dataTests = append(dataTests, tdName)
+	_, err = r.State.Data[tdName].genManifestFull(
+		genWithTag("image-uncompressed"),
+		genWithCompress(genCompUncomp),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
 	// multi-platform index
 	if r.Config.Data.Index {
 		tdName = "index"
@@ -189,6 +200,10 @@ func (r *runner) GenerateData() error {
 		}
 		_, err = r.State.Data[tdName].genManifestFull(
 			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithAnnotations(map[string]string{
+				"org.opencontainers.conformance": "hello conformance test",
+			}),
+			genWithAnnotationUniq(),
 			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
@@ -215,6 +230,10 @@ func (r *runner) GenerateData() error {
 		subjDesc := *r.State.Data[tdName].desc[subjDig]
 		_, err = r.State.Data[tdName].genIndexFull(
 			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithAnnotations(map[string]string{
+				"org.opencontainers.conformance": "hello conformance test",
+			}),
+			genWithAnnotationUniq(),
 			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
@@ -239,6 +258,10 @@ func (r *runner) GenerateData() error {
 		}
 		_, err = r.State.Data[tdName].genManifestFull(
 			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithAnnotations(map[string]string{
+				"org.opencontainers.conformance": "hello conformance test",
+			}),
+			genWithAnnotationUniq(),
 			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
@@ -1323,7 +1346,7 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 	}
 	return r.ChildRun("referrers", parent, func(r *runner, res *results) error {
 		errs := []error{}
-		for subj, referrerList := range r.State.Data[tdName].referrers {
+		for subj, referrerGoal := range r.State.Data[tdName].referrers {
 			if err := r.APIRequire(stateAPIReferrers); err != nil {
 				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
 				r.TestSkip(res, err, tdName, stateAPIReferrers)
@@ -1334,9 +1357,13 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 				errs = append(errs, err)
 			}
 			if err == nil {
-				for _, dig := range referrerList {
-					if !slices.ContainsFunc(referrerResp.Manifests, func(desc descriptor) bool { return desc.Digest == dig }) {
-						errs = append(errs, fmt.Errorf("entry missing from referrers list, subject %s, referrer %s", subj, dig))
+				for _, goal := range referrerGoal {
+					if !slices.ContainsFunc(referrerResp.Manifests, func(resp descriptor) bool {
+						return resp.Digest == goal.Digest &&
+							resp.ArtifactType == goal.ArtifactType &&
+							mapContainsAll(resp.Annotations, goal.Annotations)
+					}) {
+						errs = append(errs, fmt.Errorf("entry missing from referrers list, subject %s, referrer %+v", subj, goal))
 					}
 				}
 			}
@@ -1348,6 +1375,18 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 		r.TestPass(res, tdName, stateAPIReferrers)
 		return nil
 	})
+}
+
+func mapContainsAll[K comparable, V comparable](check, goal map[K]V) bool {
+	if len(goal) == 0 {
+		return true
+	}
+	for k, v := range goal {
+		if found, ok := check[k]; !ok || found != v {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *results) error) error {

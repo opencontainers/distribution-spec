@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"math/big"
 	"strings"
@@ -22,7 +23,7 @@ type testData struct {
 	blobs     map[digest.Digest][]byte
 	manifests map[digest.Digest][]byte
 	manOrder  []digest.Digest // ordered list to push manifests, the last is optionally tagged
-	referrers map[digest.Digest][]digest.Digest
+	referrers map[digest.Digest][]*descriptor
 }
 
 func newTestData(name string) *testData {
@@ -33,7 +34,7 @@ func newTestData(name string) *testData {
 		blobs:     map[digest.Digest][]byte{},
 		manifests: map[digest.Digest][]byte{},
 		manOrder:  []digest.Digest{},
-		referrers: map[digest.Digest][]digest.Digest{},
+		referrers: map[digest.Digest][]*descriptor{},
 	}
 }
 
@@ -46,6 +47,8 @@ const (
 
 type genOptS struct {
 	algo                digest.Algorithm
+	annotations         map[string]string
+	annotationUniq      bool
 	artifactType        string
 	blobSize            int64
 	comp                genComp
@@ -66,6 +69,24 @@ type genOpt func(*genOptS)
 func genWithAlgo(algo digest.Algorithm) genOpt {
 	return func(opt *genOptS) {
 		opt.algo = algo
+	}
+}
+
+func genWithAnnotations(annotations map[string]string) genOpt {
+	return func(opt *genOptS) {
+		if opt.annotations == nil {
+			opt.annotations = annotations
+		} else {
+			for k, v := range annotations {
+				opt.annotations[k] = v
+			}
+		}
+	}
+}
+
+func genWithAnnotationUniq() genOpt {
+	return func(opt *genOptS) {
+		opt.annotationUniq = true
 	}
 }
 
@@ -311,6 +332,15 @@ func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...ge
 		Config:        conf,
 		Layers:        layers,
 		Subject:       gOpt.subject,
+		Annotations:   gOpt.annotations,
+	}
+	if gOpt.annotationUniq {
+		if m.Annotations == nil {
+			m.Annotations = map[string]string{}
+		} else {
+			m.Annotations = maps.Clone(m.Annotations)
+		}
+		m.Annotations["org.example."+rand.Text()] = rand.Text()
 	}
 	body, err := json.Marshal(m)
 	if err != nil {
@@ -320,16 +350,25 @@ func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...ge
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
 	td.desc[dig] = &descriptor{
-		MediaType:    mt,
-		ArtifactType: gOpt.artifactType,
-		Digest:       dig,
-		Size:         int64(len(body)),
+		MediaType: m.MediaType,
+		Digest:    dig,
+		Size:      int64(len(body)),
 	}
 	if gOpt.setData {
 		td.desc[dig].Data = body
 	}
+	at := m.ArtifactType
+	if at == "" {
+		at = m.Config.MediaType
+	}
 	if gOpt.subject != nil {
-		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], dig)
+		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], &descriptor{
+			MediaType:    m.MediaType,
+			ArtifactType: at,
+			Digest:       dig,
+			Size:         int64(len(body)),
+			Annotations:  m.Annotations,
+		})
 	}
 	if gOpt.tag != "" {
 		td.tags[gOpt.tag] = dig
@@ -420,11 +459,20 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 		ArtifactType:  gOpt.artifactType,
 		Manifests:     make([]descriptor, len(manifests)),
 		Subject:       gOpt.subject,
+		Annotations:   gOpt.annotations,
 	}
 	for i, l := range manifests {
 		d := *td.desc[l]
 		d.Platform = platforms[i]
 		ind.Manifests[i] = d
+	}
+	if gOpt.annotationUniq {
+		if ind.Annotations == nil {
+			ind.Annotations = map[string]string{}
+		} else {
+			ind.Annotations = maps.Clone(ind.Annotations)
+		}
+		ind.Annotations["org.example."+rand.Text()] = rand.Text()
 	}
 	body, err := json.Marshal(ind)
 	if err != nil {
@@ -434,16 +482,21 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
 	td.desc[dig] = &descriptor{
-		MediaType:    mt,
-		ArtifactType: gOpt.artifactType,
-		Digest:       dig,
-		Size:         int64(len(body)),
+		MediaType: ind.MediaType,
+		Digest:    dig,
+		Size:      int64(len(body)),
 	}
 	if gOpt.setData {
 		td.desc[dig].Data = body
 	}
 	if gOpt.subject != nil {
-		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], dig)
+		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], &descriptor{
+			MediaType:    ind.MediaType,
+			ArtifactType: ind.ArtifactType,
+			Digest:       dig,
+			Size:         int64(len(body)),
+			Annotations:  ind.Annotations,
+		})
 	}
 	if gOpt.tag != "" {
 		td.tags[gOpt.tag] = dig
