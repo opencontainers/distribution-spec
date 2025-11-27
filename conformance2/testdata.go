@@ -15,27 +15,29 @@ import (
 	"strings"
 
 	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
+	image "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type testData struct {
 	name      string // name of data set for logs
 	tags      map[string]digest.Digest
-	desc      map[digest.Digest]*descriptor
+	desc      map[digest.Digest]*image.Descriptor
 	blobs     map[digest.Digest][]byte
 	manifests map[digest.Digest][]byte
 	manOrder  []digest.Digest // ordered list to push manifests, the last is optionally tagged
-	referrers map[digest.Digest][]*descriptor
+	referrers map[digest.Digest][]*image.Descriptor
 }
 
 func newTestData(name string) *testData {
 	return &testData{
 		name:      name,
 		tags:      map[string]digest.Digest{},
-		desc:      map[digest.Digest]*descriptor{},
+		desc:      map[digest.Digest]*image.Descriptor{},
 		blobs:     map[digest.Digest][]byte{},
 		manifests: map[digest.Digest][]byte{},
 		manOrder:  []digest.Digest{},
-		referrers: map[digest.Digest][]*descriptor{},
+		referrers: map[digest.Digest][]*image.Descriptor{},
 	}
 }
 
@@ -59,10 +61,10 @@ type genOptS struct {
 	extraField          bool
 	layerCount          int
 	layerMediaType      string
-	platform            platform
-	platforms           []*platform
+	platform            image.Platform
+	platforms           []*image.Platform
 	setData             bool
-	subject             *descriptor
+	subject             *image.Descriptor
 	tag                 string
 }
 
@@ -145,13 +147,13 @@ func genWithLayerMediaType(mediaType string) genOpt {
 	}
 }
 
-func genWithPlatform(p platform) genOpt {
+func genWithPlatform(p image.Platform) genOpt {
 	return func(opt *genOptS) {
 		opt.platform = p
 	}
 }
 
-func genWithPlatforms(platforms []*platform) genOpt {
+func genWithPlatforms(platforms []*image.Platform) genOpt {
 	return func(opt *genOptS) {
 		opt.platforms = platforms
 	}
@@ -163,7 +165,7 @@ func genWithBlobSize(size int64) genOpt {
 	}
 }
 
-func genWithSubject(subject descriptor) genOpt {
+func genWithSubject(subject image.Descriptor) genOpt {
 	return func(opt *genOptS) {
 		opt.subject = &subject
 	}
@@ -185,7 +187,7 @@ func (td *testData) addBlob(b []byte, opts ...genOpt) (digest.Digest, error) {
 	}
 	dig := gOpt.algo.FromBytes(b)
 	td.blobs[dig] = b
-	td.desc[dig] = &descriptor{
+	td.desc[dig] = &image.Descriptor{
 		MediaType: gOpt.descriptorMediaType,
 		Digest:    dig,
 		Size:      int64(len(b)),
@@ -270,7 +272,7 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 	digComp := gOpt.algo.FromBytes(bodyComp)
 	digUncomp := gOpt.algo.FromBytes(bodyUncomp)
 	td.blobs[digComp] = bodyComp
-	td.desc[digComp] = &descriptor{
+	td.desc[digComp] = &image.Descriptor{
 		MediaType: mt,
 		Digest:    digComp,
 		Size:      int64(len(bodyComp)),
@@ -278,7 +280,7 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 	if gOpt.setData {
 		td.desc[digComp].Data = bodyComp
 	}
-	td.desc[digUncomp] = &descriptor{
+	td.desc[digUncomp] = &image.Descriptor{
 		MediaType: "application/vnd.oci.image.layer.v1.tar",
 		Digest:    digUncomp,
 		Size:      int64(len(bodyUncomp)),
@@ -290,7 +292,7 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 }
 
 // genConfig returns a config for the given platform and list of uncompressed layer digests.
-func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
+func (td *testData) genConfig(p image.Platform, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
 		algo:            digest.Canonical,
 		configMediaType: "application/vnd.oci.image.config.v1+json",
@@ -298,10 +300,10 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 	for _, opt := range opts {
 		opt(&gOpt)
 	}
-	config := image{
+	config := image.Image{
 		Author:   "OCI Conformance Test",
-		platform: p,
-		RootFS: rootFS{
+		Platform: p,
+		RootFS: image.RootFS{
 			Type:    "layers",
 			DiffIDs: layers,
 		},
@@ -318,7 +320,7 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 	}
 	dig := gOpt.algo.FromBytes(body)
 	td.blobs[dig] = body
-	td.desc[dig] = &descriptor{
+	td.desc[dig] = &image.Descriptor{
 		MediaType: gOpt.configMediaType,
 		Digest:    dig,
 		Size:      int64(len(body)),
@@ -330,7 +332,7 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 }
 
 // genManifest returns an image manifest with the selected config and compressed layer digests.
-func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...genOpt) (digest.Digest, []byte, error) {
+func (td *testData) genManifest(conf image.Descriptor, layers []image.Descriptor, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
 		algo: digest.Canonical,
 	}
@@ -338,14 +340,14 @@ func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...ge
 		opt(&gOpt)
 	}
 	mt := "application/vnd.oci.image.manifest.v1+json"
-	m := manifest{
-		SchemaVersion: 2,
-		MediaType:     mt,
-		ArtifactType:  gOpt.artifactType,
-		Config:        conf,
-		Layers:        layers,
-		Subject:       gOpt.subject,
-		Annotations:   gOpt.annotations,
+	m := image.Manifest{
+		Versioned:    specs.Versioned{SchemaVersion: 2},
+		MediaType:    mt,
+		ArtifactType: gOpt.artifactType,
+		Config:       conf,
+		Layers:       layers,
+		Subject:      gOpt.subject,
+		Annotations:  gOpt.annotations,
 	}
 	if gOpt.annotationUniq {
 		if m.Annotations == nil {
@@ -368,7 +370,7 @@ func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...ge
 	dig := gOpt.algo.FromBytes(body)
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
-	td.desc[dig] = &descriptor{
+	td.desc[dig] = &image.Descriptor{
 		MediaType: m.MediaType,
 		Digest:    dig,
 		Size:      int64(len(body)),
@@ -381,7 +383,7 @@ func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...ge
 		at = m.Config.MediaType
 	}
 	if gOpt.subject != nil {
-		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], &descriptor{
+		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], &image.Descriptor{
 			MediaType:    m.MediaType,
 			ArtifactType: at,
 			Digest:       dig,
@@ -399,7 +401,7 @@ func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...ge
 func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 	gOpt := genOptS{
 		layerCount: 2,
-		platform:   platform{OS: "linux", Architecture: "amd64"},
+		platform:   image.Platform{OS: "linux", Architecture: "amd64"},
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -449,7 +451,7 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 		}
 		cDig = dig
 	}
-	layers := make([]descriptor, len(digCList))
+	layers := make([]image.Descriptor, len(digCList))
 	for i, lDig := range digCList {
 		layers[i] = *td.desc[lDig]
 	}
@@ -461,7 +463,7 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 }
 
 // genIndex returns an index manifest with the specified layers and platforms.
-func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
+func (td *testData) genIndex(platforms []*image.Platform, manifests []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	mt := "application/vnd.oci.image.index.v1+json"
 	gOpt := genOptS{
 		algo: digest.Canonical,
@@ -472,13 +474,13 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	if len(platforms) != len(manifests) {
 		return digest.Digest(""), nil, fmt.Errorf("genIndex requires the same number of platforms and layers")
 	}
-	ind := index{
-		SchemaVersion: 2,
-		MediaType:     mt,
-		ArtifactType:  gOpt.artifactType,
-		Manifests:     make([]descriptor, len(manifests)),
-		Subject:       gOpt.subject,
-		Annotations:   gOpt.annotations,
+	ind := image.Index{
+		Versioned:    specs.Versioned{SchemaVersion: 2},
+		MediaType:    mt,
+		ArtifactType: gOpt.artifactType,
+		Manifests:    make([]image.Descriptor, len(manifests)),
+		Subject:      gOpt.subject,
+		Annotations:  gOpt.annotations,
 	}
 	for i, l := range manifests {
 		d := *td.desc[l]
@@ -506,7 +508,7 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 	dig := gOpt.algo.FromBytes(body)
 	td.manifests[dig] = body
 	td.manOrder = append(td.manOrder, dig)
-	td.desc[dig] = &descriptor{
+	td.desc[dig] = &image.Descriptor{
 		MediaType: ind.MediaType,
 		Digest:    dig,
 		Size:      int64(len(body)),
@@ -515,7 +517,7 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 		td.desc[dig].Data = body
 	}
 	if gOpt.subject != nil {
-		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], &descriptor{
+		td.referrers[gOpt.subject.Digest] = append(td.referrers[gOpt.subject.Digest], &image.Descriptor{
 			MediaType:    ind.MediaType,
 			ArtifactType: ind.ArtifactType,
 			Digest:       dig,
@@ -532,7 +534,7 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 // genIndexFull creates an index with multiple images, including the image layers and configs
 func (td *testData) genIndexFull(opts ...genOpt) (digest.Digest, error) {
 	gOpt := genOptS{
-		platforms: []*platform{
+		platforms: []*image.Platform{
 			{OS: "linux", Architecture: "amd64"},
 			{OS: "linux", Architecture: "arm64"},
 		},

@@ -6,4 +6,5 @@ require (
 	github.com/goccy/go-yaml v1.18.0
 	github.com/opencontainers/distribution-spec/specs-go v0.0.0-20240926185104-8376368dd8aa
 	github.com/opencontainers/go-digest v1.0.0
+	github.com/opencontainers/image-spec v1.1.1
 )
