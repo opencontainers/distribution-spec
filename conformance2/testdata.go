@@ -11,6 +11,7 @@ import (
 	"maps"
 	"math"
 	"math/big"
+	"reflect"
 	"strings"
 
 	digest "github.com/opencontainers/go-digest"
@@ -55,6 +56,7 @@ type genOptS struct {
 	configBytes         []byte
 	configMediaType     string
 	descriptorMediaType string
+	extraField          bool
 	layerCount          int
 	layerMediaType      string
 	platform            platform
@@ -126,6 +128,11 @@ func genWithDescriptorMediaType(mediaType string) genOpt {
 	}
 }
 
+func genWithExtraField() genOpt {
+	return func(opt *genOptS) {
+		opt.extraField = true
+	}
+}
 func genWithLayerCount(count int) genOpt {
 	return func(opt *genOptS) {
 		opt.layerCount = count
@@ -299,7 +306,13 @@ func (td *testData) genConfig(p platform, layers []digest.Digest, opts ...genOpt
 			DiffIDs: layers,
 		},
 	}
-	body, err := json.Marshal(config)
+	var body []byte
+	var err error
+	if !gOpt.extraField {
+		body, err = json.Marshal(config)
+	} else {
+		body, err = json.Marshal(genAddJSONFields(config))
+	}
 	if err != nil {
 		return digest.Digest(""), nil, err
 	}
@@ -342,7 +355,13 @@ func (td *testData) genManifest(conf descriptor, layers []descriptor, opts ...ge
 		}
 		m.Annotations["org.example."+rand.Text()] = rand.Text()
 	}
-	body, err := json.Marshal(m)
+	var body []byte
+	var err error
+	if !gOpt.extraField {
+		body, err = json.Marshal(m)
+	} else {
+		body, err = json.Marshal(genAddJSONFields(m))
+	}
 	if err != nil {
 		return digest.Digest(""), nil, err
 	}
@@ -474,7 +493,13 @@ func (td *testData) genIndex(platforms []*platform, manifests []digest.Digest, o
 		}
 		ind.Annotations["org.example."+rand.Text()] = rand.Text()
 	}
-	body, err := json.Marshal(ind)
+	var body []byte
+	var err error
+	if !gOpt.extraField {
+		body, err = json.Marshal(ind)
+	} else {
+		body, err = json.Marshal(genAddJSONFields(ind))
+	}
 	if err != nil {
 		return digest.Digest(""), nil, err
 	}
@@ -531,6 +556,24 @@ func (td *testData) genIndexFull(opts ...genOpt) (digest.Digest, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to generate test data: %w", err)
 	}
-	td.tags["index"] = iDig
 	return iDig, nil
+}
+
+func genAddJSONFields(v any) any {
+	newT := reflect.StructOf([]reflect.StructField{
+		{
+			Name:      "Embed",
+			Anonymous: true,
+			Type:      reflect.TypeOf(v),
+		},
+		{
+			Name: "Custom",
+			Type: reflect.TypeOf(""),
+			Tag:  reflect.StructTag("json:\"org." + rand.Text() + "\""),
+		},
+	})
+	newV := reflect.New(newT).Elem()
+	newV.Field(0).Set(reflect.ValueOf(v))
+	newV.FieldByName("Custom").SetString(rand.Text())
+	return newV.Interface()
 }
