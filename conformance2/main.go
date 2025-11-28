@@ -24,8 +24,20 @@ func main() {
 	r.Report(os.Stdout)
 	// generate reports
 	os.MkdirAll(c.ResultsDir, 0755)
+	// write config.yaml
+	fh, err := os.Create(filepath.Join(c.ResultsDir, "config.yaml"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create config.yaml: %v\n", err)
+		return
+	}
+	_, err = fh.Write([]byte(r.Config.Report()))
+	_ = fh.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to generate config.yaml: %v\n", err)
+		return
+	}
 	// write junit.xml report
-	fh, err := os.Create(filepath.Join(c.ResultsDir, "junit.xml"))
+	fh, err = os.Create(filepath.Join(c.ResultsDir, "junit.xml"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create junit.xml: %v\n", err)
 		return
