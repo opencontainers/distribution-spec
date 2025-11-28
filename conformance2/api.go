@@ -780,7 +780,7 @@ func apiExpectBody(bodyExpect []byte) apiDoOpt {
 			if err != nil {
 				return fmt.Errorf("failed to print expected body: %w", err)
 			}
-			return fmt.Errorf("body contents mismatch, expected %s, received %s", bufExpect.String(), bufReceived.String())
+			return fmt.Errorf("body contents mismatch, expected %s, received %s", strings.TrimSpace(bufExpect.String()), strings.TrimSpace(bufReceived.String()))
 		},
 	}
 }
