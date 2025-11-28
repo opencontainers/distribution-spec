@@ -571,22 +571,21 @@ var confHTMLTemplates = map[string]string{
     </table>`,
 	"results": `
     <div class="result {{ template "status-color" .Status }}">
-    <h4 style="display: inline;">{{ .Name }}</h4>
+    <details {{- if ne ( len .Children ) 0 }} open="true" {{- end }}><summary><h4 style="display: inline;">{{ .Name }}</h4></summary>
     {{- if ne .Output.String "" }}
-    <details><summary>Output</summary>
+    <p>Output:
     <pre class="pre-box">{{- html .Output.String -}}</pre>
-    </details>
     {{- end }}
     {{- if ne ( len .Errs ) 0 }}
-    <details><summary>Errors</summary>
+    <p>Errors:
     {{- range $err := .Errs }}
     <pre class="fail-message">{{ html $err.Error }}</pre>
     {{- end }}
-    </details>
     {{- end }}
     {{- range $result := .Children }}
     {{template "results" $result }}
     {{- end }}
+    </details>
     </div>
   `,
 	"status-color": `
