@@ -350,23 +350,34 @@ var confHTMLTemplates = map[string]string{
       th, td {
         padding: 12px;
         text-align: left;
+		  vertical-align: top;
         border-bottom: 1px solid #ddd;
       }
       tr:hover {
         background-color: #ffe39b;
       }
+		p {
+		  margin: .1em 0em .1em 0em;
+		}
+		summary {
+		  cursor: pointer;
+		}
       .result {
-        padding: 1.25em 0 .25em 0.8em;
-        border: 1px solid #e1e1e1;
+        padding: .25em 0 .25em .75em;
+        border: 0px solid #e1e1e1;
         border-radius: 5px;
-        margin-top: 10px;
+        margin-top: .1em;
+      }
+		.result h4 {
+		  margin: .1em 0em .1em 0em;
       }
       .red {
         background: #ffc8c8;
       }
       pre.fail-message {
+		  margin: .1em 0em .1em 0em;
         background: #f9a5a5;
-        padding: 20px;
+        padding: 10px;
         margin-right: 10px;
         display: inline-block;
         border-radius: 4px;
@@ -377,27 +388,14 @@ var confHTMLTemplates = map[string]string{
       }
       .green {
         background: #c8ffc8;
-        padding: 1.25em 0 1.25em 0.8em;
+        /* padding: 1.25em 0 1.25em 0.8em; */
       }
       .grey {
         background: lightgrey;
-        padding: 1.25em 0 1.25em 0.8em;
-      }
-      .toggle {
-        border: 2px solid #3e3e3e;
-        cursor: pointer;
-        width: 1em;
-        text-align: center;
-        font-weight: bold;
-        display: inline;
-        font-family: monospace;
-        padding: 0 .25em 0 .25em;
-        margin: 1em 1em 1em 0;
-        font-size: 12pt;
-        color: #3e3e3e;
-        border-radius: 3px;
+        /* padding: 1.25em 0 1.25em 0.8em; */
       }
       pre.pre-box {
+		  margin: .1em 0em .1em 0em;
         background: #343a40;
         color: #fff;
         padding: 10px;
@@ -410,21 +408,6 @@ var confHTMLTemplates = map[string]string{
         max-height: 60em;
         overflow-y: auto;
         max-width: 85%;
-      }
-      .summary {
-        width: 100%;
-        height: auto;
-        padding: 0 0 .5em 0;
-        border-radius: 6px;
-        border: 1px solid #cccddd;
-        background: white;
-      }
-      .summary-bullet {
-        width: 100%;
-        height: auto;
-        display: flex;
-        flex-wrap: wrap;
-        padding: .5em .1em .1em .5em;
       }
       .bullet-left {
         width: 25%;
@@ -481,33 +464,7 @@ var confHTMLTemplates = map[string]string{
         background: grey;
         width: {{ .PercentSkipped -}}%;
       }
-      .subcategory {
-        background: white;
-        padding: 0px 20px 20px 20px;
-        border: 1px solid #cccddd;
-        border-radius: 6px;
-      }
-      h2 {
-        margin-top: 45px;
-      }
-      h4 {
-        vertical-align: bottom;
-        cursor: pointer;
-      }
     </style>
-    <script>
-      function toggleOutput(id) {
-        var elem = document.getElementById(id);
-        var button = document.getElementById(id + "-button");
-        if (elem.style['display'] === 'block') {
-          button.innerHTML = "+";
-          elem.style['display'] = 'none';
-        } else {
-          button.innerHTML = "-";
-          elem.style['display'] = 'block';
-        }
-      }
-    </script>
   </head>
   <body>
     <h1>OCI Distribution Conformance Tests</h1>
@@ -573,11 +530,11 @@ var confHTMLTemplates = map[string]string{
     <div class="result {{ template "status-color" .Status }}">
     <details {{- if ne ( len .Children ) 0 }} open="true" {{- end }}><summary><h4 style="display: inline;">{{ .Name }}</h4></summary>
     {{- if ne .Output.String "" }}
-    <p>Output:
+    <p>Output:</p>
     <pre class="pre-box">{{- html .Output.String -}}</pre>
     {{- end }}
     {{- if ne ( len .Errs ) 0 }}
-    <p>Errors:
+    <p>Errors:</p>
     {{- range $err := .Errs }}
     <pre class="fail-message">{{ html $err.Error }}</pre>
     {{- end }}
