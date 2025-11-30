@@ -126,7 +126,6 @@ func configLoad() (config, error) {
 	if configVersionEnv != "" {
 		configVersion = configVersionEnv
 	}
-
 	// initialize config with default values based on spec version
 	c := config{
 		Registry:   "localhost:5000",
@@ -179,20 +178,11 @@ func configLoad() (config, error) {
 	default:
 		return config{}, fmt.Errorf("unsupported config version %s", configVersion)
 	}
-
-	// TODO:
-	// read legacy environment variables to set defaults, but warn if seen
-	// export OCI_ROOT_URL="https://r.myreg.io"
-	// export OCI_NAMESPACE="myorg/myrepo"
-	// export OCI_CROSSMOUNT_NAMESPACE="myorg/other"
-	// export OCI_TEST_PULL=1
-	// export OCI_TEST_PUSH=1
-	// export OCI_TEST_CONTENT_DISCOVERY=1
-	// export OCI_TEST_CONTENT_MANAGEMENT=1
-	// export OCI_HIDE_SKIPPED_WORKFLOWS=0
-	// export OCI_DEBUG=0
-	// export OCI_DELETE_MANIFEST_BEFORE_BLOBS=0 // exclude option until a requirement is found
-
+	// process legacy variables but warn user when they are seen
+	err := confLegacyEnv(&c)
+	if err != nil {
+		return c, err
+	}
 	// read config from yaml file if available
 	if len(configFile) > 0 {
 		err := yaml.Unmarshal(configFile, &c)
@@ -200,20 +190,17 @@ func configLoad() (config, error) {
 			return c, err
 		}
 	}
-
-	// for each config option, check if env var is set to override value
-	err := confFromEnv(envOCIConf, confGoTag, reflect.ValueOf(&c))
+	// parse config from environment variables, overriding any yaml settings
+	err = confFromEnv(envOCIConf, confGoTag, reflect.ValueOf(&c))
 	if err != nil {
 		return c, err
 	}
-
 	// setup computed values
 	scheme := "https"
 	if c.TLS == tlsDisabled {
 		scheme = "http"
 	}
 	c.schemeReg = fmt.Sprintf("%s://%s", scheme, c.Registry)
-
 	// load the commit from the build info
 	if bi, ok := debug.ReadBuildInfo(); ok && bi != nil {
 		for _, setting := range bi.Settings {
@@ -312,6 +299,84 @@ func confFromEnv(env, tag string, vp reflect.Value) error {
 	default:
 		// unhandled type
 		return fmt.Errorf("unsupported kind: %s", v.Kind())
+	}
+	return nil
+}
+
+func confLegacyEnv(c *config) error {
+	// Note: some legacy variables are not converted:
+	// export OCI_HIDE_SKIPPED_WORKFLOWS=0
+	// export OCI_DELETE_MANIFEST_BEFORE_BLOBS=0
+	if v := os.Getenv("OCI_ROOT_URL"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_REPO_URL is deprecated, use OCI_REGISTRY and OCI_TLS instead\n")
+		v := strings.TrimSuffix(strings.TrimSpace(strings.ToLower(v)), "/")
+		vSplit := strings.SplitN(v, "://", 2)
+		scheme := "https"
+		reg := v
+		if len(vSplit) == 2 {
+			scheme = vSplit[0]
+			reg = vSplit[1]
+		}
+		switch scheme {
+		case "http":
+			c.TLS = tlsDisabled
+		default:
+			c.TLS = tlsEnabled
+		}
+		c.Registry = reg
+	}
+	if v := os.Getenv("OCI_NAMESPACE"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_NAMESPACE is deprecated, use OCI_REPO1 instead\n")
+		c.Repo1 = strings.TrimSuffix(strings.TrimSpace(strings.ToLower(v)), "/")
+	}
+	if v := os.Getenv("OCI_CROSSMOUNT_NAMESPACE"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_CROSSMOUNT_NAMESPACE is deprecated, use OCI_REPO2 instead\n")
+		c.Repo2 = strings.TrimSuffix(strings.TrimSpace(strings.ToLower(v)), "/")
+	}
+	if v := os.Getenv("OCI_TEST_PULL"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_PULL is deprecated, use OCI_API_PULL instead\n")
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("failed ot parse bool value from environment %s=%s", "OCI_TEST_PULL", v)
+		}
+		c.APIs.Pull = b
+	}
+	if v := os.Getenv("OCI_TEST_PUSH"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_PUSH is deprecated, use OCI_API_PUSH instead\n")
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("failed ot parse bool value from environment %s=%s", "OCI_TEST_PUSH", v)
+		}
+		c.APIs.Push = b
+	}
+	if v := os.Getenv("OCI_TEST_CONTENT_DISCOVERY"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_CONTENT_DISCOVERY is deprecated, use OCI_API_TAG_LIST and OCI_API_REFERRER instead\n")
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("failed ot parse bool value from environment %s=%s", "OCI_TEST_CONTENT_DISCOVERY", v)
+		}
+		c.APIs.Tags.List = b
+		c.APIs.Referrer = b
+	}
+	if v := os.Getenv("OCI_TEST_CONTENT_MANAGEMENT"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_CONTENT_MANAGEMENT is deprecated, use OCI_API_TAG_DELETE, OCI_API_MANIFEST_DELETE, and OCI_API_BLOB_DELETE instead\n")
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("failed ot parse bool value from environment %s=%s", "OCI_TEST_CONTENT_MANAGEMENT", v)
+		}
+		c.APIs.Tags.Delete = b
+		c.APIs.Manifests.Delete = b
+		c.APIs.Blobs.Delete = b
+	}
+	if v := os.Getenv("OCI_DEBUG"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_DEBUG is deprecated, use OCI_LOG=debug instead\n")
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return fmt.Errorf("failed ot parse bool value from environment %s=%s", "OCI_DEBUG", v)
+		}
+		if b {
+			c.LogLevel = "debug"
+		}
 	}
 	return nil
 }
