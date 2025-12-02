@@ -20,6 +20,8 @@ import (
 	image "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+var emptyDigest = digest.Canonical.FromBytes([]byte{})
+
 type api struct {
 	client     *http.Client
 	user, pass string
@@ -137,13 +139,13 @@ func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData,
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("DELETE"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusAccepted, http.StatusNotFound, http.StatusBadRequest, http.StatusMethodNotAllowed),
+		apiExpectStatus(http.StatusAccepted, http.StatusNotFound, http.StatusMethodNotAllowed),
 		apiReturnStatus(&status),
 	)
 	if err != nil {
 		return fmt.Errorf("blob delete failed: %v", err)
 	}
-	if status == http.StatusBadRequest || status == http.StatusMethodNotAllowed {
+	if status == http.StatusMethodNotAllowed {
 		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
 	}
 	return nil
@@ -168,7 +170,7 @@ func (a *api) BlobGetExistsFull(registry, repo string, dig digest.Digest, td *te
 	opts = append(opts,
 		apiExpectStatus(http.StatusOK),
 	)
-	if val, ok := td.blobs[dig]; ok {
+	if val, ok := td.blobs[dig]; ok && (len(val) > 0 || dig == emptyDigest) {
 		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
 	}
 	return a.BlobGetReq(registry, repo, dig, td, opts...)
@@ -194,7 +196,7 @@ func (a *api) BlobHeadExists(registry, repo string, dig digest.Digest, td *testD
 		apiExpectStatus(http.StatusOK),
 		apiExpectBody([]byte{}),
 	)
-	if val, ok := td.blobs[dig]; ok {
+	if val, ok := td.blobs[dig]; ok && (len(val) > 0 || dig == emptyDigest) {
 		opts = append(opts, apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
 	}
 	return a.BlobHeadReq(registry, repo, dig, td, opts...)
@@ -494,7 +496,7 @@ func (a *api) ManifestDelete(registry, repo, ref string, dig digest.Digest, td *
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("DELETE"),
 		apiWithURL(u),
-		apiExpectStatus(http.StatusAccepted, http.StatusNotFound),
+		apiExpectStatus(http.StatusAccepted, http.StatusNotFound, http.StatusBadRequest, http.StatusMethodNotAllowed),
 		apiReturnStatus(&status),
 	)
 	if err != nil {
@@ -527,7 +529,7 @@ func (a *api) ManifestGetExists(registry, repo, ref string, dig digest.Digest, t
 	opts = append(opts,
 		apiExpectStatus(http.StatusOK),
 	)
-	if val, ok := td.manifests[dig]; ok {
+	if val, ok := td.manifests[dig]; ok && len(val) > 0 {
 		mediaType := detectMediaType(val)
 		opts = append(opts,
 			apiExpectBody(val),
@@ -560,7 +562,7 @@ func (a *api) ManifestHeadExists(registry, repo, ref string, dig digest.Digest, 
 		apiExpectStatus(http.StatusOK),
 		apiExpectBody([]byte{}),
 	)
-	if val, ok := td.manifests[dig]; ok {
+	if val, ok := td.manifests[dig]; ok && len(val) > 0 {
 		mediaType := detectMediaType(val)
 		opts = append(opts,
 			apiExpectHeader("Content-Type", mediaType),

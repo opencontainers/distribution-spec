@@ -70,6 +70,42 @@ func (r *runner) GenerateData() error {
 		// all data tests require the image manifest
 		return nil
 	}
+	// include empty tests for user provided read-only data, no validation is done on the content of the response since we don't know it
+	if len(r.Config.ROData.Tags) > 0 || len(r.Config.ROData.Manifests) > 0 || len(r.Config.ROData.Blobs) > 0 || len(r.Config.ROData.Referrers) > 0 {
+		tdName = "read-only"
+		r.State.Data[tdName] = newTestData("Read Only Inputs")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		for _, tag := range r.Config.ROData.Tags {
+			r.State.Data[tdName].tags[tag] = ""
+		}
+		for _, manifest := range r.Config.ROData.Manifests {
+			dig, err := digest.Parse(manifest)
+			if err != nil {
+				return fmt.Errorf("failed to parse manifest digest %s: %w", manifest, err)
+			}
+			r.State.Data[tdName].manifests[dig] = []byte{}
+			r.State.Data[tdName].manOrder = append(r.State.Data[tdName].manOrder, dig)
+		}
+		for _, blob := range r.Config.ROData.Blobs {
+			dig, err := digest.Parse(blob)
+			if err != nil {
+				return fmt.Errorf("failed to parse blob digest %s: %w", blob, err)
+			}
+			r.State.Data[tdName].blobs[dig] = []byte{}
+		}
+		for _, subject := range r.Config.ROData.Referrers {
+			dig, err := digest.Parse(subject)
+			if err != nil {
+				return fmt.Errorf("failed to parse subject digest %s: %w", subject, err)
+			}
+			r.State.Data[tdName].referrers[dig] = []*image.Descriptor{}
+		}
+	}
+	if !r.Config.APIs.Push {
+		// do not generate random data if push is disabled
+		return nil
+	}
 	// standard image with a layer per blob test
 	tdName = "image"
 	r.State.Data[tdName] = newTestData("Image")
@@ -591,6 +627,10 @@ func (r *runner) TestAll() error {
 
 func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo digest.Algorithm, repo, repo2 string) error {
 	return r.ChildRun(algo.String()+" blobs", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIBlobPush); err != nil {
+			r.TestSkip(res, err, tdName, stateAPIBlobPush)
+			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+		}
 		errs := []error{}
 		// setup testdata
 		r.State.Data[tdName] = newTestData(tdDesc)
@@ -885,6 +925,7 @@ func (r *runner) TestEmpty(parent *results, repo string) error {
 		if err := r.TestEmptyTagList(res, repo); err != nil {
 			errs = append(errs, err)
 		}
+		// TODO: test referrers response on unknown digest
 		if len(errs) > 0 {
 			return errors.Join(errs...)
 		}
@@ -1138,6 +1179,9 @@ var (
 )
 
 func (r *runner) TestPushBlobAny(parent *results, tdName string, repo string, dig digest.Digest) error {
+	if err := r.APIRequire(stateAPIBlobPush); err != nil {
+		return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+	}
 	apis := []stateAPIType{}
 	if _, ok := blobAPIsTestedByAlgo[dig.Algorithm()]; !ok {
 		blobAPIsTestedByAlgo[dig.Algorithm()] = &[stateAPIMax]bool{}
