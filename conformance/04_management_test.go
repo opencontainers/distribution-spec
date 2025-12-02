@@ -72,15 +72,14 @@ var test04ContentManagement = func() {
 				SkipIfDisabled(contentManagement)
 				RunOnlyIf(runContentManagementSetup)
 				tagToDelete = defaultTagName
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(tagToDelete)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[3].Content)
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				pushManifest(
+					&ManifestInfo{
+						Tag:     tagToDelete,
+						Digest:  manifests[3].Digest,
+						Content: manifests[3].Content,
+					},
+					nil, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Check how many tags there are before anything gets deleted", func() {
@@ -106,8 +105,8 @@ var test04ContentManagement = func() {
 				resp, err := client.Do(req)
 				Expect(err).To(BeNil())
 				Expect(resp.StatusCode()).To(SatisfyAny(
-					Equal(http.StatusBadRequest),
 					Equal(http.StatusAccepted),
+					Equal(http.StatusBadRequest),
 					Equal(http.StatusMethodNotAllowed)))
 				if resp.StatusCode() == http.StatusBadRequest {
 					errorResponses, err := resp.Errors()
@@ -117,7 +116,7 @@ var test04ContentManagement = func() {
 				}
 			})
 
-			g.Specify("DELETE request to manifest (digest) should yield 202 response unless already deleted", func() {
+			g.Specify("DELETE request to manifest (digest) should yield 202 response, unless already deleted (404) or manifest deletion is disallowed (400/405)", func() {
 				SkipIfDisabled(contentManagement)
 				req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[3].Digest))
 				resp, err := client.Do(req)
@@ -126,6 +125,8 @@ var test04ContentManagement = func() {
 				Expect(resp.StatusCode()).To(SatisfyAny(
 					Equal(http.StatusAccepted),
 					Equal(http.StatusNotFound),
+					Equal(http.StatusBadRequest),
+					Equal(http.StatusMethodNotAllowed),
 				))
 			})
 

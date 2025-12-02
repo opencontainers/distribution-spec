@@ -23,6 +23,7 @@ import (
 	"log"
 	"math/big"
 	mathrand "math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -32,6 +33,7 @@ import (
 	"github.com/google/uuid"
 	g "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/formatter"
+	. "github.com/onsi/gomega"
 	godigest "github.com/opencontainers/go-digest"
 )
 
@@ -674,4 +676,92 @@ func setupChunkedBlob(size int) {
 	testBlobBChunk2 = testBlobB[size/2+1:]
 	testBlobBChunk2Length = strconv.Itoa(len(testBlobBChunk2))
 	testBlobBChunk2Range = fmt.Sprintf("%d-%d", len(testBlobBChunk1), len(testBlobB)-1)
+}
+
+type ManifestInfo struct {
+	Index   bool
+	Tag     string
+	Digest  string
+	Content []byte
+	Subject string
+}
+
+func pushManifest(
+	manifestInfo *ManifestInfo,
+	manifestRefs []string,
+	t g.GinkgoTInterface,
+) []string {
+	t.Helper()
+	// if tag passed, use it as reference, otherwise use digest
+	reference := manifestInfo.Tag
+	if reference == "" {
+		reference = manifestInfo.Digest
+	}
+	// if index, use corresponding mediaType
+	mediaType := "application/vnd.oci.image.manifest.v1+json"
+	if manifestInfo.Index {
+		mediaType = "application/vnd.oci.image.index.v1+json"
+	}
+	// push manifest
+	req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
+		reggie.WithReference(reference)).
+		SetHeader("Content-Type", mediaType).
+		SetBody(manifestInfo.Content)
+	resp, err := client.Do(req)
+	// check all expectations
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+	Expect(resp.Header().Get("Location")).ToNot(BeEmpty())
+	// OCI-Subject is empty if referrers API unsupported
+	Expect(resp.Header().Get("OCI-Subject")).To(SatisfyAny(
+		Equal(manifestInfo.Subject),
+		Equal("")))
+	// keep track of all reference(s) to manifest
+	manifestRefs = append(manifestRefs, reference)
+	if manifestInfo.Tag != "" {
+		manifestRefs = append(manifestRefs, manifestInfo.Digest)
+	}
+	return manifestRefs
+}
+
+func deleteManifest(
+	ref string,
+	t g.GinkgoTInterface,
+) {
+	t.Helper()
+
+	req := client.NewRequest(reggie.GET, "/v2/<name>/manifests/<reference>",
+		reggie.WithReference(ref))
+	resp, err := client.Do(req)
+	Expect(err).To(BeNil())
+	if resp.StatusCode() == http.StatusOK {
+		req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<reference>",
+			reggie.WithReference(ref))
+		resp, err := client.Do(req)
+		Expect(err).To(BeNil())
+		Expect(resp.StatusCode()).To(SatisfyAny(
+			Equal(http.StatusAccepted),
+			Equal(http.StatusMethodNotAllowed),
+			Equal(http.StatusNotFound),
+		))
+		req = client.NewRequest(reggie.GET, "/v2/<name>/manifests/<ref>",
+			reggie.WithReference(ref))
+		resp, err = client.Do(req)
+		Expect(err).To(BeNil())
+		Expect(resp.StatusCode()).To(Equal(http.StatusNotFound))
+	}
+}
+
+func deleteManifests(
+	manifestRefs []string,
+	t g.GinkgoTInterface,
+) {
+	t.Helper()
+
+	for len(manifestRefs) > 0 {
+		index := len(manifestRefs) - 1
+		ref := manifestRefs[index]
+		manifestRefs = manifestRefs[:index]
+		deleteManifest(ref, t)
+	}
 }
