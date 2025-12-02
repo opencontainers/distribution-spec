@@ -24,20 +24,21 @@ const (
 )
 
 type config struct {
-	Registry   string     `conformance:"REGISTRY" yaml:"registry"`      // hostname:port of registry server
-	TLS        tls        `conformance:"TLS" yaml:"tls"`                // tls configuration for communicating with the registry
-	Repo1      string     `conformance:"REPO1" yaml:"repo1"`            // first repository for pushing content
-	Repo2      string     `conformance:"REPO2" yaml:"repo2"`            // second repository for pushing content
-	LoginUser  string     `conformance:"USERNAME" yaml:"username"`      // username for login, leave blank for anonymous
-	LoginPass  string     `conformance:"PASSWORD" yaml:"password"`      // password for login, leave blank for anonymous
-	LogLevel   string     `conformance:"LOG" yaml:"logging"`            // slog logging level, defaults to "warn"
-	LogWriter  io.Writer  `yaml:"-"`                                    // writer used for logging, defaults to os.Stderr
-	APIs       configAPI  `conformance:"API" yaml:"apis"`               // API tests to run
-	Data       configData `conformance:"DATA" yaml:"data"`              // data types to test
-	ResultsDir string     `conformance:"RESULTS_DIR" yaml:"resultsDir"` // directory to write results
-	Version    string     `conformance:"VERSION" yaml:"version"`        // spec version used to set test defaults
-	schemeReg  string     `yaml:"-"`                                    // base for url to access the registry
-	Commit     string     `yaml:"commit"`                               // injected git commit hash from runtime
+	Registry   string       `conformance:"REGISTRY" yaml:"registry"`      // hostname:port of registry server
+	TLS        tls          `conformance:"TLS" yaml:"tls"`                // tls configuration for communicating with the registry
+	Repo1      string       `conformance:"REPO1" yaml:"repo1"`            // first repository for pushing content
+	Repo2      string       `conformance:"REPO2" yaml:"repo2"`            // second repository for pushing content
+	LoginUser  string       `conformance:"USERNAME" yaml:"username"`      // username for login, leave blank for anonymous
+	LoginPass  string       `conformance:"PASSWORD" yaml:"password"`      // password for login, leave blank for anonymous
+	LogLevel   string       `conformance:"LOG" yaml:"logging"`            // slog logging level, defaults to "warn"
+	LogWriter  io.Writer    `yaml:"-"`                                    // writer used for logging, defaults to os.Stderr
+	APIs       configAPI    `conformance:"API" yaml:"apis"`               // API tests to run
+	Data       configData   `conformance:"DATA" yaml:"data"`              // data types to test
+	ROData     configROData `conformance:"RO_DATA" yaml:"roData"`         // read-only data for registries that do not support push methods
+	ResultsDir string       `conformance:"RESULTS_DIR" yaml:"resultsDir"` // directory to write results
+	Version    string       `conformance:"VERSION" yaml:"version"`        // spec version used to set test defaults
+	schemeReg  string       `yaml:"-"`                                    // base for url to access the registry
+	Commit     string       `yaml:"commit"`                               // injected git commit hash from runtime
 }
 
 type tls int
@@ -88,6 +89,13 @@ type configData struct {
 	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated in spec 1.1
 	CustomFields     bool `conformance:"CUSTOM_FIELDS" yaml:"customFields"`        // fields added beyond the OCI spec
 	Sha512           bool `conformance:"SHA512" yaml:"sha512"`                     // sha512 digest algorithm
+}
+
+type configROData struct {
+	Tags      []string `conformance:"TAGS" yaml:"tags"`           // tag names
+	Manifests []string `conformance:"MANIFESTS" yaml:"manifests"` // manifest digests
+	Blobs     []string `conformance:"BLOBS" yaml:"blobs"`         // blob digests
+	Referrers []string `conformance:"REFERRERS" yaml:"referrers"` // referrers subject digests
 }
 
 func configLoad() (config, error) {
@@ -296,6 +304,18 @@ func confFromEnv(env, tag string, vp reflect.Value) error {
 			return fmt.Errorf("failed to parse bool value from environment %s=%s", env, val)
 		}
 		v.SetBool(b)
+	case reflect.Slice:
+		switch v.Type().Elem().Kind() {
+		case reflect.String:
+			valSlice := strings.Split(val, " ")
+			newSlice := reflect.MakeSlice(v.Type(), len(valSlice), len(valSlice))
+			for i, cur := range valSlice {
+				newSlice.Index(i).SetString(cur)
+			}
+			v.Set(newSlice)
+		default:
+			return fmt.Errorf("unsupported slice of kind: %s", v.Type().Elem().Kind())
+		}
 	default:
 		// unhandled type
 		return fmt.Errorf("unsupported kind: %s", v.Kind())
