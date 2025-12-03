@@ -205,7 +205,7 @@ func (a *api) BlobHeadExists(registry, repo string, dig digest.Digest, td *testD
 func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPostPut missing expected digest to send: %s", dig.String())
+		return fmt.Errorf("BlobPostPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -263,7 +263,7 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPatchChunked missing expected digest to send: %s", dig.String())
+		return fmt.Errorf("BlobPatchChunked missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -352,7 +352,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPatchStream missing expected digest to send: %s", dig.String())
+		return fmt.Errorf("BlobPatchStream missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -413,7 +413,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s", dig.String())
+		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -445,7 +445,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPostPut missing expected digest to send: %s", dig.String())
+		return fmt.Errorf("BlobPostPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -575,7 +575,7 @@ func (a *api) ManifestHeadExists(registry, repo, ref string, dig digest.Digest, 
 func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.manifests[dig]
 	if !ok {
-		return fmt.Errorf("ManifestPut missing expected digest to send: %s", dig.String())
+		return fmt.Errorf("ManifestPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
 	if err != nil {

@@ -398,6 +398,18 @@ func confLegacyEnv(c *config) error {
 			c.LogLevel = "debug"
 		}
 	}
+	if v := os.Getenv("OCI_TAG_NAME"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_TAG_NAME is deprecated, use OCI_RO_DATA_TAGS instead\n")
+		c.ROData.Tags = append(c.ROData.Tags, strings.Split(v, " ")...)
+	}
+	if v := os.Getenv("OCI_MANIFEST_DIGEST"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_MANIFEST_DIGEST is deprecated, use OCI_RO_DATA_MANIFESTS instead\n")
+		c.ROData.Manifests = append(c.ROData.Manifests, strings.Split(v, " ")...)
+	}
+	if v := os.Getenv("OCI_BLOB_DIGEST"); v != "" {
+		fmt.Fprintf(os.Stderr, "WARNING: OCI_BLOB_DIGEST is deprecated, use OCI_RO_DATA_BLOBS instead\n")
+		c.ROData.Blobs = append(c.ROData.Blobs, strings.Split(v, " ")...)
+	}
 	return nil
 }
 

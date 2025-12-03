@@ -26,9 +26,10 @@ const (
 )
 
 var (
-	errTestAPIFail = errors.New("API test with a known failure")
-	errTestAPISkip = errors.New("API test was skipped")
-	dataTests      = []string{}
+	errTestAPIError = errors.New("API test encountered an internal error")
+	errTestAPIFail  = errors.New("API test with a known failure")
+	errTestAPISkip  = errors.New("API test was skipped")
+	dataTests       = []string{}
 )
 
 type runner struct {
@@ -521,9 +522,9 @@ func (r *runner) ReportHTML(w io.Writer) error {
 	data := reportData{
 		Config:          r.Config,
 		Results:         r.Results,
-		NumTotal:        r.Results.Counts[statusPass] + r.Results.Counts[statusFail] + r.Results.Counts[statusSkip] + r.Results.Counts[statusDisabled],
+		NumTotal:        r.Results.Counts[statusPass] + r.Results.Counts[statusFail] + r.Results.Counts[statusError] + r.Results.Counts[statusSkip] + r.Results.Counts[statusDisabled],
 		NumPassed:       r.Results.Counts[statusPass],
-		NumFailed:       r.Results.Counts[statusFail],
+		NumFailed:       r.Results.Counts[statusFail] + r.Results.Counts[statusError],
 		NumSkipped:      r.Results.Counts[statusSkip] + r.Results.Counts[statusDisabled],
 		StartTimeString: r.Results.Start.Format("Jan 2 15:04:05.000 -0700 MST"),
 		EndTimeString:   r.Results.Stop.Format("Jan 2 15:04:05.000 -0700 MST"),
@@ -1047,7 +1048,7 @@ func (r *runner) TestList(parent *results, tdName string, repo string) error {
 		errs := []error{}
 		for tag := range r.State.Data[tdName].tags {
 			if !slices.Contains(tagList.Tags, tag) {
-				errs = append(errs, fmt.Errorf("missing tag %q from listing", tag))
+				errs = append(errs, fmt.Errorf("missing tag %q from listing%.0w", tag, errTestAPIFail))
 			}
 		}
 		if len(errs) > 0 {
@@ -1424,7 +1425,7 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 							resp.ArtifactType == goal.ArtifactType &&
 							mapContainsAll(resp.Annotations, goal.Annotations)
 					}) {
-						errs = append(errs, fmt.Errorf("entry missing from referrers list, subject %s, referrer %+v", subj, goal))
+						errs = append(errs, fmt.Errorf("entry missing from referrers list, subject %s, referrer %+v%.0w", subj, goal, errTestAPIFail))
 					}
 				}
 			}
@@ -1491,7 +1492,9 @@ func (r *runner) TestSkip(res *results, err error, tdName string, apis ...stateA
 
 func (r *runner) TestFail(res *results, err error, tdName string, apis ...stateAPIType) {
 	s := statusFail
-	if errors.Is(err, ErrRegUnsupported) {
+	if errors.Is(err, errTestAPIError) {
+		s = statusError
+	} else if errors.Is(err, ErrRegUnsupported) {
 		s = statusDisabled
 	}
 	res.Status = res.Status.Set(s)
