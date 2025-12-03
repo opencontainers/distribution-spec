@@ -28,6 +28,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/bloodorangeio/reggie"
 	"github.com/google/uuid"
@@ -763,5 +764,117 @@ func deleteManifests(
 		ref := manifestRefs[index]
 		manifestRefs = manifestRefs[:index]
 		deleteManifest(ref, t)
+	}
+}
+
+type BlobInfo struct {
+	Digest  string
+	Content []byte
+	Length  string
+	Type    string
+}
+
+func pushBlob(
+	blobInfo *BlobInfo,
+	blobRefs []string,
+	t g.GinkgoTInterface,
+) []string {
+	t.Helper()
+
+	if blobInfo.Type == "" {
+		blobInfo.Type = "application/octet-stream"
+	}
+	req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
+	resp, err := client.Do(req)
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode()).To(SatisfyAny(
+		Equal(http.StatusAccepted),
+		Equal(http.StatusCreated),
+	))
+	req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
+		SetQueryParam("digest", blobInfo.Digest).
+		SetHeader("Content-Type", blobInfo.Type).
+		SetHeader("Content-Length", blobInfo.Length).
+		SetBody(blobInfo.Content)
+	resp, err = client.Do(req)
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode()).To(Equal(http.StatusCreated))
+	blobRefs = append(blobRefs, blobInfo.Digest)
+	return blobRefs
+}
+
+func mountBlob(
+	digest string,
+	from string,
+	blobRefs []string,
+	t g.GinkgoTInterface,
+) ([]string, *reggie.Response) {
+	t.Helper()
+
+	var req *reggie.Request
+
+	if from == "" {
+		req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
+			reggie.WithName(crossmountNamespace)).
+			SetQueryParam("mount", digest)
+	} else {
+		req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/",
+			reggie.WithName(crossmountNamespace)).
+			SetQueryParam("mount", digest).
+			SetQueryParam("from", from)
+	}
+	resp, err := client.Do(req)
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode()).To(SatisfyAny(
+		Equal(http.StatusCreated),
+		Equal(http.StatusAccepted),
+	))
+	Expect(resp.GetAbsoluteLocation()).To(Not(BeEmpty()))
+
+	digest = fmt.Sprintf("%s/%s", crossmountNamespace, digest)
+	blobRefs = append(blobRefs, digest)
+	return blobRefs, resp
+}
+
+func deleteBlob(
+	ref string,
+	t g.GinkgoTInterface,
+) int {
+	t.Helper()
+
+	var req *reggie.Request
+	separator := "/"
+	if strings.Contains(ref, separator) {
+		// if blob not in default namespace, get it
+		parts := strings.Split(ref, separator)
+		namespace := parts[0]
+		ref = parts[1]
+		req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<reference>", reggie.WithName(namespace), reggie.WithReference(ref))
+	} else {
+		// blob in default namespace
+		req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<reference>", reggie.WithReference(ref))
+	}
+	resp, err := client.Do(req)
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode()).To(SatisfyAny(
+		Equal(http.StatusAccepted),
+		Equal(http.StatusNotFound),
+		Equal(http.StatusBadRequest),
+		Equal(http.StatusMethodNotAllowed),
+	))
+	return resp.StatusCode()
+}
+
+func deleteBlobs(
+	blobRefs []string,
+	t g.GinkgoTInterface,
+) {
+	t.Helper()
+
+	for len(blobRefs) > 0 {
+		index := len(blobRefs) - 1
+		ref := blobRefs[index]
+		blobRefs = blobRefs[:index]
+		deleteBlob(ref, t)
 	}
 }

@@ -34,43 +34,34 @@ var test03ContentDiscovery = func() {
 
 		var numTags = 4
 		var tagList []string
+		var blobRefs []string
 		var manifestRefs []string
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
 				SkipIfDisabled(contentDiscovery)
 				RunOnlyIf(runContentDiscoverySetup)
-				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", configs[2].Digest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", configs[2].ContentLength).
-					SetBody(configs[2].Content)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  configs[2].Digest,
+						Content: configs[2].Content,
+						Length:  configs[2].ContentLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Populate registry with test layer", func() {
 				SkipIfDisabled(contentDiscovery)
 				RunOnlyIf(runContentDiscoverySetup)
-				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", layerBlobDigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", layerBlobContentLength).
-					SetBody(layerBlobData)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  layerBlobDigest,
+						Content: layerBlobData,
+						Length:  layerBlobContentLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Populate registry with test tags", func() {
@@ -108,34 +99,24 @@ var test03ContentDiscovery = func() {
 				// Populate registry with empty JSON blob
 				// validate expected empty JSON blob digest
 				Expect(emptyJSONDescriptor.Digest).To(Equal(godigest.Digest("sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a")))
-				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", emptyJSONDescriptor.Digest.String()).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", fmt.Sprintf("%d", emptyJSONDescriptor.Size)).
-					SetBody(emptyJSONBlob)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  emptyJSONDescriptor.Digest.String(),
+						Content: emptyJSONBlob,
+						Length:  fmt.Sprintf("%d", emptyJSONDescriptor.Size),
+					},
+					blobRefs, g.GinkgoT(),
+				)
 
 				// Populate registry with reference blob before the image manifest is pushed
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", testRefBlobADigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", testRefBlobALength).
-					SetBody(testRefBlobA)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  testRefBlobADigest,
+						Content: testRefBlobA,
+						Length:  testRefBlobALength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 
 				// Populate registry with test references manifest (config.MediaType = artifactType)
 				manifestRefs = pushManifest(
@@ -169,34 +150,24 @@ var test03ContentDiscovery = func() {
 				)
 
 				// Populate registry with test blob
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", configs[4].Digest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", configs[4].ContentLength).
-					SetBody(configs[4].Content)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  configs[4].Digest,
+						Content: configs[4].Content,
+						Length:  configs[4].ContentLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 
 				// Populate registry with test layer
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", layerBlobDigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", layerBlobContentLength).
-					SetBody(layerBlobData)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  layerBlobDigest,
+						Content: layerBlobData,
+						Length:  layerBlobContentLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 
 				// Populate registry with test manifest
 				tag := testTagName
@@ -210,19 +181,14 @@ var test03ContentDiscovery = func() {
 				)
 
 				// Populate registry with reference blob after the image manifest is pushed
-				req = client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", testRefBlobBDigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", testRefBlobBLength).
-					SetBody(testRefBlobB)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  testRefBlobBDigest,
+						Content: testRefBlobB,
+						Length:  testRefBlobBLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 
 				// Populate registry with test references manifest (config.MediaType = artifactType)
 				manifestRefs = pushManifest(
@@ -404,36 +370,10 @@ var test03ContentDiscovery = func() {
 				})
 			}
 
-			g.Specify("Delete config blob created in tests", func() {
+			g.Specify("Delete blobs created in tests", func() {
 				SkipIfDisabled(contentDiscovery)
 				RunOnlyIf(runContentDiscoverySetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[2].Digest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300),
-					),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
-			})
-
-			g.Specify("Delete layer blob created in setup", func() {
-				SkipIfDisabled(contentDiscovery)
-				RunOnlyIf(runContentDiscoverySetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300),
-					),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
+				deleteBlobs(blobRefs, g.GinkgoT())
 			})
 
 			if !deleteManifestBeforeBlobs {
@@ -443,38 +383,6 @@ var test03ContentDiscovery = func() {
 					deleteManifests(manifestRefs, g.GinkgoT())
 				})
 			}
-
-			g.Specify("References teardown", func() {
-				SkipIfDisabled(contentDiscovery)
-				RunOnlyIf(runContentDiscoverySetup)
-
-				deleteReq := func(req *reggie.Request) {
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusNotFound),
-						Equal(http.StatusMethodNotAllowed),
-					))
-				}
-
-				// Delete config blob created in setup
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[4].Digest))
-				deleteReq(req)
-
-				// Delete reference blob created in setup
-				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(testRefBlobADigest))
-				deleteReq(req)
-				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(testRefBlobBDigest))
-				deleteReq(req)
-
-				// Delete empty JSON blob created in setup
-				req = client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(emptyJSONDescriptor.Digest.String()))
-				deleteReq(req)
-			})
 		})
 	})
 }
