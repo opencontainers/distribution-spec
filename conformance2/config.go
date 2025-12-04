@@ -17,7 +17,7 @@ const (
 	envOCIConf     = "OCI"
 	envOCIConfFile = "OCI_CONFIGURATION"
 	envOCIVersion  = "OCI_VERSION"
-	defaultOCIConf = "oci-conformance.yml"
+	defaultOCIConf = "oci-conformance.yaml"
 	chunkMin       = 1024
 	truncateBody   = 4096
 	biVCSCommit    = "vcs.revision"
@@ -181,6 +181,7 @@ func configLoad() (config, error) {
 	case "", "1.1":
 		c.Version = "1.1"
 	case "1.0":
+		c.APIs.Blobs.MountAnonymous = false
 		c.APIs.Referrer = false
 		c.Version = "1.0"
 	default:
