@@ -170,7 +170,7 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
-		_, _, err = r.State.Data[tdName].genIndex([]*image.Platform{{}, {}}, []digest.Digest{dig1, dig2},
+		_, _, err = r.State.Data[tdName].genIndex([]*image.Platform{nil, nil}, []digest.Digest{dig1, dig2},
 			genWithTag("index-of-index"),
 		)
 		if err != nil {
@@ -637,12 +637,12 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 		r.State.Data[tdName] = newTestData(tdDesc)
 		r.State.DataStatus[tdName] = statusUnknown
 		digests := map[string]digest.Digest{}
-		testBlobs := map[string][]byte{
-			"empty":     []byte(""),
-			"emptyJSON": []byte("{}"),
+		blobDataTests := map[string][]byte{}
+		if r.Config.Data.EmptyBlob {
+			blobDataTests["empty"] = []byte("")
 		}
-		blobDataTests := []string{"empty", "emptyJSON"}
-		for name, val := range testBlobs {
+		blobDataTests["emptyJSON"] = []byte("{}")
+		for name, val := range blobDataTests {
 			dig := algo.FromBytes(val)
 			digests[name] = dig
 			r.State.Data[tdName].blobs[dig] = val
@@ -778,7 +778,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 			}
 		}
 		// test various well known blob contents
-		for _, name := range blobDataTests {
+		for name := range blobDataTests {
 			err := r.ChildRun(name, res, func(r *runner, res *results) error {
 				dig := digests[name]
 				err := r.TestPushBlobAny(res, tdName, repo, dig)
