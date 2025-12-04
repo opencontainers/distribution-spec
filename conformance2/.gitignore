@@ -1,5 +1,6 @@
 !go.mod
 !go.sum
 conformance
+conformance.test
 oci-conformance.yaml
 results/**
