@@ -7,12 +7,17 @@ import (
 )
 
 func main() {
+	mainRun(false)
+}
+
+func mainRun(legacy bool) {
 	// load config
 	c, err := configLoad()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load config: %v\n", err)
 		return
 	}
+	c.Legacy = legacy
 	// run all tests
 	r, err := runnerNew(c)
 	if err != nil {
@@ -59,5 +64,8 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to generate report.html: %v\n", err)
 		return
+	}
+	if c.Legacy {
+		fmt.Fprintf(os.Stderr, "WARNING: \"go test\" is deprecated. Please update to using \"go build\".\n")
 	}
 }

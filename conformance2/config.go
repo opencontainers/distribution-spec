@@ -39,6 +39,7 @@ type config struct {
 	Version    string       `conformance:"VERSION" yaml:"version"`        // spec version used to set test defaults
 	schemeReg  string       `yaml:"-"`                                    // base for url to access the registry
 	Commit     string       `yaml:"commit"`                               // injected git commit hash from runtime
+	Legacy     bool         `yaml:"legacy,omitempty"`                     // injected to indicate that conformance was run with "go test"
 }
 
 type tls int
@@ -566,6 +567,9 @@ var confHTMLTemplates = map[string]string{
   </head>
   <body>
     <h1>OCI Distribution Conformance Tests</h1>
+	 {{- if .Config.Legacy }}
+	 <h2>WARNING: Running conformance with "go test" is deprecated, please update to "go build"</h2>
+	 {{- end }}
     {{ template "summary" . }}
     <div>
     {{ template "results" .Results }}
