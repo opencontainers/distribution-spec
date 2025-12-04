@@ -1422,6 +1422,8 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 				for _, goal := range referrerGoal {
 					if !slices.ContainsFunc(referrerResp.Manifests, func(resp image.Descriptor) bool {
 						return resp.Digest == goal.Digest &&
+							resp.MediaType == goal.MediaType &&
+							resp.Size == goal.Size &&
 							resp.ArtifactType == goal.ArtifactType &&
 							mapContainsAll(resp.Annotations, goal.Annotations)
 					}) {
