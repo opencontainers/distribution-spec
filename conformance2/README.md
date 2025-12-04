@@ -56,6 +56,7 @@ export OCI_DATA_SUBJECT_LIST=true # an OCI index with the subject field defined
 export OCI_DATA_DATA_FIELD=true # descriptors with the data field populated
 export OCI_DATA_NONDISTRIBUTABLE=true # an OCI image containing nondistributable layer references that have not been pushed
 export OCI_DATA_CUSTOM_FIELDS=true # manifests and config json with additional fields
+export OCI_DATA_EMPTY_BLOB=true # zero byte blob
 export OCI_DATA_SHA512=true # content pushed using the sha512 digest algorithm
 
 # For testing read-only registries, images must be preloaded.
@@ -111,6 +112,7 @@ data:
   dataField: true
   nondistributable: true
   customFields: true
+  emptyBlob: true
   sha512: true
 roData:
   tags: []
