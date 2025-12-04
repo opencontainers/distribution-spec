@@ -142,7 +142,19 @@ go build -o conformance .
 
 ### Docker
 
-TODO
+First configure the test with environment variables or a configuration file as described above.
+Then build and run the conformance test using a command similar to below:
+
+```shell
+docker build -t conformance .
+docker run -it --rm --net=host \
+  -u "$(id -u):$(id -g)" \
+  -v "$(pwd)/results:/results" \
+  -e OCI_REGISTRY -e OCI_TLS -e OCI_REPO1 -e OCI_REPO2 -e OCI_USERNAME -e OCI_PASSWORD -e OCI_VERSION \
+  conformance:latest
+```
+
+Additional environment variables can be specified as needed, or the `oci-conformance.yaml` file can be passed as a volume, mounted at `/oci-conformance.yaml` inside the container.
 
 ### GitHub Actions
 
