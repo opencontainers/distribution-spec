@@ -814,7 +814,7 @@ func apiExpectStatus(statusCodes ...int) apiDoOpt {
 			if slices.Contains(statusCodes, resp.StatusCode) {
 				return nil
 			}
-			return fmt.Errorf("unexpected status code %d", resp.StatusCode)
+			return fmt.Errorf("unexpected status code, expected one of %v, received %d", statusCodes, resp.StatusCode)
 		},
 	}
 }
