@@ -275,6 +275,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
+		apiWithHeaderAdd("Content-Length", "0"),
 		apiExpectStatus(http.StatusAccepted),
 		apiReturnHeader("OCI-Chunk-Min-Length", &minStr),
 		apiReturnHeader("Location", &loc),
@@ -338,8 +339,8 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithHeaderAdd("Content-Length", "0"),
+		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiExpectStatus(http.StatusCreated),
 		apiExpectHeader("Location", ""),
 	)
@@ -363,6 +364,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
+		apiWithHeaderAdd("Content-Length", "0"),
 		apiExpectStatus(http.StatusAccepted),
 		apiReturnHeader("Location", &loc),
 	)
@@ -400,6 +402,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
+		apiWithHeaderAdd("Content-Length", "0"),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiExpectStatus(http.StatusCreated),
 		apiExpectHeader("Location", ""),
