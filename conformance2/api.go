@@ -260,7 +260,7 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 	return fmt.Errorf("registry returned status %d, fell back to blob POST+PUT%.0w", status, ErrRegUnsupported)
 }
 
-func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, putLastChunk bool, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
 		return fmt.Errorf("BlobPatchChunked missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
@@ -312,40 +312,51 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 		}
 		start := lastByte + 1
 		lastByte = min(start+chunkSize-1, len(bodyBytes)-1)
+		method := "PATCH"
+		expStatus := http.StatusAccepted
+		if putLastChunk && lastByte == len(bodyBytes)-1 {
+			method = "PUT"
+			qa := u.Query()
+			qa.Set("digest", dig.String())
+			u.RawQuery = qa.Encode()
+			expStatus = http.StatusCreated
+		}
 		err = a.Do(apiWithAnd(opts),
-			apiWithMethod("PATCH"),
+			apiWithMethod(method),
 			apiWithURL(u),
 			apiWithContentLength(int64(lastByte-start+1)),
 			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 			apiWithHeaderAdd("Content-Range", fmt.Sprintf("%d-%d", start, lastByte)),
 			apiWithBody(bodyBytes[start:lastByte+1]),
-			apiExpectStatus(http.StatusAccepted),
+			apiExpectStatus(expStatus),
 			apiReturnHeader("Location", &loc),
 		)
 		if err != nil {
 			return fmt.Errorf("blob patch failed: %v", err)
 		}
 	}
-	if loc == "" {
-		return fmt.Errorf("blob patch did not return a location")
-	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("blob patch could not parse location header: %v", err)
-	}
-	qa := u.Query()
-	qa.Set("digest", dig.String())
-	u.RawQuery = qa.Encode()
-	err = a.Do(apiWithAnd(opts),
-		apiWithMethod("PUT"),
-		apiWithURL(u),
-		apiWithContentLength(0),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiExpectStatus(http.StatusCreated),
-		apiExpectHeader("Location", ""),
-	)
-	if err != nil {
-		return fmt.Errorf("blob put failed: %v", err)
+	if !putLastChunk {
+		if loc == "" {
+			return fmt.Errorf("blob patch did not return a location")
+		}
+		u, err = u.Parse(loc)
+		if err != nil {
+			return fmt.Errorf("blob patch could not parse location header: %v", err)
+		}
+		qa := u.Query()
+		qa.Set("digest", dig.String())
+		u.RawQuery = qa.Encode()
+		err = a.Do(apiWithAnd(opts),
+			apiWithMethod("PUT"),
+			apiWithURL(u),
+			apiWithContentLength(0),
+			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+			apiExpectStatus(http.StatusCreated),
+			apiExpectHeader("Location", ""),
+		)
+		if err != nil {
+			return fmt.Errorf("blob put failed: %v", err)
+		}
 	}
 	return nil
 }
