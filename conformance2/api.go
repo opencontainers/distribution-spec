@@ -744,6 +744,10 @@ func apiWithContentLength(l int64) apiDoOpt {
 	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
 			req.ContentLength = l
+			if req.Header == nil {
+				req.Header = http.Header{}
+			}
+			req.Header.Add("Content-Length", fmt.Sprintf("%d", l))
 			return nil
 		},
 	}
