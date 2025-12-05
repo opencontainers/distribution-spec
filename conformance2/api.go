@@ -275,7 +275,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", "0"),
+		apiWithContentLength(0),
 		apiExpectStatus(http.StatusAccepted),
 		apiReturnHeader("OCI-Chunk-Min-Length", &minStr),
 		apiReturnHeader("Location", &loc),
@@ -315,8 +315,8 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 		err = a.Do(apiWithAnd(opts),
 			apiWithMethod("PATCH"),
 			apiWithURL(u),
+			apiWithContentLength(int64(lastByte-start+1)),
 			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-			apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", lastByte-start+1)),
 			apiWithHeaderAdd("Content-Range", fmt.Sprintf("%d-%d", start, lastByte)),
 			apiWithBody(bodyBytes[start:lastByte+1]),
 			apiExpectStatus(http.StatusAccepted),
@@ -339,7 +339,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", "0"),
+		apiWithContentLength(0),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiExpectStatus(http.StatusCreated),
 		apiExpectHeader("Location", ""),
@@ -364,7 +364,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", "0"),
+		apiWithContentLength(0),
 		apiExpectStatus(http.StatusAccepted),
 		apiReturnHeader("Location", &loc),
 	)
@@ -402,7 +402,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", "0"),
+		apiWithContentLength(0),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiExpectStatus(http.StatusCreated),
 		apiExpectHeader("Location", ""),
@@ -429,7 +429,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+		apiWithContentLength(int64(len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated, http.StatusAccepted),
@@ -478,7 +478,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+		apiWithContentLength(int64(len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated),
@@ -735,6 +735,15 @@ func apiWithURL(u *url.URL) apiDoOpt {
 	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
 			req.URL = u
+			return nil
+		},
+	}
+}
+
+func apiWithContentLength(l int64) apiDoOpt {
+	return apiDoOpt{
+		reqFn: func(req *http.Request) error {
+			req.ContentLength = l
 			return nil
 		},
 	}
