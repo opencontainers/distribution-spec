@@ -248,7 +248,7 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+		apiWithContentLength(int64(len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated),
