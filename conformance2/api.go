@@ -50,6 +50,7 @@ type apiDoOpt struct {
 	reqFn  func(*http.Request) error
 	respFn func(*http.Response) error
 	out    io.Writer
+	flags  map[string]bool
 }
 
 func (a *api) Do(opts ...apiDoOpt) error {
@@ -128,6 +129,14 @@ func (a *api) Do(opts ...apiDoOpt) error {
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (a *api) GetFlags(opts ...apiDoOpt) map[string]bool {
+	ret := map[string]bool{}
+	for _, opt := range opts {
+		maps.Copy(ret, opt.flags)
+	}
+	return ret
 }
 
 func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
@@ -260,7 +269,8 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 	return fmt.Errorf("registry returned status %d, fell back to blob POST+PUT%.0w", status, ErrRegUnsupported)
 }
 
-func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, putLastChunk bool, opts ...apiDoOpt) error {
+func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
 		return fmt.Errorf("BlobPatchChunked missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
@@ -314,12 +324,16 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 		lastByte = min(start+chunkSize-1, len(bodyBytes)-1)
 		method := "PATCH"
 		expStatus := http.StatusAccepted
-		if putLastChunk && lastByte == len(bodyBytes)-1 {
+		if flags["PutLastChunk"] && lastByte == len(bodyBytes)-1 {
 			method = "PUT"
 			qa := u.Query()
 			qa.Set("digest", dig.String())
 			u.RawQuery = qa.Encode()
-			expStatus = http.StatusCreated
+			if flags["ExpectBadDigest"] {
+				expStatus = http.StatusBadRequest
+			} else {
+				expStatus = http.StatusCreated
+			}
 		}
 		err = a.Do(apiWithAnd(opts),
 			apiWithMethod(method),
@@ -335,7 +349,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 			return fmt.Errorf("blob patch failed: %v", err)
 		}
 	}
-	if !putLastChunk {
+	if !flags["PutLastChunk"] {
 		if loc == "" {
 			return fmt.Errorf("blob patch did not return a location")
 		}
@@ -346,13 +360,21 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 		qa := u.Query()
 		qa.Set("digest", dig.String())
 		u.RawQuery = qa.Encode()
+		if flags["ExpectBadDigest"] {
+			opts = append(opts,
+				apiExpectStatus(http.StatusBadRequest),
+			)
+		} else {
+			opts = append(opts,
+				apiExpectStatus(http.StatusCreated),
+				apiExpectHeader("Location", ""),
+			)
+		}
 		err = a.Do(apiWithAnd(opts),
 			apiWithMethod("PUT"),
 			apiWithURL(u),
 			apiWithContentLength(0),
 			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-			apiExpectStatus(http.StatusCreated),
-			apiExpectHeader("Location", ""),
 		)
 		if err != nil {
 			return fmt.Errorf("blob put failed: %v", err)
@@ -362,6 +384,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 }
 
 func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
 		return fmt.Errorf("BlobPatchStream missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
@@ -410,13 +433,21 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	qa := u.Query()
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
+	if flags["ExpectBadDigest"] {
+		opts = append(opts,
+			apiExpectStatus(http.StatusBadRequest),
+		)
+	} else {
+		opts = append(opts,
+			apiExpectStatus(http.StatusCreated),
+			apiExpectHeader("Location", ""),
+		)
+	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
 		apiWithContentLength(0),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
-		apiExpectStatus(http.StatusCreated),
-		apiExpectHeader("Location", ""),
 	)
 	if err != nil {
 		return fmt.Errorf("blob put failed: %v", err)
@@ -425,6 +456,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 }
 
 func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
 		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
@@ -437,26 +469,37 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
 	var status int
-	err = a.Do(apiWithAnd(opts),
+	var postOpts []apiDoOpt
+	if flags["ExpectBadDigest"] {
+		postOpts = append([]apiDoOpt{
+			apiExpectStatus(http.StatusBadRequest, http.StatusAccepted),
+		}, opts...)
+	} else {
+		postOpts = append([]apiDoOpt{
+			apiExpectStatus(http.StatusCreated, http.StatusAccepted),
+			apiExpectHeader("Location", ""),
+		}, opts...)
+	}
+	err = a.Do(apiWithAnd(postOpts),
 		apiWithMethod("POST"),
 		apiWithURL(u),
 		apiWithContentLength(int64(len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
-		apiExpectStatus(http.StatusCreated, http.StatusAccepted),
-		apiExpectHeader("Location", ""),
 		apiReturnStatus(&status),
 	)
 	if err != nil {
 		return fmt.Errorf("blob post failed: %v", err)
 	}
-	if status != http.StatusCreated {
+	// TODO: fall back on StatusAccepted to a PUT to the returned location
+	if status != http.StatusCreated && !flags["ExpectBadDigest"] {
 		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
 	}
 	return nil
 }
 
 func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
 		return fmt.Errorf("BlobPostPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
@@ -486,14 +529,22 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	qa := u.Query()
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
+	if flags["ExpectBadDigest"] {
+		opts = append(opts,
+			apiExpectStatus(http.StatusBadRequest),
+		)
+	} else {
+		opts = append(opts,
+			apiExpectStatus(http.StatusCreated),
+			apiExpectHeader("Location", ""),
+		)
+	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
 		apiWithContentLength(int64(len(bodyBytes))),
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
-		apiExpectStatus(http.StatusCreated),
-		apiExpectHeader("Location", ""),
 	)
 	if err != nil {
 		return fmt.Errorf("blob put failed: %v", err)
@@ -730,6 +781,12 @@ func apiWithOr(optLists ...[]apiDoOpt) apiDoOpt {
 			}
 			return fmt.Errorf("response did not match any condition: %w", errors.Join(errsOr...))
 		},
+	}
+}
+
+func apiWithFlag(flag string) apiDoOpt {
+	return apiDoOpt{
+		flags: map[string]bool{flag: true},
 	}
 }
 
