@@ -468,6 +468,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	qa := u.Query()
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
+	loc := ""
 	var status int
 	var postOpts []apiDoOpt
 	if flags["ExpectBadDigest"] {
@@ -487,13 +488,42 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
 		apiWithBody(bodyBytes),
 		apiReturnStatus(&status),
+		apiReturnHeader("Location", &loc),
 	)
 	if err != nil {
 		return fmt.Errorf("blob post failed: %v", err)
 	}
-	// TODO: fall back on StatusAccepted to a PUT to the returned location
-	if status != http.StatusCreated && !flags["ExpectBadDigest"] {
-		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
+	if status == http.StatusAccepted {
+		// fallback to a PUT request, but track the unsupported API
+		var putOpts []apiDoOpt
+		if flags["ExpectBadDigest"] {
+			putOpts = append([]apiDoOpt{
+				apiExpectStatus(http.StatusBadRequest),
+			}, opts...)
+		} else {
+			putOpts = append([]apiDoOpt{
+				apiExpectStatus(http.StatusCreated),
+				apiExpectHeader("Location", ""),
+			}, opts...)
+		}
+		u, err = u.Parse(loc)
+		if err != nil {
+			return fmt.Errorf("blob post could not parse location header: %v", err)
+		}
+		qa := u.Query()
+		qa.Set("digest", dig.String())
+		u.RawQuery = qa.Encode()
+		err = a.Do(apiWithAnd(putOpts),
+			apiWithMethod("PUT"),
+			apiWithURL(u),
+			apiWithContentLength(int64(len(bodyBytes))),
+			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+			apiWithBody(bodyBytes),
+		)
+		if err != nil {
+			return fmt.Errorf("blob post failed: %v", err)
+		}
+		return fmt.Errorf("registry does not support content in the POST, fallback to PUT%.0w", ErrRegUnsupported)
 	}
 	return nil
 }
