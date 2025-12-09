@@ -668,6 +668,7 @@ func (a *api) ManifestHeadExists(registry, repo, ref string, dig digest.Digest, 
 }
 
 func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.manifests[dig]
 	if !ok {
 		return fmt.Errorf("ManifestPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
@@ -678,17 +679,29 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	}
 	mediaType := detectMediaType(bodyBytes)
 	resp := http.Response{}
+	if flags["ExpectBadDigest"] {
+		opts = append(opts,
+			apiExpectStatus(http.StatusBadRequest),
+		)
+	} else {
+		opts = append(opts,
+			apiExpectStatus(http.StatusCreated),
+			apiExpectHeader("Location", ""),
+		)
+	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PUT"),
 		apiWithURL(u),
 		apiWithBody(bodyBytes),
 		apiWithHeaderAdd("Content-Type", mediaType),
-		apiExpectStatus(http.StatusCreated),
-		apiExpectHeader("Location", ""),
 		apiReturnResponse(&resp),
 	)
 	if err != nil {
 		return fmt.Errorf("manifest put failed: %v", err)
+	}
+	// do not validate response if a failure was expected
+	if flags["ExpectBadDigest"] {
+		return nil
 	}
 	digHeader := resp.Header.Get("Docker-Content-Digest")
 	if digHeader == "" {
