@@ -26,10 +26,14 @@ const (
 )
 
 var (
-	errTestAPIError = errors.New("API test encountered an internal error")
-	errTestAPIFail  = errors.New("API test with a known failure")
-	errTestAPISkip  = errors.New("API test was skipped")
-	dataTests       = []string{}
+	errTestAPIError       = errors.New("API test encountered an internal error")
+	errTestAPIFail        = errors.New("API test with a known failure")
+	errTestAPISkip        = errors.New("API test was skipped")
+	dataTests             = []string{}
+	dataFailManifestTests = []struct {
+		tdName string
+		opts   []apiDoOpt
+	}{}
 )
 
 type runner struct {
@@ -403,6 +407,19 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
+	tdName = "bad-digest-image"
+	r.State.Data[tdName] = newTestData("Bad Digest Image")
+	r.State.DataStatus[tdName] = statusUnknown
+	dataFailManifestTests = append(dataFailManifestTests, struct {
+		tdName string
+		opts   []apiDoOpt
+	}{tdName: tdName, opts: []apiDoOpt{apiWithFlag("ExpectBadDigest")}})
+	dig, err := r.State.Data[tdName].genManifestFull()
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	// add some whitespace to make the digest mismatch
+	r.State.Data[tdName].manifests[dig] = append(r.State.Data[tdName].manifests[dig], []byte("  ")...)
 
 	// TODO: sha512 digest
 
@@ -612,6 +629,33 @@ func (r *runner) TestAll() error {
 				errs = append(errs, err)
 			}
 			return errors.Join(errs...)
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// other tests with expected failures to push the manifest
+	for _, failTest := range dataFailManifestTests {
+		tdName := failTest.tdName
+		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
+			errs := []error{}
+			for dig := range r.State.Data[tdName].blobs {
+				err := r.TestPushBlobAny(res, tdName, repo, dig)
+				if err != nil {
+					errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
+				}
+			}
+			for i, dig := range r.State.Data[tdName].manOrder {
+				err := r.TestPushManifestDigest(res, tdName, repo, dig, failTest.opts...)
+				if err != nil {
+					errs = append(errs, fmt.Errorf("failed to push manifest %d, digest %s%.0w", i, dig.String(), err))
+				}
+			}
+			if len(errs) > 0 {
+				return errors.Join(errs...)
+			}
+			return nil
 		})
 		if err != nil {
 			errs = append(errs, err)
@@ -1393,9 +1437,8 @@ func (r *runner) TestPushBlobPatchStream(parent *results, tdName string, repo st
 	})
 }
 
-func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
 	td := r.State.Data[tdName]
-	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
 	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
 	subj := detectSubject(td.manifests[dig])
@@ -1422,9 +1465,8 @@ func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo str
 	})
 }
 
-func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
+func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest, opts ...apiDoOpt) error {
 	td := r.State.Data[tdName]
-	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
 	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
 	subj := detectSubject(td.manifests[dig])
