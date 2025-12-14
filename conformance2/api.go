@@ -313,6 +313,66 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	lastByte := -1
 	// loop over the number of chunks
 	for lastByte < len(bodyBytes)-1 {
+		if flags["OutOfOrderChunks"] {
+			if loc == "" {
+				return fmt.Errorf("blob request did not return a location")
+			}
+			u, err = u.Parse(loc)
+			if err != nil {
+				return fmt.Errorf("blob request could not parse location header: %v", err)
+			}
+			// send an out of order chunk, skipping ahead or back to the beginning
+			badStart := lastByte + 1 + chunkSize
+			if badStart >= len(bodyBytes) {
+				badStart = 0
+			}
+			badLastByte := min(badStart+chunkSize-1, len(bodyBytes)-1)
+			method := "PATCH"
+			expStatus := []int{http.StatusRequestedRangeNotSatisfiable}
+			if flags["PutLastChunk"] && badLastByte == len(bodyBytes)-1 {
+				method = "PUT"
+				expStatus = append(expStatus, http.StatusBadRequest)
+				qa := u.Query()
+				qa.Set("digest", dig.String())
+				u.RawQuery = qa.Encode()
+			}
+			err = a.Do(apiWithAnd(opts),
+				apiWithMethod(method),
+				apiWithURL(u),
+				apiWithContentLength(int64(badLastByte-badStart+1)),
+				apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+				apiWithHeaderAdd("Content-Range", fmt.Sprintf("%d-%d", badStart, badLastByte)),
+				apiWithBody(bodyBytes[badStart:badLastByte+1]),
+				apiExpectStatus(expStatus...),
+				apiReturnHeader("Location", &loc),
+			)
+			if err != nil {
+				return fmt.Errorf("blob out of order chunk: %v", err)
+			}
+			// recover with a GET request to find the new location/range
+			rangeHeader := ""
+			err = a.Do(apiWithAnd(opts),
+				apiWithMethod("GET"),
+				apiWithURL(u),
+				apiExpectStatus(http.StatusNoContent),
+				apiReturnHeader("Location", &loc),
+				apiReturnHeader("Range", &rangeHeader),
+			)
+			if err != nil {
+				return fmt.Errorf("blob chunked upload get request: %v", err)
+			}
+			rangeHeader, found := strings.CutPrefix(rangeHeader, "0-")
+			if !found {
+				return fmt.Errorf("content-range header is missing the 0- prefix: %q", rangeHeader)
+			}
+			rangeLastByte, err := strconv.Atoi(rangeHeader)
+			if err != nil {
+				return fmt.Errorf("content-range header could not be parsed: %q", rangeHeader)
+			}
+			if lastByte >= 0 && rangeLastByte != lastByte {
+				return fmt.Errorf("content-range unexpected, received %q, expected \"0-%d\"", rangeHeader, lastByte)
+			}
+		}
 		if loc == "" {
 			return fmt.Errorf("blob request did not return a location")
 		}

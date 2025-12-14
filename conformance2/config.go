@@ -87,7 +87,7 @@ type configData struct {
 	ArtifactList     bool `conformance:"ARTIFACT_LIST" yaml:"artifactList"`        // index of artifacts
 	SubjectList      bool `conformance:"SUBJECT_LIST" yaml:"subjectList"`          // index with a subject
 	DataField        bool `conformance:"DATA_FIELD" yaml:"dataField"`              // data field in descriptor
-	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated in spec 1.1
+	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated in image-spec 1.1
 	CustomFields     bool `conformance:"CUSTOM_FIELDS" yaml:"customFields"`        // fields added beyond the OCI spec
 	EmptyBlob        bool `conformance:"EMPTY_BLOB" yaml:"emptyBlob"`              // a zero byte blob
 	Sha512           bool `conformance:"SHA512" yaml:"sha512"`                     // sha512 digest algorithm
