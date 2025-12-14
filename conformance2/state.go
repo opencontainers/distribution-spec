@@ -25,6 +25,7 @@ const (
 	stateAPITagList stateAPIType = iota
 	stateAPITagDelete
 	stateAPITagDeleteAtomic
+	stateAPIBlobCancel
 	stateAPIBlobPush // any blob push API
 	stateAPIBlobPostOnly
 	stateAPIBlobPostPut
@@ -60,6 +61,8 @@ func (a stateAPIType) String() string {
 		return "Tag delete"
 	case stateAPITagDeleteAtomic:
 		return "Tag delete atomic"
+	case stateAPIBlobCancel:
+		return "Blob upload cancel"
 	case stateAPIBlobPush:
 		return "Blob push"
 	case stateAPIBlobPostOnly:
@@ -125,6 +128,8 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPITagDelete
 	case "Tag delete atomic":
 		*a = stateAPITagDeleteAtomic
+	case "Blob upload cancel":
+		*a = stateAPIBlobCancel
 	case "Blob push":
 		*a = stateAPIBlobPush
 	case "Blob post only":

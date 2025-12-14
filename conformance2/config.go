@@ -63,6 +63,7 @@ type configBlobs struct {
 	Atomic         bool `config:"ATOMIC" yaml:"atomic"`
 	Delete         bool `config:"DELETE" yaml:"delete"`
 	MountAnonymous bool `config:"MOUNT_ANONYMOUS" yaml:"mountAnonymous"`
+	UploadCancel   bool `config:"UPLOAD_CANCEL" yaml:"uploadCancel"`
 }
 
 type configManifests struct {
@@ -151,6 +152,7 @@ func configLoad() (config, error) {
 				Atomic:         true,
 				Delete:         true,
 				MountAnonymous: true,
+				UploadCancel:   true,
 			},
 			Manifests: configManifests{
 				Atomic: true,
