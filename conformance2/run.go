@@ -684,7 +684,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 		if _, ok := blobAPIsTestedByAlgo[algo]; !ok {
 			blobAPIsTestedByAlgo[algo] = &[stateAPIMax]bool{}
 		}
-		blobAPITests := []string{"post only", "post+put", "chunked single", "stream", "mount", "mount anonymous", "mount missing"}
+		blobAPITests := []string{"post only", "post+put", "chunked single", "stream", "mount", "mount anonymous", "mount missing", "post cancel"}
 		for _, name := range blobAPITests {
 			dig, _, err := r.State.Data[tdName].genBlob(genWithBlobSize(512), genWithAlgo(algo))
 			if err != nil {
@@ -781,6 +781,12 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 					if err != nil {
 						errs = append(errs, err)
 					}
+				case "post cancel":
+					api = stateAPIBlobPostPut
+					err = r.TestPushBlobPostCancel(res, tdName, repo, dig)
+					if err != nil {
+						errs = append(errs, err)
+					}
 				case "mount":
 					api = stateAPIBlobMountSource
 					// first push to repo2
@@ -817,7 +823,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 				// track the used APIs so TestPushBlobAny doesn't rerun tests
 				blobAPIsTested[api] = true
 				blobAPIsTestedByAlgo[dig.Algorithm()][api] = true
-				if err == nil {
+				if err == nil && testName != "post cancel" {
 					// head request
 					err = r.TestHeadBlob(res, tdName, repo, dig)
 					if err != nil {
@@ -1397,6 +1403,22 @@ func (r *runner) TestPushBlobMountMissing(parent *results, tdName string, repo, 
 	})
 }
 
+func (r *runner) TestPushBlobPostCancel(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
+	return r.ChildRun("blob-post-cancel", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIBlobPush, stateAPIBlobCancel); err != nil {
+			r.TestSkip(res, err, tdName, stateAPIBlobPush, stateAPIBlobCancel)
+			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+		}
+		opts = append(opts, apiSaveOutput(res.Output))
+		if err := r.API.BlobPostCancel(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...); err != nil {
+			r.TestFail(res, err, tdName, stateAPIBlobPush, stateAPIBlobCancel)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, tdName, stateAPIBlobPush, stateAPIBlobCancel)
+		return nil
+	})
+}
+
 func (r *runner) TestPushBlobPostPut(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
 	return r.ChildRun("blob-post-put", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobPostPut); err != nil {
@@ -1651,53 +1673,61 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 			continue
 		}
 		// check the configuration disables the api
+		configDisabled := false
 		switch a {
 		case stateAPITagList:
 			if !r.Config.APIs.Tags.List {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPIManifestGetTag, stateAPIManifestGetDigest, stateAPIBlobGetFull, stateAPIBlobGetRange:
 			if !r.Config.APIs.Pull {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPIManifestPutTag, stateAPIManifestPutDigest, stateAPIManifestPutSubject,
 			stateAPIBlobPush, stateAPIBlobPostOnly, stateAPIBlobPostPut,
 			stateAPIBlobPatchChunked, stateAPIBlobPatchStream, stateAPIBlobMountSource:
 			if !r.Config.APIs.Push {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
+			}
+		case stateAPIBlobCancel:
+			if !r.Config.APIs.Blobs.UploadCancel {
+				configDisabled = true
 			}
 		case stateAPIBlobMountAnonymous:
 			if !r.Config.APIs.Push || !r.Config.APIs.Blobs.MountAnonymous {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPITagDelete:
 			if !r.Config.APIs.Tags.Delete {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPITagDeleteAtomic:
 			if !r.Config.APIs.Tags.Delete || !r.Config.APIs.Tags.Atomic {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPIManifestDelete:
 			if !r.Config.APIs.Manifests.Delete {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPIManifestDeleteAtomic:
 			if !r.Config.APIs.Manifests.Atomic {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPIBlobDelete:
 			if !r.Config.APIs.Blobs.Delete {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPIBlobDeleteAtomic:
 			if !r.Config.APIs.Blobs.Atomic {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
 		case stateAPIReferrers:
 			if !r.Config.APIs.Referrer {
-				errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
+				configDisabled = true
 			}
+		}
+		if configDisabled {
+			errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, ErrDisabled))
 		}
 		// do not check the [r.global.apiState] since tests may pass or fail based on different input data
 	}

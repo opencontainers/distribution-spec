@@ -515,6 +515,40 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	return nil
 }
 
+func (a *api) BlobPostCancel(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
+	if err != nil {
+		return err
+	}
+	loc := ""
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("POST"),
+		apiWithURL(u),
+		apiExpectStatus(http.StatusAccepted),
+		apiReturnHeader("Location", &loc),
+	)
+	if err != nil {
+		return fmt.Errorf("blob post failed: %v", err)
+	}
+	if loc == "" {
+		return fmt.Errorf("blob post did not return a location")
+	}
+	u, err = u.Parse(loc)
+	if err != nil {
+		return fmt.Errorf("blob post could not parse location header: %v", err)
+	}
+	err = a.Do(apiWithAnd(opts),
+		apiWithMethod("DELETE"),
+		apiWithURL(u),
+		apiWithContentLength(0),
+		apiExpectStatus(http.StatusNoContent),
+	)
+	if err != nil {
+		return fmt.Errorf("blob cancel failed: %v", err)
+	}
+	return nil
+}
+
 func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
