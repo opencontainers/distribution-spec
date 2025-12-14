@@ -692,7 +692,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 			}
 			digests[name] = dig
 		}
-		blobAPITests = append(blobAPITests, "chunked multi", "chunked multi and put chunk")
+		blobAPITests = append(blobAPITests, "chunked multi", "chunked multi and put chunk", "chunked out-of-order", "chunked out-of-order and put chunk")
 		minChunkSize := int64(chunkMin)
 		minHeader := ""
 		for _, testName := range blobAPITests {
@@ -748,6 +748,30 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 					}
 					digests[testName] = dig
 					err = r.TestPushBlobPatchChunked(res, tdName, repo, dig, apiWithFlag("PutLastChunk"))
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "chunked out-of-order":
+					api = stateAPIBlobPatchChunked
+					// generate a blob large enough to span three chunks
+					dig, _, err = r.State.Data[tdName].genBlob(genWithBlobSize(minChunkSize*3-5), genWithAlgo(algo))
+					if err != nil {
+						return fmt.Errorf("failed to generate chunked blob of size %d: %w", minChunkSize*3-5, err)
+					}
+					digests[testName] = dig
+					err = r.TestPushBlobPatchChunked(res, tdName, repo, dig, apiWithFlag("OutOfOrderChunks"))
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "chunked out-of-order and put chunk":
+					api = stateAPIBlobPatchChunked
+					// generate a blob large enough to span three chunks
+					dig, _, err = r.State.Data[tdName].genBlob(genWithBlobSize(minChunkSize*3-5), genWithAlgo(algo))
+					if err != nil {
+						return fmt.Errorf("failed to generate chunked blob of size %d: %w", minChunkSize*3-5, err)
+					}
+					digests[testName] = dig
+					err = r.TestPushBlobPatchChunked(res, tdName, repo, dig, apiWithFlag("PutLastChunk"), apiWithFlag("OutOfOrderChunks"))
 					if err != nil {
 						errs = append(errs, err)
 					}
