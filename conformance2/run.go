@@ -1486,13 +1486,9 @@ func (r *runner) TestPushBlobPatchStream(parent *results, tdName string, repo st
 func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
 	td := r.State.Data[tdName]
 	apis := []stateAPIType{}
-	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
 	subj := detectSubject(td.manifests[dig])
 	if subj != nil {
 		apis = append(apis, stateAPIManifestPutSubject)
-		if r.Config.APIs.Referrer {
-			opts = append(opts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
-		}
 	}
 	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
@@ -1502,7 +1498,7 @@ func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo str
 		}
 		apis = append(apis, stateAPIManifestPutDigest)
 		opts = append(opts, apiSaveOutput(res.Output))
-		if err := r.API.ManifestPut(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
+		if err := r.API.ManifestPut(r.Config.schemeReg, repo, dig.String(), dig, td, r.Config.APIs.Referrer, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
@@ -1514,13 +1510,9 @@ func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo str
 func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest, opts ...apiDoOpt) error {
 	td := r.State.Data[tdName]
 	apis := []stateAPIType{}
-	// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
 	subj := detectSubject(td.manifests[dig])
 	if subj != nil {
 		apis = append(apis, stateAPIManifestPutSubject)
-		if r.Config.APIs.Referrer {
-			opts = append(opts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
-		}
 	}
 	return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestPutTag); err != nil {
@@ -1530,7 +1522,7 @@ func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string
 		}
 		apis = append(apis, stateAPIManifestPutTag)
 		opts = append(opts, apiSaveOutput(res.Output))
-		if err := r.API.ManifestPut(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
+		if err := r.API.ManifestPut(r.Config.schemeReg, repo, tag, dig, td, r.Config.APIs.Referrer, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
 		}
