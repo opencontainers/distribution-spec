@@ -36,6 +36,7 @@ export OCI_API_PUSH=true # to disable push requests, see the OCI_RO_DATA variabl
 export OCI_API_BLOBS_ATOMIC=true # whether blob delete operations should be immediate
 export OCI_API_BLOBS_DELETE=true
 export OCI_API_BLOBS_MOUNT_ANONYMOUS=true # attempt to mount a blob without a source repository
+export OCI_API_BLOBS_UPLOAD_CANCEL=false # cancel a running upload
 export OCI_API_MANIFESTS_ATOMIC=true # whether manifest delete operations should be immediate
 export OCI_API_MANIFESTS_DELETE=true
 export OCI_API_TAGS_ATOMIC=true # whether tag delete operations should be immediate
@@ -47,7 +48,7 @@ export OCI_API_REFERRER=true
 export OCI_DATA_IMAGE=true # note, this must be left enabled for any tests to run
 export OCI_DATA_INDEX=true
 export OCI_DATA_INDEX_LIST=true # an index containing a nested index
-export OCI_DATA_SPARSE=false # an index containing references to manifests that have not been pushed
+export OCI_DATA_SPARSE=false # manifest where some descriptors have not been pushed
 export OCI_DATA_ARTIFACT=true # an OCI artifact packaged as an image with an artifactType
 export OCI_DATA_SUBJECT=true # an OCI image with the subject field defined
 export OCI_DATA_SUBJECT_MISSING=true # pushes content with a subject referencing a non-existent digest
@@ -91,6 +92,7 @@ apis:
     atomic: true
     delete: true
     mountAnonymous: false
+    uploadCancel: false
   manifests:
     atomic: true
     delete: true
