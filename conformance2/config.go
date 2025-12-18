@@ -81,7 +81,7 @@ type configData struct {
 	Image            bool `conformance:"IMAGE" yaml:"image"`                       // standard OCI image
 	Index            bool `conformance:"INDEX" yaml:"index"`                       // multi-platform manifest
 	IndexList        bool `conformance:"INDEX_LIST" yaml:"indexList"`              // nested index
-	Sparse           bool `conformance:"SPARSE" yaml:"sparse"`                     // TODO: multi-platform manifest with missing entries
+	Sparse           bool `conformance:"SPARSE" yaml:"sparse"`                     // manifest where some descriptors have not been pushed
 	Artifact         bool `conformance:"ARTIFACT" yaml:"artifact"`                 // OCI artifact
 	Subject          bool `conformance:"SUBJECT" yaml:"subject"`                   // artifact with the subject defined
 	SubjectMissing   bool `conformance:"SUBJECT_MISSING" yaml:"subjectMissing"`    // artifact with a missing subject
@@ -152,7 +152,7 @@ func configLoad() (config, error) {
 				Atomic:         true,
 				Delete:         true,
 				MountAnonymous: true,
-				UploadCancel:   true,
+				UploadCancel:   false,
 			},
 			Manifests: configManifests{
 				Atomic: true,
@@ -183,6 +183,9 @@ func configLoad() (config, error) {
 		},
 	}
 	switch configVersion {
+	case "1.1+dev":
+		c.APIs.Blobs.UploadCancel = true
+		c.Version = "1.1+dev"
 	case "", "1.1":
 		c.Version = "1.1"
 	case "1.0":

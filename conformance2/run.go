@@ -407,6 +407,61 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
+	// sparse manifests missing layers/platforms
+	if r.Config.Data.Sparse {
+		tdName = "sparse"
+		r.State.Data[tdName] = newTestData("Sparse Manifests")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err := r.State.Data[tdName].genManifestFull(
+			genWithTag("sparse-image"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		for dig := range r.State.Data[tdName].blobs {
+			if strings.HasPrefix(r.State.Data[tdName].desc[dig].MediaType, "application/vnd.oci.image.layer") {
+				// remove the first layer we find
+				delete(r.State.Data[tdName].desc, dig)
+				delete(r.State.Data[tdName].blobs, dig)
+				break
+			}
+		}
+		// for the index, make an image and a random digest/descriptor, add both to an index
+		imagePlat := image.Platform{
+			OS:           "linux",
+			Architecture: "amd64",
+		}
+		imageDig, err := r.State.Data[tdName].genManifestFull(
+			genWithPlatform(imagePlat),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		randPlat := image.Platform{
+			OS:           "linux",
+			Architecture: "arm64",
+		}
+		b := make([]byte, 1024)
+		_, err = rand.Read(b)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		randDig := digest.Canonical.FromBytes(b)
+		r.State.Data[tdName].desc[randDig] = &image.Descriptor{
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Digest:    randDig,
+			Size:      1024,
+		}
+		_, _, err = r.State.Data[tdName].genIndex(
+			[]*image.Platform{&imagePlat, &randPlat},
+			[]digest.Digest{imageDig, randDig},
+			genWithTag("sparse-index"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
 	tdName = "bad-digest-image"
 	r.State.Data[tdName] = newTestData("Bad Digest Image")
 	r.State.DataStatus[tdName] = statusUnknown
