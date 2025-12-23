@@ -717,6 +717,12 @@ func (r *runner) TestAll() error {
 		}
 	}
 
+	// various manifest error conditions
+	err = r.TestManifestErrors(r.Results, repo)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	r.Results.Stop = time.Now()
 
 	if len(errs) > 0 {
@@ -1233,6 +1239,72 @@ func (r *runner) TestList(parent *results, tdName string, repo string) error {
 		r.TestPass(res, tdName, stateAPITagList)
 		return nil
 	})
+}
+
+func (r *runner) TestManifestErrors(parent *results, repo string) error {
+	errs := []error{}
+	err := r.ChildRun("invalid-digest-format", parent, func(r *runner, res *results) error {
+		errs := []error{}
+		tdName := "invalid-manifest-digest"
+		r.State.Data[tdName] = newTestData("invalid manifest digest")
+		manDig, err := r.State.Data[tdName].genManifestFull(genWithLayerCount(1))
+		if err != nil {
+			return err
+		}
+		for dig := range r.State.Data[tdName].blobs {
+			err := r.TestPushBlobAny(res, tdName, repo, dig)
+			if err != nil {
+				errs = append(errs, err)
+			}
+		}
+		// push digest "sha256:baddigeststring"
+		err = r.ChildRun("manifest-put", res, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
+				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+				r.TestSkip(res, err, tdName, stateAPIManifestPutDigest)
+				return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+			}
+			if err := r.API.ManifestPut(r.Config.schemeReg, repo, "sha256:baddigeststring", manDig, r.State.Data[tdName], r.Config.APIs.Referrer,
+				apiWithFlag("ExpectBadDigest"), apiSaveOutput(res.Output)); err != nil {
+				r.TestFail(res, err, tdName, stateAPIManifestPutDigest)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+			}
+			r.TestPass(res, tdName, stateAPIManifestPutDigest)
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+		// pull digest "sha256:baddigeststring"
+		err = r.ChildRun("manifest-get", res, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestGetDigest); err != nil {
+				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+				r.TestSkip(res, err, tdName, stateAPIManifestGetDigest)
+				return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+			}
+			if err := r.API.ManifestGetReq(r.Config.schemeReg, repo, "sha256:baddigeststring", manDig, r.State.Data[tdName],
+				apiExpectStatus(http.StatusNotFound, http.StatusBadRequest), apiSaveOutput(res.Output)); err != nil {
+				r.TestFail(res, err, tdName, stateAPIManifestGetDigest)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+			}
+			r.TestPass(res, tdName, stateAPIManifestGetDigest)
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+		// cleanup
+		err = r.TestDelete(res, tdName, repo)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		return errors.Join(errs...)
+	})
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (r *runner) TestPull(parent *results, tdName string, repo string) error {
