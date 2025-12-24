@@ -753,6 +753,22 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 			}
 			digests[name] = dig
 		}
+		// try pulling a blob that has not been pushed
+		err := r.ChildRun("get-missing", res, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIBlobGetFull); err != nil {
+				r.TestSkip(res, err, tdName, stateAPIBlobGetFull)
+				return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+			}
+			if err := r.API.BlobGetReq(r.Config.schemeReg, repo, digests["post cancel"], r.State.Data[tdName], apiExpectStatus(http.StatusNotFound), apiSaveOutput(res.Output)); err != nil {
+				r.TestFail(res, err, tdName, stateAPIBlobGetFull)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+			}
+			r.TestPass(res, tdName, stateAPIBlobGetFull)
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
 		blobAPITests = append(blobAPITests, "chunked multi", "chunked multi and put chunk", "chunked out-of-order", "chunked out-of-order and put chunk")
 		minChunkSize := int64(chunkMin)
 		minHeader := ""
