@@ -1243,7 +1243,54 @@ func (r *runner) TestList(parent *results, tdName string, repo string) error {
 
 func (r *runner) TestManifestErrors(parent *results, repo string) error {
 	errs := []error{}
-	err := r.ChildRun("invalid-digest-format", parent, func(r *runner, res *results) error {
+	err := r.ChildRun("missing-manifest", parent, func(r *runner, res *results) error {
+		errs := []error{}
+		err := r.ChildRun("by-digest", res, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestGetDigest); err != nil {
+				r.TestSkip(res, err, "", stateAPIManifestGetDigest)
+				return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+			}
+			b := make([]byte, 1024)
+			_, err := rand.Read(b)
+			if err != nil {
+				return err
+			}
+			dig := digest.Canonical.FromBytes(b)
+			if err := r.API.ManifestGetReq(r.Config.schemeReg, repo, dig.String(), dig, nil,
+				apiExpectStatus(http.StatusNotFound), apiSaveOutput(res.Output)); err != nil {
+				r.TestFail(res, err, "", stateAPIManifestGetDigest)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+			}
+			r.TestPass(res, "", stateAPIManifestGetDigest)
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+		err = r.ChildRun("by-tag", res, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIManifestGetTag); err != nil {
+				r.TestSkip(res, err, "", stateAPIManifestGetTag)
+				return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+			}
+			rnd := rand.Text()
+			tag := fmt.Sprintf("missing-%.20s", strings.ToLower(rnd))
+			if err := r.API.ManifestGetReq(r.Config.schemeReg, repo, tag, digest.Digest(""), nil,
+				apiExpectStatus(http.StatusNotFound), apiSaveOutput(res.Output)); err != nil {
+				r.TestFail(res, err, "", stateAPIManifestGetTag)
+				return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+			}
+			r.TestPass(res, "", stateAPIManifestGetTag)
+			return nil
+		})
+		if err != nil {
+			errs = append(errs, err)
+		}
+		return errors.Join(errs...)
+	})
+	if err != nil {
+		errs = append(errs, err)
+	}
+	err = r.ChildRun("invalid-digest-format", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		tdName := "invalid-manifest-digest"
 		r.State.Data[tdName] = newTestData("invalid manifest digest")
