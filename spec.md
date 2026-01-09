@@ -426,6 +426,23 @@ The following chunk upload SHOULD use the `<location>` provided in the response.
 
 The `<end-of-range>` value is the position of the last uploaded byte of the blob.
 
+##### Cancel a blob upload
+
+During a blob upload, the session may be canceled with a `DELETE` request:
+
+URL path: `<location>` <sup>[end-14](#endpoints)</sup>
+```
+Content-Length: 0
+```
+
+The `<location>` refers to the URL obtained from the preceding `POST` or `PATCH` request.
+
+If successful, the response SHOULD be a `204 No Content` response code.
+
+Clients SHOULD send this request when aborting a blob upload, releasing server resources.
+Clients SHOULD ignore any failures.
+If this request fails or is not called, the server SHOULD eventually timeout unfinished uploads.
+
 ##### Mounting a blob from another repository
 
 If a necessary blob exists already in another repository within the same registry, it can be mounted into a different repository via a `POST`
@@ -805,6 +822,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                                | `200`       | `404`/`400`       |
 | end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
 | end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
+| end-14  | `DELETE`       | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`/`400`       |
 
 #### Error Codes
 
