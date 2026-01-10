@@ -275,7 +275,7 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 		apiWithMethod("PUT"),
 		apiWithURL(u),
 		apiWithContentLength(int64(len(bodyBytes))),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithHeaderAdd("Content-Type", mtOctetStream),
 		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusCreated),
 		apiReturnHeader("Location", &loc),
@@ -374,7 +374,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 				apiWithMethod(method),
 				apiWithURL(u),
 				apiWithContentLength(int64(badLastByte-badStart+1)),
-				apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+				apiWithHeaderAdd("Content-Type", mtOctetStream),
 				apiWithHeaderAdd("Content-Range", fmt.Sprintf("%d-%d", badStart, badLastByte)),
 				apiWithBody(bodyBytes[badStart:badLastByte+1]),
 				apiExpectStatus(expStatus...),
@@ -444,7 +444,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 		err = a.Do(apiWithAnd(chunkOpts),
 			apiWithURL(u),
 			apiWithContentLength(int64(lastByte-start+1)),
-			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+			apiWithHeaderAdd("Content-Type", mtOctetStream),
 			apiWithHeaderAdd("Content-Range", fmt.Sprintf("%d-%d", start, lastByte)),
 			apiWithBody(bodyBytes[start:lastByte+1]),
 		)
@@ -478,7 +478,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 			apiWithMethod("PUT"),
 			apiWithURL(u),
 			apiWithContentLength(0),
-			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+			apiWithHeaderAdd("Content-Type", mtOctetStream),
 		)
 		if err != nil {
 			return fmt.Errorf("blob put failed: %w", err)
@@ -539,7 +539,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("PATCH"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithHeaderAdd("Content-Type", mtOctetStream),
 		apiWithBody(bodyBytes),
 		apiExpectStatus(http.StatusAccepted),
 		apiReturnHeader("Location", &loc),
@@ -572,7 +572,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 		apiWithMethod("PUT"),
 		apiWithURL(u),
 		apiWithContentLength(0),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithHeaderAdd("Content-Type", mtOctetStream),
 		apiReturnHeader("Location", &loc),
 	)
 	if err != nil {
@@ -665,7 +665,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 		apiWithMethod("POST"),
 		apiWithURL(u),
 		apiWithContentLength(int64(len(bodyBytes))),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithHeaderAdd("Content-Type", mtOctetStream),
 		apiWithBody(bodyBytes),
 		apiReturnStatus(&status),
 		apiReturnHeader("Location", &loc),
@@ -697,7 +697,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 			apiWithMethod("PUT"),
 			apiWithURL(u),
 			apiWithContentLength(int64(len(bodyBytes))),
-			apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+			apiWithHeaderAdd("Content-Type", mtOctetStream),
 			apiWithBody(bodyBytes),
 		)
 		if err != nil {
@@ -773,7 +773,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 		apiWithMethod("PUT"),
 		apiWithURL(u),
 		apiWithContentLength(int64(len(bodyBytes))),
-		apiWithHeaderAdd("Content-Type", "application/octet-stream"),
+		apiWithHeaderAdd("Content-Type", mtOctetStream),
 		apiWithBody(bodyBytes),
 	)
 	if err != nil {
@@ -831,8 +831,8 @@ func (a *api) ManifestGetReq(registry, repo, ref string, dig digest.Digest, td *
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("GET"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
+		apiWithHeaderAdd("Accept", mtOCIIndex),
+		apiWithHeaderAdd("Accept", mtOCIImage),
 	)
 	if err != nil {
 		return fmt.Errorf("manifest get failed: %w", err)
@@ -863,8 +863,8 @@ func (a *api) ManifestHeadReq(registry, repo, ref string, dig digest.Digest, td 
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("HEAD"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
+		apiWithHeaderAdd("Accept", mtOCIIndex),
+		apiWithHeaderAdd("Accept", mtOCIImage),
 	)
 	if err != nil {
 		return fmt.Errorf("manifest head failed: %w", err)
@@ -950,8 +950,8 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	err = a.Do(apiWithAnd(opts),
 		apiWithMethod("GET"),
 		apiWithURL(u),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.index.v1+json"),
-		apiWithHeaderAdd("Accept", "application/vnd.oci.image.manifest.v1+json"),
+		apiWithHeaderAdd("Accept", mtOCIIndex),
+		apiWithHeaderAdd("Accept", mtOCIImage),
 		apiExpectStatus(http.StatusOK),
 		apiExpectHeader("Content-Type", mediaType),
 		apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
@@ -971,12 +971,12 @@ func (a *api) ReferrersList(registry, repo string, dig digest.Digest, opts ...ap
 	}
 	err = a.Do(apiWithAnd(opts),
 		apiWithURL(u),
-		apiExpectHeader("Content-Type", "application/vnd.oci.image.index.v1+json"),
+		apiExpectHeader("Content-Type", mtOCIIndex),
 		apiExpectStatus(http.StatusOK),
 		apiReturnJSONBody(&rl),
 	)
 	// validate the response
-	if err == nil && (rl.MediaType != "application/vnd.oci.image.index.v1+json" || rl.SchemaVersion != 2) {
+	if err == nil && (rl.MediaType != mtOCIIndex || rl.SchemaVersion != 2) {
 		err = fmt.Errorf("referrers response is not a valid OCI index (media type and schema version)%.0w", errAPITestFail)
 	}
 	return rl, err
@@ -1355,7 +1355,7 @@ type detectManifest struct {
 
 func detectMediaType(body []byte) string {
 	det := detectManifest{
-		MediaType: "application/vnd.oci.image.manifest.v1+json",
+		MediaType: mtOCIImage,
 	}
 	_ = json.Unmarshal(body, &det)
 	return det.MediaType

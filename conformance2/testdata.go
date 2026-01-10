@@ -19,6 +19,20 @@ import (
 	image "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+const (
+	mtExampleConf  = "application/vnd.example.oci.conformance"
+	mtOctetStream  = "application/octet-stream"
+	mtOCIConfig    = "application/vnd.oci.image.config.v1+json"
+	mtOCIImage     = "application/vnd.oci.image.manifest.v1+json"
+	mtOCIIndex     = "application/vnd.oci.image.index.v1+json"
+	mtOCILayer     = "application/vnd.oci.image.layer.v1.tar"
+	mtOCILayerPre  = "application/vnd.oci.image.layer.v1."
+	mtOCILayerGz   = "application/vnd.oci.image.layer.v1.tar+gzip"
+	mtOCILayerNd   = "application/vnd.oci.image.layer.nondistributable.v1.tar"
+	mtOCILayerNdGz = "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip"
+	mtOCIEmptyJSON = "application/vnd.oci.empty.v1+json"
+)
+
 type testData struct {
 	name      string // name of data set for logs
 	tags      map[string]digest.Digest
@@ -180,7 +194,7 @@ func genWithTag(tag string) genOpt {
 func (td *testData) addBlob(b []byte, opts ...genOpt) (digest.Digest, error) {
 	gOpt := genOptS{
 		algo:                digest.Canonical,
-		descriptorMediaType: "application/octet-stream",
+		descriptorMediaType: mtOctetStream,
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -233,10 +247,10 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 	switch gOpt.comp {
 	case genCompGzip:
 		wUncomp = gzip.NewWriter(bufComp)
-		mt = "application/vnd.oci.image.layer.v1.tar+gzip"
+		mt = mtOCILayerGz
 	case genCompUncomp:
 		wUncomp = bufComp
-		mt = "application/vnd.oci.image.layer.v1.tar"
+		mt = mtOCILayer
 	}
 	wTar := tar.NewWriter(wUncomp)
 	bigRandNum, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
@@ -281,7 +295,7 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 		td.desc[digComp].Data = bodyComp
 	}
 	td.desc[digUncomp] = &image.Descriptor{
-		MediaType: "application/vnd.oci.image.layer.v1.tar",
+		MediaType: mtOCILayer,
 		Digest:    digUncomp,
 		Size:      int64(len(bodyUncomp)),
 	}
@@ -295,7 +309,7 @@ func (td *testData) genLayer(fileNum int, opts ...genOpt) (digest.Digest, digest
 func (td *testData) genConfig(p image.Platform, layers []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
 	gOpt := genOptS{
 		algo:            digest.Canonical,
-		configMediaType: "application/vnd.oci.image.config.v1+json",
+		configMediaType: mtOCIConfig,
 	}
 	for _, opt := range opts {
 		opt(&gOpt)
@@ -339,7 +353,7 @@ func (td *testData) genManifest(conf image.Descriptor, layers []image.Descriptor
 	for _, opt := range opts {
 		opt(&gOpt)
 	}
-	mt := "application/vnd.oci.image.manifest.v1+json"
+	mt := mtOCIImage
 	m := image.Manifest{
 		Versioned:    specs.Versioned{SchemaVersion: 2},
 		MediaType:    mt,
@@ -409,7 +423,7 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 	digCList := []digest.Digest{}
 	digUCList := []digest.Digest{}
 	for l := range gOpt.layerCount {
-		if gOpt.layerMediaType == "" || strings.HasPrefix(gOpt.layerMediaType, "application/vnd.oci.image.layer.v1") {
+		if gOpt.layerMediaType == "" || strings.HasPrefix(gOpt.layerMediaType, mtOCILayerPre) {
 			// image
 			digC, digUC, _, err := td.genLayer(l, opts...)
 			if err != nil {
@@ -432,7 +446,7 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 		}
 	}
 	cDig := digest.Digest("")
-	if gOpt.configMediaType == "" || gOpt.configMediaType == "application/vnd.oci.image.config.v1+json" {
+	if gOpt.configMediaType == "" || gOpt.configMediaType == mtOCIConfig {
 		// image config
 		dig, _, err := td.genConfig(gOpt.platform, digUCList, opts...)
 		if err != nil {
@@ -464,7 +478,7 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 
 // genIndex returns an index manifest with the specified layers and platforms.
 func (td *testData) genIndex(platforms []*image.Platform, manifests []digest.Digest, opts ...genOpt) (digest.Digest, []byte, error) {
-	mt := "application/vnd.oci.image.index.v1+json"
+	mt := mtOCIIndex
 	gOpt := genOptS{
 		algo: digest.Canonical,
 	}
