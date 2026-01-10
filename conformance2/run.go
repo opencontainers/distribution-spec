@@ -1123,10 +1123,29 @@ func (r *runner) TestEmpty(parent *results, repo string) error {
 		if err := r.TestEmptyTagList(res, repo); err != nil {
 			errs = append(errs, err)
 		}
-		// TODO: test referrers response on unknown digest
+		if err := r.TestEmptyReferrers(res, repo); err != nil {
+			errs = append(errs, err)
+		}
 		if len(errs) > 0 {
 			return errors.Join(errs...)
 		}
+		return nil
+	})
+}
+
+func (r *runner) TestEmptyReferrers(parent *results, repo string) error {
+	return r.ChildRun("referrers", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIReferrers); err != nil {
+			r.TestSkip(res, err, "", stateAPIReferrers)
+			return fmt.Errorf("%.0w%w", errTestAPISkip, err)
+		}
+		subj := digest.Canonical.FromString(rand.Text())
+		_, err := r.API.ReferrersList(r.Config.schemeReg, repo, subj, apiSaveOutput(res.Output))
+		if err != nil {
+			r.TestFail(res, err, "", stateAPIReferrers)
+			return fmt.Errorf("%.0w%w", errTestAPIFail, err)
+		}
+		r.TestPass(res, "", stateAPIReferrers)
 		return nil
 	})
 }
