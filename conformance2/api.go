@@ -155,7 +155,7 @@ func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData,
 		return fmt.Errorf("blob delete failed: %w", err)
 	}
 	if status == http.StatusMethodNotAllowed {
-		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
+		return fmt.Errorf("registry returned status %d%.0w", status, errRegUnsupported)
 	}
 	return nil
 }
@@ -214,7 +214,7 @@ func (a *api) BlobHeadExists(registry, repo string, dig digest.Digest, td *testD
 func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPostPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
+		return fmt.Errorf("BlobPostPut missing expected digest to send: %s%.0w", dig.String(), errAPITestError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -300,14 +300,14 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 	if err != nil {
 		return fmt.Errorf("failed to verify returned location: %w", err)
 	}
-	return fmt.Errorf("registry returned status %d, fell back to blob POST+PUT%.0w", status, ErrRegUnsupported)
+	return fmt.Errorf("registry returned status %d, fell back to blob POST+PUT%.0w", status, errRegUnsupported)
 }
 
 func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPatchChunked missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
+		return fmt.Errorf("BlobPatchChunked missing expected digest to send: %s%.0w", dig.String(), errAPITestError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -511,7 +511,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPatchStream missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
+		return fmt.Errorf("BlobPatchStream missing expected digest to send: %s%.0w", dig.String(), errAPITestError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -639,7 +639,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
+		return fmt.Errorf("BlobPostOnly missing expected digest to send: %s%.0w", dig.String(), errAPITestError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -703,7 +703,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 		if err != nil {
 			return fmt.Errorf("blob post failed: %w", err)
 		}
-		return fmt.Errorf("registry does not support content in the POST, fallback to PUT%.0w", ErrRegUnsupported)
+		return fmt.Errorf("registry does not support content in the POST, fallback to PUT%.0w", errRegUnsupported)
 	}
 	if flags["ExpectBadDigest"] {
 		return nil
@@ -732,7 +732,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.blobs[dig]
 	if !ok {
-		return fmt.Errorf("BlobPostPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
+		return fmt.Errorf("BlobPostPut missing expected digest to send: %s%.0w", dig.String(), errAPITestError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/uploads/")
 	if err != nil {
@@ -818,7 +818,7 @@ func (a *api) ManifestDelete(registry, repo, ref string, dig digest.Digest, td *
 		return fmt.Errorf("manifest delete failed: %w", err)
 	}
 	if status == http.StatusBadRequest || status == http.StatusMethodNotAllowed {
-		return fmt.Errorf("registry returned status %d%.0w", status, ErrRegUnsupported)
+		return fmt.Errorf("registry returned status %d%.0w", status, errRegUnsupported)
 	}
 	return nil
 }
@@ -891,7 +891,7 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.manifests[dig]
 	if !ok {
-		return fmt.Errorf("ManifestPut missing expected digest to send: %s%.0w", dig.String(), errTestAPIError)
+		return fmt.Errorf("ManifestPut missing expected digest to send: %s%.0w", dig.String(), errAPITestError)
 	}
 	u, err := url.Parse(registry + "/v2/" + repo + "/manifests/" + ref)
 	if err != nil {
@@ -977,7 +977,7 @@ func (a *api) ReferrersList(registry, repo string, dig digest.Digest, opts ...ap
 	)
 	// validate the response
 	if err == nil && (rl.MediaType != "application/vnd.oci.image.index.v1+json" || rl.SchemaVersion != 2) {
-		err = fmt.Errorf("referrers response is not a valid OCI index (media type and schema version)%.0w", errTestAPIFail)
+		err = fmt.Errorf("referrers response is not a valid OCI index (media type and schema version)%.0w", errAPITestFail)
 	}
 	return rl, err
 }
