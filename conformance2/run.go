@@ -186,11 +186,11 @@ func (r *runner) GenerateData() error {
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genManifestFull(
 			genWithTag("artifact"),
-			genWithArtifactType("application/vnd.example.oci.conformance"),
-			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithArtifactType(mtExampleConf),
+			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithLayerMediaType(mtExampleConf),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
@@ -208,11 +208,11 @@ func (r *runner) GenerateData() error {
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
-			genWithArtifactType("application/vnd.example.oci.conformance"),
-			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithArtifactType(mtExampleConf),
+			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithLayerMediaType(mtExampleConf),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
@@ -238,15 +238,15 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 		_, err = r.State.Data[tdName].genManifestFull(
-			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithArtifactType(mtExampleConf),
 			genWithAnnotations(map[string]string{
 				"org.opencontainers.conformance": "hello conformance test",
 			}),
 			genWithAnnotationUniq(),
-			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithLayerMediaType(mtExampleConf),
 			genWithSubject(subjDesc),
 			genWithTag("tagged-artifact"),
 		)
@@ -268,15 +268,15 @@ func (r *runner) GenerateData() error {
 		}
 		subjDesc := *r.State.Data[tdName].desc[subjDig]
 		_, err = r.State.Data[tdName].genIndexFull(
-			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithArtifactType(mtExampleConf),
 			genWithAnnotations(map[string]string{
 				"org.opencontainers.conformance": "hello conformance test",
 			}),
 			genWithAnnotationUniq(),
-			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithLayerMediaType(mtExampleConf),
 			genWithSubject(subjDesc),
 			genWithTag("tagged-artifact"),
 		)
@@ -291,20 +291,20 @@ func (r *runner) GenerateData() error {
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		subjDesc := image.Descriptor{
-			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			MediaType: mtOCIImage,
 			Size:      123,
 			Digest:    digest.FromString("missing content"),
 		}
 		_, err = r.State.Data[tdName].genManifestFull(
-			genWithArtifactType("application/vnd.example.oci.conformance"),
+			genWithArtifactType(mtExampleConf),
 			genWithAnnotations(map[string]string{
 				"org.opencontainers.conformance": "hello conformance test",
 			}),
 			genWithAnnotationUniq(),
-			genWithConfigMediaType("application/vnd.oci.empty.v1+json"),
+			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType("application/vnd.example.oci.conformance"),
+			genWithLayerMediaType(mtExampleConf),
 			genWithSubject(subjDesc),
 			genWithTag("tagged-artifact"),
 		)
@@ -348,7 +348,7 @@ func (r *runner) GenerateData() error {
 		}
 		dig := digest.Canonical.FromBytes(b)
 		layers[0] = image.Descriptor{
-			MediaType: "application/vnd.oci.image.layer.nondistributable.v1.tar+gzip",
+			MediaType: mtOCILayerNdGz,
 			Digest:    dig,
 			Size:      123456,
 			URLs:      []string{"https://store.example.com/blobs/sha256/" + dig.Encoded()},
@@ -361,7 +361,7 @@ func (r *runner) GenerateData() error {
 		dig = digest.Canonical.FromBytes(b)
 		confDig[1] = dig
 		layers[1] = image.Descriptor{
-			MediaType: "application/vnd.oci.image.layer.nondistributable.v1.tar",
+			MediaType: mtOCILayerNd,
 			Digest:    dig,
 			Size:      12345,
 			URLs:      []string{"https://store.example.com/blobs/sha256/" + dig.Encoded()},
@@ -417,7 +417,7 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 		for dig := range r.State.Data[tdName].blobs {
-			if strings.HasPrefix(r.State.Data[tdName].desc[dig].MediaType, "application/vnd.oci.image.layer") {
+			if strings.HasPrefix(r.State.Data[tdName].desc[dig].MediaType, mtOCILayerPre) {
 				// remove the first layer we find
 				delete(r.State.Data[tdName].desc, dig)
 				delete(r.State.Data[tdName].blobs, dig)
@@ -446,7 +446,7 @@ func (r *runner) GenerateData() error {
 		}
 		randDig := digest.Canonical.FromBytes(b)
 		r.State.Data[tdName].desc[randDig] = &image.Descriptor{
-			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			MediaType: mtOCIImage,
 			Digest:    randDig,
 			Size:      1024,
 		}
