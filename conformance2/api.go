@@ -975,6 +975,10 @@ func (a *api) ReferrersList(registry, repo string, dig digest.Digest, opts ...ap
 		apiExpectStatus(http.StatusOK),
 		apiReturnJSONBody(&rl),
 	)
+	// validate the response
+	if err == nil && (rl.MediaType != "application/vnd.oci.image.index.v1+json" || rl.SchemaVersion != 2) {
+		err = fmt.Errorf("referrers response is not a valid OCI index (media type and schema version)%.0w", errTestAPIFail)
+	}
 	return rl, err
 }
 
