@@ -738,7 +738,6 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 		r.State.Data[tdName] = newTestData(tdDesc)
 		r.State.DataStatus[tdName] = statusUnknown
 		digests := map[string]digest.Digest{}
-		// test the various blob push APIs
 		if _, ok := blobAPIsTestedByAlgo[algo]; !ok {
 			blobAPIsTestedByAlgo[algo] = &[stateAPIMax]bool{}
 		}
@@ -769,6 +768,7 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 		blobAPITests = append(blobAPITests, "chunked multi", "chunked multi and put chunk", "chunked out-of-order", "chunked out-of-order and put chunk")
 		minChunkSize := int64(chunkMin)
 		minHeader := ""
+		// test the various blob push APIs
 		for _, testName := range blobAPITests {
 			err := r.ChildRun(testName, res, func(r *runner, res *results) error {
 				var err error
@@ -925,6 +925,147 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 			if err != nil {
 				errs = append(errs, err)
 			}
+		}
+		// verify support for range requests
+		err = r.ChildRun("range requests", res, func(r *runner, res *results) error {
+			if err := r.APIRequire(stateAPIBlobGetRange, stateAPIBlobPush); err != nil {
+				r.TestSkip(res, err, tdName, stateAPIBlobGetRange)
+				return fmt.Errorf("%.0w%w", errAPITestSkip, err)
+			}
+			// setup by pushing a blob, any failures will return immediately
+			blobLen := int64(2048)
+			blobLenStr := fmt.Sprintf("%d", blobLen)
+			dig, blobBody, err := r.State.Data[tdName].genBlob(genWithBlobSize(blobLen), genWithAlgo(algo))
+			if err != nil {
+				return err
+			}
+			if err := r.TestPushBlobAny(res, tdName, repo, dig); err != nil {
+				r.TestSkip(res, err, tdName, stateAPIBlobGetRange)
+				return err
+			}
+			errs := []error{}
+			rangeTests := []struct {
+				name     string
+				reqOpts  []apiDoOpt
+				respOpts []apiDoOpt // response opts are separated to run them conditionally with a fallback
+			}{
+				{
+					name: "range 500-1499",
+					reqOpts: []apiDoOpt{
+						apiWithHeaderAdd("Range", "bytes=500-1499"),
+					},
+					respOpts: []apiDoOpt{
+						apiExpectBody(blobBody[500:1500]),
+						apiExpectStatus(http.StatusPartialContent),
+						apiExpectHeader("Content-Length", "1000"),
+						apiWithOr(
+							[]apiDoOpt{apiExpectHeader("Content-Range", "bytes 500-1499/"+blobLenStr)},
+							[]apiDoOpt{apiExpectHeader("Content-Range", "bytes 500-1499/*")},
+						),
+					},
+				},
+				{
+					name: "range 500-",
+					reqOpts: []apiDoOpt{
+						apiWithHeaderAdd("Range", "bytes=500-"),
+					},
+					respOpts: []apiDoOpt{
+						apiExpectBody(blobBody[500:]),
+						apiExpectStatus(http.StatusPartialContent),
+						apiExpectHeader("Content-Length", fmt.Sprintf("%d", blobLen-500)),
+						apiWithOr(
+							[]apiDoOpt{apiExpectHeader("Content-Range", fmt.Sprintf("bytes 500-%d/%d", blobLen-1, blobLen))},
+							[]apiDoOpt{apiExpectHeader("Content-Range", fmt.Sprintf("bytes 500-%d/*", blobLen-1))},
+						),
+					},
+				},
+				{
+					name: "range -500",
+					reqOpts: []apiDoOpt{
+						apiWithHeaderAdd("Range", "bytes=-500"),
+					},
+					respOpts: []apiDoOpt{
+						apiExpectBody(blobBody[blobLen-500:]),
+						apiExpectStatus(http.StatusPartialContent),
+						apiExpectHeader("Content-Length", "500"),
+						apiWithOr(
+							[]apiDoOpt{apiExpectHeader("Content-Range", fmt.Sprintf("bytes %d-%d/%d", blobLen-500, blobLen-1, blobLen))},
+							[]apiDoOpt{apiExpectHeader("Content-Range", fmt.Sprintf("bytes %d-%d/*", blobLen-500, blobLen-1))},
+						),
+					},
+				},
+				{
+					name: "range 2000-5000",
+					reqOpts: []apiDoOpt{
+						apiWithHeaderAdd("Range", "bytes=2000-5000"),
+					},
+					respOpts: []apiDoOpt{
+						apiExpectBody(blobBody[2000:]),
+						apiExpectStatus(http.StatusPartialContent),
+						apiExpectHeader("Content-Length", fmt.Sprintf("%d", blobLen-2000)),
+						apiWithOr(
+							[]apiDoOpt{apiExpectHeader("Content-Range", fmt.Sprintf("bytes %d-%d/%d", 2000, blobLen-1, blobLen))},
+							[]apiDoOpt{apiExpectHeader("Content-Range", fmt.Sprintf("bytes %d-%d/*", 2000, blobLen-1))},
+						),
+					},
+				},
+				{
+					name: "range 500-0",
+					reqOpts: []apiDoOpt{
+						apiWithHeaderAdd("Range", "bytes=500-0"),
+					},
+					respOpts: []apiDoOpt{
+						apiExpectStatus(http.StatusRequestedRangeNotSatisfiable),
+					},
+				},
+				{
+					name: "range 5000-10000",
+					reqOpts: []apiDoOpt{
+						apiWithHeaderAdd("Range", "bytes=5000-10000"),
+					},
+					respOpts: []apiDoOpt{
+						apiExpectStatus(http.StatusRequestedRangeNotSatisfiable),
+					},
+				},
+			}
+			for _, rt := range rangeTests {
+				err := r.ChildRun(rt.name, res, func(r *runner, res *results) error {
+					var status int
+					rangeOpts := []apiDoOpt{
+						apiSaveOutput(res.Output),
+						apiWithAnd(rt.reqOpts),
+						apiWithOr(rt.respOpts,
+							[]apiDoOpt{ // if rt.opts fails, it may fall back to a standard blob pull
+								apiExpectStatus(http.StatusOK),
+								apiExpectHeader("Content-Length", blobLenStr),
+								apiExpectBody(blobBody),
+								apiReturnStatus(&status),
+							}),
+					}
+					if err := r.API.BlobGetReq(r.Config.schemeReg, repo, dig, r.State.Data[tdName], rangeOpts...); err != nil {
+						r.TestFail(res, err, tdName, stateAPIBlobGetRange)
+						return fmt.Errorf("%.0w%w", errAPITestFail, err)
+					}
+					// detect a fallback
+					if status == http.StatusOK {
+						err := fmt.Errorf("range request unsupported, full blob returned%.0w", errRegUnsupported)
+						r.TestFail(res, err, tdName, stateAPIBlobGetRange)
+						return fmt.Errorf("%.0w%w", errAPITestFail, err)
+					}
+					r.TestPass(res, tdName, stateAPIBlobGetRange)
+					return nil
+				})
+				if err != nil {
+					errs = append(errs, err)
+				}
+			}
+			if err := r.TestDeleteBlob(res, tdName, repo, dig); err != nil {
+				errs = append(errs, err)
+			}
+			return errors.Join(errs...)
+		})
+		if err != nil {
+			errs = append(errs, err)
 		}
 		// test various well known blob contents
 		blobDataTests := map[string][]byte{}
