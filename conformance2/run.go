@@ -232,6 +232,25 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
+	// artifact without layers
+	if r.Config.Data.Artifact {
+		tdName = "artifact-without-layers"
+		r.State.Data[tdName] = newTestData("Artifact without Layers")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err = r.State.Data[tdName].genManifestFull(
+			genWithTag("artifact-without-layers"),
+			genWithArtifactType(mtExampleConf),
+			genWithConfigMediaType(mtOCIEmptyJSON),
+			genWithConfigBytes([]byte("{}")),
+			genWithLayerCount(1),
+			genWithLayerBytes([]byte("{}")),
+			genWithLayerMediaType(mtOCIEmptyJSON),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
 	// image and two referrers
 	if r.Config.Data.Subject {
 		tdName = "artifacts-with-subject"
