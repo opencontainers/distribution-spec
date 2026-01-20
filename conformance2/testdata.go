@@ -73,6 +73,7 @@ type genOptS struct {
 	configMediaType     string
 	descriptorMediaType string
 	extraField          bool
+	layerBytes          []byte
 	layerCount          int
 	layerMediaType      string
 	platform            image.Platform
@@ -149,6 +150,13 @@ func genWithExtraField() genOpt {
 		opt.extraField = true
 	}
 }
+
+func genWithLayerBytes(b []byte) genOpt {
+	return func(opt *genOptS) {
+		opt.layerBytes = b
+	}
+}
+
 func genWithLayerCount(count int) genOpt {
 	return func(opt *genOptS) {
 		opt.layerCount = count
@@ -437,12 +445,21 @@ func (td *testData) genManifestFull(opts ...genOpt) (digest.Digest, error) {
 				genWithDescriptorMediaType(gOpt.layerMediaType),
 			}
 			lOpts = append(lOpts, opts...)
-			dig, _, err := td.genBlob(lOpts...)
-			if err != nil {
-				return "", fmt.Errorf("failed to generate test artifact blob: %w", err)
+			if gOpt.layerBytes != nil {
+				dig, err := td.addBlob(gOpt.layerBytes, lOpts...)
+				if err != nil {
+					return "", fmt.Errorf("failed to generate test artifact layer: %w", err)
+				}
+				digCList = append(digCList, dig)
+				digUCList = append(digUCList, dig)
+			} else {
+				dig, _, err := td.genBlob(lOpts...)
+				if err != nil {
+					return "", fmt.Errorf("failed to generate test artifact blob: %w", err)
+				}
+				digCList = append(digCList, dig)
+				digUCList = append(digUCList, dig)
 			}
-			digCList = append(digCList, dig)
-			digUCList = append(digUCList, dig)
 		}
 	}
 	cDig := digest.Digest("")
