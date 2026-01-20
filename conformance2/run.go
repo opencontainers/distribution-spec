@@ -2008,7 +2008,7 @@ func (r *runner) TestFail(res *results, err error, tdName string, apis ...stateA
 	if errors.Is(err, errAPITestError) {
 		s = statusError
 	} else if errors.Is(err, errRegUnsupported) {
-		s = statusDisabled
+		s = statusSkip
 	}
 	res.Status = res.Status.Set(s)
 	res.Counts[s]++
