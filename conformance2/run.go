@@ -178,6 +178,20 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
+	// empty index
+	if r.Config.Data.Index {
+		tdName = "empty-index"
+		r.State.Data[tdName] = newTestData("Empty Index")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err = r.State.Data[tdName].genIndexFull(
+			genWithTag("index"),
+			genWithPlatforms([]*image.Platform{}),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
 	// artifact manifest
 	if r.Config.Data.Artifact {
 		tdName = "artifact"
