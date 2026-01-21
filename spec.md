@@ -409,6 +409,8 @@ Location: <blob-location>
 
 Here, `<blob-location>` is a pullable blob URL.
 
+If the final chunk is uploaded out of order, the registry MUST respond with a `416 Requested Range Not Satisfiable` code.
+
 ---
 
 To get the current status after a 416 error, issue a `GET` request to a URL `<location>` <sup>[end-13](#endpoints)</sup>.
@@ -795,7 +797,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                    | `202`       | `404`             |
 | end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
 | end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
-| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`       |
+| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`/`416` |
 | end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
 | end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
 | end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
