@@ -362,10 +362,8 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 			}
 			badLastByte := min(badStart+chunkSize-1, len(bodyBytes)-1)
 			method := "PATCH"
-			expStatus := []int{http.StatusRequestedRangeNotSatisfiable}
 			if flags["PutLastChunk"] && badLastByte == len(bodyBytes)-1 {
 				method = "PUT"
-				expStatus = append(expStatus, http.StatusBadRequest)
 				qa := u.Query()
 				qa.Set("digest", dig.String())
 				u.RawQuery = qa.Encode()
@@ -377,7 +375,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 				apiWithHeaderAdd("Content-Type", mtOctetStream),
 				apiWithHeaderAdd("Content-Range", fmt.Sprintf("%d-%d", badStart, badLastByte)),
 				apiWithBody(bodyBytes[badStart:badLastByte+1]),
-				apiExpectStatus(expStatus...),
+				apiExpectStatus(http.StatusRequestedRangeNotSatisfiable),
 				apiReturnHeader("Location", &loc),
 			)
 			if err != nil {
