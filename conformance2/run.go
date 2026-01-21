@@ -437,6 +437,20 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
+	// image with an empty layer list
+	if r.Config.Data.NoLayers {
+		tdName = "no-layers"
+		r.State.Data[tdName] = newTestData("No Layers")
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err := r.State.Data[tdName].genManifestFull(
+			genWithTag("no-layers"),
+			genWithLayerCount(0),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	}
 	// sparse manifests missing layers/platforms
 	if r.Config.Data.Sparse {
 		tdName = "sparse"
