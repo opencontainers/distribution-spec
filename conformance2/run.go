@@ -1452,6 +1452,28 @@ func (r *runner) TestList(parent *results, tdName string, repo string) error {
 				errs = append(errs, fmt.Errorf("missing tag %q from listing%.0w", tag, errAPITestFail))
 			}
 		}
+		if len(tagList.Tags) >= 2 {
+			sortedTags := slices.Clone(tagList.Tags)
+			slices.Sort(sortedTags)
+			end := len(sortedTags) / 2
+			last := sortedTags[end-1]
+			// test the last parameter
+			partialList, err := r.API.TagList(r.Config.schemeReg, repo, apiSaveOutput(res.Output), apiWithURLParam("last", last))
+			if err != nil {
+				r.TestFail(res, err, tdName, stateAPITagList)
+				return fmt.Errorf("%.0w%w", errAPITestFail, err)
+			}
+			for _, tag := range sortedTags[:end] {
+				if slices.Contains(partialList.Tags, tag) {
+					errs = append(errs, fmt.Errorf("tag %q returned when last set to %q%.0w", tag, last, errAPITestFail))
+				}
+			}
+			for _, tag := range sortedTags[end:] {
+				if !slices.Contains(partialList.Tags, tag) {
+					errs = append(errs, fmt.Errorf("tag %q missing when last set to %q%.0w", tag, last, errAPITestFail))
+				}
+			}
+		}
 		if len(errs) > 0 {
 			r.TestFail(res, errors.Join(errs...), tdName, stateAPITagList)
 			return errors.Join(errs...)
