@@ -91,6 +91,7 @@ type configData struct {
 	DataField        bool `conformance:"DATA_FIELD" yaml:"dataField"`              // data field in descriptor
 	Nondistributable bool `conformance:"NONDISTRIBUTABLE" yaml:"nondistributable"` // nondistributable image, deprecated in image-spec 1.1
 	CustomFields     bool `conformance:"CUSTOM_FIELDS" yaml:"customFields"`        // fields added beyond the OCI spec
+	NoLayers         bool `conformance:"NO_LAYERS" yaml:"noLayers"`                // image manifest with an empty layer list
 	EmptyBlob        bool `conformance:"EMPTY_BLOB" yaml:"emptyBlob"`              // a zero byte blob
 	Sha512           bool `conformance:"SHA512" yaml:"sha512"`                     // sha512 digest algorithm
 }
@@ -179,6 +180,7 @@ func configLoad() (config, error) {
 			DataField:        true,
 			Nondistributable: true,
 			CustomFields:     true,
+			NoLayers:         true,
 			EmptyBlob:        true,
 			Sha512:           true,
 		},
