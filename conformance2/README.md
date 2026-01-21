@@ -67,6 +67,9 @@ export OCI_RO_DATA_TAGS= # space separated list of tags
 export OCI_RO_DATA_MANIFESTS= # space separated list of manifest digests
 export OCI_RO_DATA_BLOBS= # space separated list of blob digests
 export OCI_RO_DATA_REFERRERS= # space separated list of subject digests for the referrers API
+
+# other settings
+export OCI_FILTER_TEST= # used to filter a specific branch of tests in, e.g. "OCI Conformance Test/sha256 blobs"
 ```
 
 ### Yaml Configuration File
@@ -85,13 +88,14 @@ repo2: conformance/repo2
 username: ""
 password: ""
 logging: warn
+filterTest: ""
 apis:
   pull: true
   push: true
   blobs:
     atomic: true
     delete: true
-    mountAnonymous: false
+    mountAnonymous: true
     uploadCancel: false
   manifests:
     atomic: true
