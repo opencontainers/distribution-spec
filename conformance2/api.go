@@ -986,8 +986,9 @@ func (a *api) TagList(registry, repo string, opts ...apiDoOpt) (specs.TagList, e
 	if err != nil {
 		return tl, err
 	}
-	err = a.Do(apiWithAnd(opts),
+	err = a.Do(
 		apiWithURL(u),
+		apiWithAnd(opts),
 		apiWithOr(
 			[]apiDoOpt{
 				apiExpectStatus(http.StatusOK),
@@ -1098,6 +1099,20 @@ func apiWithURL(u *url.URL) apiDoOpt {
 	return apiDoOpt{
 		reqFn: func(req *http.Request) error {
 			req.URL = u
+			return nil
+		},
+	}
+}
+
+func apiWithURLParam(key, val string) apiDoOpt {
+	return apiDoOpt{
+		reqFn: func(req *http.Request) error {
+			if req.URL == nil {
+				return fmt.Errorf("URL must be set before adding a parameter")
+			}
+			params := req.URL.Query()
+			params.Set(key, val)
+			req.URL.RawQuery = params.Encode()
 			return nil
 		},
 	}
