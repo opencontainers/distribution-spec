@@ -81,3 +81,26 @@ If the client is trying to be defensive to nonconformant registries, and receive
 Mounting without having to specify `from`, also known as automatic mount origin discovery, requires the registry to determine whether or not a blob exists in any repository. 
 If the existence check for the blob is done first, an immediate failure will indicate the lack of presence of a blob. 
 On the other hand, if the registry needs to perform further work to determine if the blob can be accessed by the mounter, it could create an information disclosure risk, in leaking that presence of a blob with that digest in the registry.
+
+**Q: Why is support for new digest algorithms being added?**
+
+The default digest algorithm for OCI ecosystem has been _sha256_ and it has
+worked well. So why bother with additional digest algorithms?
+
+There are a couple of reasons (not in any particular order of importance):
+- Existing digest algorithms may be broken in the future and it is prudent
+  that we design and accomodate for additional digest algorithms. Doing this _a
+  posteriori_ is [much harder](https://lwn.net/Articles/898522/).
+- OCI (v1.1.0 specs) now supports arbitrary artifacts and large artifacts pose
+  a performance problem especially with strictly serial hash algorithms such as
+  _sha2_-family. Much faster parallel digest algorithms such as _blake3-256_
+  are a viable alternative.
+
+Note that the two properties that matter to us are _collision resistance_ (so
+content is uniquely addressable) and _preimage resistance_ (so source cannot be
+guessed from the output hash)
+
+The guidelines being followed when making this change are:
+- An artifact (including container images) may be composed of one or more digest types.
+- An artifact registry must not modify an artifact once pushed.
+- An artifact registry must be able to reject unsupported digest algorithms as early as possible during push operation.
