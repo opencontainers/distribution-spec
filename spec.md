@@ -48,7 +48,7 @@ For relevant details and a history leading up to this specification, please see 
 
 #### Legacy Docker support HTTP headers
 
-Because of the origins of this specification, the client MAY encounter Docker-specific headers, such as `Docker-Content-Digest`, or `Docker-Distribution-API-Version`.
+Because of the origins of this specification, the client MAY encounter Docker-specific headers, such as `Docker-Distribution-API-Version`.
 These headers are OPTIONAL and clients SHOULD NOT depend on them.
 
 #### Legacy Docker support error codes
@@ -210,8 +210,8 @@ In order to verify that a repository contains a given manifest or blob, make a `
 `/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup> (for blobs).
 
 A HEAD request to an existing blob or manifest URL MUST return `200 OK`.
-A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
-A successful response SHOULD contain the size in bytes of the uploaded blob in the header `Content-Length`.
+A successful response SHOULD contain the digest of the uploaded blob or manifest in the header `Docker-Content-Digest`.
+A successful response SHOULD contain the size in bytes of the uploaded blob or manifest in the header `Content-Length`.
 
 If the blob or manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
