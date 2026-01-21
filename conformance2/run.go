@@ -1966,12 +1966,16 @@ func mapContainsAll[K comparable, V comparable](check, goal map[K]V) bool {
 
 func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *results) error) error {
 	res := resultsNew(name, parent)
+	// HasPrefix goes both ways, to include all parents to the prefix, and then all children of the selected prefix
+	if r.Config.FilterTest != "" && !strings.HasPrefix(r.Config.FilterTest, res.Name) && !strings.HasPrefix(res.Name, r.Config.FilterTest) {
+		return fmt.Errorf("test filter %s excludes %s%.0w", r.Config.FilterTest, res.Name, errAPITestDisabled)
+	}
 	if parent != nil {
 		parent.Children = append(parent.Children, res)
 	}
 	err := fn(r, res)
 	res.Stop = time.Now()
-	if err != nil && !errors.Is(err, errAPITestFail) && !errors.Is(err, errAPITestSkip) {
+	if err != nil && !errors.Is(err, errAPITestFail) && !errors.Is(err, errAPITestSkip) && !errors.Is(err, errAPITestDisabled) {
 		res.Errs = append(res.Errs, err)
 		res.Status = res.Status.Set(statusError)
 		res.Counts[statusError]++
@@ -2007,6 +2011,8 @@ func (r *runner) TestFail(res *results, err error, tdName string, apis ...stateA
 	s := statusFail
 	if errors.Is(err, errAPITestError) {
 		s = statusError
+	} else if errors.Is(err, errAPITestDisabled) {
+		s = statusDisabled
 	} else if errors.Is(err, errRegUnsupported) {
 		s = statusSkip
 	}

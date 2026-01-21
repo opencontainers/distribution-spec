@@ -24,22 +24,23 @@ const (
 )
 
 type config struct {
-	Registry   string       `conformance:"REGISTRY" yaml:"registry"`      // hostname:port of registry server
-	TLS        tls          `conformance:"TLS" yaml:"tls"`                // tls configuration for communicating with the registry
-	Repo1      string       `conformance:"REPO1" yaml:"repo1"`            // first repository for pushing content
-	Repo2      string       `conformance:"REPO2" yaml:"repo2"`            // second repository for pushing content
-	LoginUser  string       `conformance:"USERNAME" yaml:"username"`      // username for login, leave blank for anonymous
-	LoginPass  string       `conformance:"PASSWORD" yaml:"password"`      // password for login, leave blank for anonymous
-	LogLevel   string       `conformance:"LOG" yaml:"logging"`            // slog logging level, defaults to "warn"
-	LogWriter  io.Writer    `yaml:"-"`                                    // writer used for logging, defaults to os.Stderr
-	APIs       configAPI    `conformance:"API" yaml:"apis"`               // API tests to run
-	Data       configData   `conformance:"DATA" yaml:"data"`              // data types to test
-	ROData     configROData `conformance:"RO_DATA" yaml:"roData"`         // read-only data for registries that do not support push methods
-	ResultsDir string       `conformance:"RESULTS_DIR" yaml:"resultsDir"` // directory to write results
-	Version    string       `conformance:"VERSION" yaml:"version"`        // spec version used to set test defaults
-	schemeReg  string       `yaml:"-"`                                    // base for url to access the registry
-	Commit     string       `yaml:"commit"`                               // injected git commit hash from runtime
-	Legacy     bool         `yaml:"legacy,omitempty"`                     // injected to indicate that conformance was run with "go test"
+	Registry   string       `conformance:"REGISTRY" yaml:"registry"`                // hostname:port of registry server
+	TLS        tls          `conformance:"TLS" yaml:"tls"`                          // tls configuration for communicating with the registry
+	Repo1      string       `conformance:"REPO1" yaml:"repo1"`                      // first repository for pushing content
+	Repo2      string       `conformance:"REPO2" yaml:"repo2"`                      // second repository for pushing content
+	LoginUser  string       `conformance:"USERNAME" yaml:"username"`                // username for login, leave blank for anonymous
+	LoginPass  string       `conformance:"PASSWORD" yaml:"password"`                // password for login, leave blank for anonymous
+	LogLevel   string       `conformance:"LOG" yaml:"logging"`                      // slog logging level, defaults to "warn"
+	LogWriter  io.Writer    `yaml:"-"`                                              // writer used for logging, defaults to os.Stderr
+	FilterTest string       `conformance:"FILTER_TEST" yaml:"filterTest,omitempty"` // only run tests with a given name prefix
+	APIs       configAPI    `conformance:"API" yaml:"apis"`                         // API tests to run
+	Data       configData   `conformance:"DATA" yaml:"data"`                        // data types to test
+	ROData     configROData `conformance:"RO_DATA" yaml:"roData"`                   // read-only data for registries that do not support push methods
+	ResultsDir string       `conformance:"RESULTS_DIR" yaml:"resultsDir"`           // directory to write results
+	Version    string       `conformance:"VERSION" yaml:"version"`                  // spec version used to set test defaults
+	schemeReg  string       `yaml:"-"`                                              // base for url to access the registry
+	Commit     string       `yaml:"commit"`                                         // injected git commit hash from runtime
+	Legacy     bool         `yaml:"legacy,omitempty"`                               // injected to indicate that conformance was run with "go test"
 }
 
 type tls int
