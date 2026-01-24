@@ -200,11 +200,11 @@ func (r *runner) GenerateData() error {
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genManifestFull(
 			genWithTag("artifact"),
-			genWithArtifactType(mtExampleConf),
+			genWithArtifactType(mtExampleConf1),
 			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType(mtExampleConf),
+			genWithLayerMediaType(mtExampleConf1),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
@@ -222,11 +222,11 @@ func (r *runner) GenerateData() error {
 				{OS: "linux", Architecture: "amd64"},
 				{OS: "linux", Architecture: "arm64"},
 			}),
-			genWithArtifactType(mtExampleConf),
+			genWithArtifactType(mtExampleConf1),
 			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType(mtExampleConf),
+			genWithLayerMediaType(mtExampleConf1),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
@@ -240,7 +240,7 @@ func (r *runner) GenerateData() error {
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genManifestFull(
 			genWithTag("artifact-without-layers"),
-			genWithArtifactType(mtExampleConf),
+			genWithArtifactType(mtExampleConf1),
 			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
@@ -251,7 +251,7 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 	}
-	// image and two referrers
+	// image and referrers
 	if r.Config.Data.Subject {
 		tdName = "artifacts-with-subject"
 		r.State.Data[tdName] = newTestData("Artifacts with Subject")
@@ -271,7 +271,7 @@ func (r *runner) GenerateData() error {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
 		_, err = r.State.Data[tdName].genManifestFull(
-			genWithArtifactType(mtExampleConf),
+			genWithArtifactType(mtExampleConf1),
 			genWithAnnotations(map[string]string{
 				"org.opencontainers.conformance": "hello conformance test",
 			}),
@@ -279,9 +279,25 @@ func (r *runner) GenerateData() error {
 			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType(mtExampleConf),
+			genWithLayerMediaType(mtExampleConf1),
 			genWithSubject(subjDesc),
-			genWithTag("tagged-artifact"),
+			genWithTag("tagged-artifact1"),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		_, err = r.State.Data[tdName].genManifestFull(
+			genWithArtifactType(mtExampleConf2),
+			genWithAnnotations(map[string]string{
+				"org.opencontainers.conformance": "hello conformance test",
+			}),
+			genWithAnnotationUniq(),
+			genWithConfigMediaType(mtOCIEmptyJSON),
+			genWithConfigBytes([]byte("{}")),
+			genWithLayerCount(1),
+			genWithLayerMediaType(mtOctetStream),
+			genWithSubject(subjDesc),
+			genWithTag("tagged-artifact2"),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
@@ -301,7 +317,7 @@ func (r *runner) GenerateData() error {
 		}
 		subjDesc := *r.State.Data[tdName].desc[subjDig]
 		_, err = r.State.Data[tdName].genIndexFull(
-			genWithArtifactType(mtExampleConf),
+			genWithArtifactType(mtExampleConf1),
 			genWithAnnotations(map[string]string{
 				"org.opencontainers.conformance": "hello conformance test",
 			}),
@@ -309,7 +325,7 @@ func (r *runner) GenerateData() error {
 			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType(mtExampleConf),
+			genWithLayerMediaType(mtExampleConf1),
 			genWithSubject(subjDesc),
 			genWithTag("tagged-artifact"),
 		)
@@ -329,7 +345,7 @@ func (r *runner) GenerateData() error {
 			Digest:    digest.FromString("missing content"),
 		}
 		_, err = r.State.Data[tdName].genManifestFull(
-			genWithArtifactType(mtExampleConf),
+			genWithArtifactType(mtExampleConf1),
 			genWithAnnotations(map[string]string{
 				"org.opencontainers.conformance": "hello conformance test",
 			}),
@@ -337,7 +353,7 @@ func (r *runner) GenerateData() error {
 			genWithConfigMediaType(mtOCIEmptyJSON),
 			genWithConfigBytes([]byte("{}")),
 			genWithLayerCount(1),
-			genWithLayerMediaType(mtExampleConf),
+			genWithLayerMediaType(mtExampleConf1),
 			genWithSubject(subjDesc),
 			genWithTag("tagged-artifact"),
 		)
@@ -1975,6 +1991,44 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 							mapContainsAll(resp.Annotations, goal.Annotations)
 					}) {
 						errs = append(errs, fmt.Errorf("entry missing from referrers list, subject %s, referrer %+v%.0w", subj, goal, errAPITestFail))
+					}
+				}
+			}
+			// if multiple referrers exist, try to filter on artifactType
+			if len(r.State.Data[tdName].referrers[subj]) > 1 {
+				var filtersHeader string
+				referrerResp, err := r.API.ReferrersList(r.Config.schemeReg, repo, subj, apiSaveOutput(res.Output),
+					apiWithURLParam("artifactType", mtExampleConf1),
+					apiReturnHeader("OCI-Filters-Applied", &filtersHeader))
+				if err != nil {
+					errs = append(errs, err)
+				}
+				if err == nil {
+					filtersApplied := false
+					if strings.Contains(filtersHeader, "artifactType") {
+						filtersApplied = true
+					}
+					if !filtersApplied {
+						errs = append(errs, fmt.Errorf("registry does not set the expected OCI-Filters-Applied header for the artifactType%.0w", errRegUnsupported))
+					}
+					for _, goal := range referrerGoal {
+						if (!filtersApplied || goal.ArtifactType == mtExampleConf1) && !slices.ContainsFunc(referrerResp.Manifests, func(resp image.Descriptor) bool {
+							return resp.Digest == goal.Digest &&
+								resp.MediaType == goal.MediaType &&
+								resp.Size == goal.Size &&
+								resp.ArtifactType == goal.ArtifactType &&
+								mapContainsAll(resp.Annotations, goal.Annotations)
+						}) {
+							errs = append(errs, fmt.Errorf("entry missing from referrers list, subject %s, referrer %+v%.0w", subj, goal, errAPITestFail))
+						}
+					}
+					if filtersApplied {
+						// verify no other entries are returned
+						for _, resp := range referrerResp.Manifests {
+							if resp.ArtifactType != mtExampleConf1 {
+								errs = append(errs, fmt.Errorf("referrers filter for artifactType %s included descriptor %v%.0w", mtExampleConf1, resp, errAPITestError))
+							}
+						}
 					}
 				}
 			}

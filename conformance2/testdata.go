@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	mtExampleConf  = "application/vnd.example.oci.conformance"
+	mtExampleConf1 = "application/vnd.example.oci.conformance.v1"
+	mtExampleConf2 = "application/vnd.example.oci.conformance.v2"
 	mtOctetStream  = "application/octet-stream"
 	mtOCIConfig    = "application/vnd.oci.image.config.v1+json"
 	mtOCIImage     = "application/vnd.oci.image.manifest.v1+json"
