@@ -445,7 +445,7 @@ Location: <blob-location>
 ```
 
 The Location header will contain the registry URL to access the accepted layer file.
-The Docker-Content-Digest header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
+The Docker-Content-Digest header returns the digest of the uploaded blob which MAY differ from the provided digest.
 Most clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 The registry MAY treat the `from` parameter as optional, and it MAY cross-mount the blob if it can be found.
@@ -487,7 +487,7 @@ Location: <location>
 ```
 
 The `<location>` is a pullable manifest URL.
-The Docker-Content-Digest header returns the canonical digest of the uploaded blob, and MUST be equal to the client provided digest.
+The Docker-Content-Digest header returns the digest of the uploaded blob, and MUST be equal to the client provided digest.
 Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
