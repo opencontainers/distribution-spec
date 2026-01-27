@@ -213,7 +213,8 @@ A successful response MUST contain the digest of the uploaded blob or manifest i
 A successful response MUST contain the size in bytes of the uploaded blob or manifest in the header `Content-Length`.
 
 _Implementers note:_
-Clients MAY encounter registries which do not return the `Docker-Content-Digest` header in their response. In such cases, the clients can safely assume the digest used is the canonical digest (sha256).
+Clients may encounter registries implementing earlier spec versions which did not require the `Docker-Content-Digest` header.
+In such cases, the clients can safely assume the digest used is the canonical digest (sha256).
 
 If the blob or manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
