@@ -696,6 +696,11 @@ func (r *runner) TestAll() error {
 		return fmt.Errorf("aborting tests, unable to generate data: %w", err)
 	}
 
+	err = r.TestPing(r.Results)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	err = r.TestEmpty(r.Results, repo)
 	if err != nil {
 		errs = append(errs, err)
@@ -1612,6 +1617,21 @@ func (r *runner) TestManifestErrors(parent *results, repo string) error {
 	return errors.Join(errs...)
 }
 
+func (r *runner) TestPing(parent *results) error {
+	return r.ChildRun("ping", parent, func(r *runner, res *results) error {
+		if err := r.APIRequire(stateAPIPing); err != nil {
+			r.TestSkip(res, err, "", stateAPIPing)
+			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
+		}
+		if err := r.API.PingReq(r.Config.schemeReg, apiSaveOutput(res.Output)); err != nil {
+			r.TestFail(res, err, "", stateAPIPing)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		r.TestPass(res, "", stateAPIPing)
+		return nil
+	})
+}
+
 func (r *runner) TestPull(parent *results, tdName string, repo string) error {
 	return r.ChildRun("pull", parent, func(r *runner, res *results) error {
 		errs := []error{}
@@ -2081,7 +2101,11 @@ func (r *runner) ChildRun(name string, parent *results, fn func(*runner, *result
 
 func (r *runner) TestSkip(res *results, err error, tdName string, apis ...stateAPIType) {
 	s := statusSkip
-	if errors.Is(err, errAPITestDisabled) {
+	if errors.Is(err, errAPITestError) {
+		s = statusError
+	} else if errors.Is(err, errAPITestFail) {
+		s = statusFail
+	} else if errors.Is(err, errAPITestDisabled) {
 		s = statusDisabled
 	}
 	res.Status = res.Status.Set(s)
@@ -2145,11 +2169,16 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 		// check the configuration disables the api
 		configDisabled := false
 		switch a {
+		case stateAPIPing:
+			if !r.Config.APIs.Ping {
+				configDisabled = true
+			}
 		case stateAPITagList:
 			if !r.Config.APIs.Tags.List {
 				configDisabled = true
 			}
-		case stateAPIManifestGetTag, stateAPIManifestGetDigest, stateAPIBlobGetFull, stateAPIBlobGetRange:
+		case stateAPIManifestHeadTag, stateAPIManifestHeadDigest, stateAPIManifestGetTag, stateAPIManifestGetDigest,
+			stateAPIBlobHead, stateAPIBlobGetFull, stateAPIBlobGetRange:
 			if !r.Config.APIs.Pull {
 				configDisabled = true
 			}
@@ -2195,6 +2224,8 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 			if !r.Config.APIs.Referrer {
 				configDisabled = true
 			}
+		default:
+			return fmt.Errorf("APIRequire check is missing for state %s%.0w", a.String(), errAPITestError)
 		}
 		if configDisabled {
 			errs = append(errs, fmt.Errorf("api %s is disabled in the configuration%.0w", aText, errAPITestDisabled))
