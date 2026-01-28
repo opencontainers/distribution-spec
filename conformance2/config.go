@@ -52,6 +52,7 @@ const (
 )
 
 type configAPI struct {
+	Ping      bool            `conformance:"PING" yaml:"ping"`
 	Pull      bool            `conformance:"PULL" yaml:"pull"`
 	Push      bool            `conformance:"PUSH" yaml:"push"`
 	Blobs     configBlobs     `conformance:"BLOBS" yaml:"blobs"`
@@ -148,6 +149,7 @@ func configLoad() (config, error) {
 		LogWriter:  os.Stderr,
 		ResultsDir: "./results",
 		APIs: configAPI{
+			Ping: true,
 			Pull: true,
 			Push: true,
 			Blobs: configBlobs{

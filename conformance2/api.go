@@ -991,6 +991,22 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	return nil
 }
 
+func (a *api) PingReq(registry string, opts ...apiDoOpt) error {
+	u, err := url.Parse(registry + "/v2/")
+	if err != nil {
+		return err
+	}
+	err = a.Do(
+		apiWithMethod("GET"),
+		apiWithURL(u),
+		apiWithAnd(opts),
+	)
+	if err != nil {
+		return fmt.Errorf("registry ping failed: %w", err)
+	}
+	return nil
+}
+
 func (a *api) ReferrersList(registry, repo string, dig digest.Digest, opts ...apiDoOpt) (image.Index, error) {
 	rl := image.Index{}
 	u, err := url.Parse(registry + "/v2/" + repo + "/referrers/" + dig.String())

@@ -48,6 +48,7 @@ const (
 	stateAPIManifestDelete
 	stateAPIManifestDeleteAtomic
 	stateAPIReferrers
+	stateAPIPing
 	stateAPIMax // number of APIs for iterating
 )
 
@@ -107,6 +108,8 @@ func (a stateAPIType) String() string {
 		return "Manifest delete atomic"
 	case stateAPIReferrers:
 		return "Referrers"
+	case stateAPIPing:
+		return "Ping"
 	}
 }
 
@@ -174,6 +177,8 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPIManifestDeleteAtomic
 	case "Referrers":
 		*a = stateAPIReferrers
+	case "Ping":
+		*a = stateAPIPing
 	}
 	return nil
 }
