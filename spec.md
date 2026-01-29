@@ -48,8 +48,8 @@ For relevant details and a history leading up to this specification, please see 
 
 #### Legacy Docker support HTTP headers
 
-Because of the origins of this specification, the client MAY encounter Docker-specific headers, such as `Docker-Content-Digest`, or `Docker-Distribution-API-Version`.
-These headers are OPTIONAL and clients SHOULD NOT depend on them.
+Because of the origins of this specification, the client MAY encounter Docker-specific headers, such as `Docker-Distribution-API-Version`.
+Unless documented elsewhere in the spec, these headers are OPTIONAL and clients SHOULD NOT depend on them.
 
 #### Legacy Docker support error codes
 
@@ -174,9 +174,9 @@ If the manifest has a `mediaType` field, clients SHOULD reject unless the `media
 For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negotiation.md) and [RFC7231](https://www.rfc-editor.org/rfc/rfc7231#section-3.1.1.1).
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
-A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
+A successful response MUST contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 
-The `Docker-Content-Digest` header, if present on the response, returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
+The `Docker-Content-Digest` header, if present on the response, returns the digest of the uploaded blob which MAY differ from the provided digest.
 If the digest does differ, it MAY be the case that the hashing algorithms used do not match.
 See [Content Digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> for information on how to detect the hashing algorithm in use.
 Most clients MAY ignore the value, but if it is used, the client MUST verify the value matches the returned manifest.
@@ -192,7 +192,7 @@ To pull a blob, perform a `GET` request to a URL in the following form:
 `<name>` is the namespace of the repository, and `<digest>` is the blob's digest.
 
 A GET request to an existing blob URL MUST provide the expected blob, with a response code that MUST be `200 OK`.
-A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
+A successful response MUST contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
 If present, the value of this header MUST be a digest matching that of the response body.
 Most clients MAY ignore the value, but if it is used, the client MUST verify the value matches the returned response body.
 Clients SHOULD verify that the response body matches the requested digest.
@@ -210,8 +210,12 @@ In order to verify that a repository contains a given manifest or blob, make a `
 `/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup> (for blobs).
 
 A HEAD request to an existing blob or manifest URL MUST return `200 OK`.
-A successful response SHOULD contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
-A successful response SHOULD contain the size in bytes of the uploaded blob in the header `Content-Length`.
+A successful response MUST contain the digest of the uploaded blob or manifest in the header `Docker-Content-Digest`.
+A successful response MUST contain the size in bytes of the uploaded blob or manifest in the header `Content-Length`.
+
+_Implementers note:_
+Clients may encounter registries implementing earlier spec versions which did not require the `Docker-Content-Digest` header.
+In such cases, the clients can reasonably assume the digest algorithm used is sha256.
 
 If the blob or manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
@@ -443,7 +447,7 @@ Location: <blob-location>
 ```
 
 The Location header will contain the registry URL to access the accepted layer file.
-The Docker-Content-Digest header returns the canonical digest of the uploaded blob which MAY differ from the provided digest.
+The Docker-Content-Digest header returns the digest of the uploaded blob which MAY differ from the provided digest.
 Most clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 The registry MAY treat the `from` parameter as optional, and it MAY cross-mount the blob if it can be found.
@@ -485,7 +489,7 @@ Location: <location>
 ```
 
 The `<location>` is a pullable manifest URL.
-The Docker-Content-Digest header returns the canonical digest of the uploaded blob, and MUST be equal to the client provided digest.
+The Docker-Content-Digest header returns the digest of the uploaded blob, and MUST be equal to the client provided digest.
 Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
