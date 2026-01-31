@@ -3,28 +3,26 @@
 ## Table of Contents
 
 - [Overview](#overview)
-	- [Introduction](#introduction)
-	- [Historical Context](#historical-context)
-	- [Definitions](#definitions)
-- [Notational Conventions](#notational-conventions)
+  - [Introduction](#introduction)
+  - [Historical Context](#historical-context)
+  - [Definitions](#definitions)
+  - [Notational Conventions](#notational-conventions)
 - [Use Cases](#use-cases)
 - [Conformance](#conformance)
-	- [Official Certification](#official-certification)
-	- [Requirements](#requirements)
-	- [Workflow Categories](#workflow-categories)
-		1. [Pull](#pull)
-		2. [Push](#push)
-		3. [Content Discovery](#content-discovery)
-		4. [Content Management](#content-management)
+- [Requirements](#requirements)
+  1. [Pull](#pull)
+  2. [Push](#push)
+  3. [Content Discovery](#content-discovery)
+  4. [Content Management](#content-management)
 - [Proxying](#registry-proxying)
 - [Backwards Compatibility](#backwards-compatibility)
   - [Unavailable Referrers API](#unavailable-referrers-api)
 - [Upgrade Procedures](#upgrade-procedures)
   - [Enabling the Referrers API](#enabling-the-referrers-api)
 - [API](#api)
-	- [Endpoints](#endpoints)
-	- [Error Codes](#error-codes)
-	- [Warnings](#warnings)
+  - [Endpoints](#endpoints)
+  - [Error Codes](#error-codes)
+  - [Warnings](#warnings)
 - [Appendix](#appendix)
 
 ## Overview
@@ -77,7 +75,7 @@ Several terms are used frequently in this document and warrant basic definitions
 - **Subject**: an association from one manifest to another, typically used to attach an artifact to an image.
 - **Referrers List**: a list of manifests with a subject relationship to a specified digest. The referrers list is generated with a [query to a registry](#listing-referrers).
 
-## Notational Conventions
+### Notational Conventions
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](https://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
 
@@ -114,15 +112,15 @@ Even in the case where both uploads are accepted, the registry may securely only
 
 ## Conformance
 
-For more information on testing for conformance, please see the [conformance README](./conformance/README.md)
-
-### Official Certification
+For more information on running conformance tests against a registry, please see the [conformance README](./conformance/README.md).
 
 Registry providers can self-certify by submitting conformance results to [opencontainers/oci-conformance](https://github.com/opencontainers/oci-conformance).
 
-### Requirements
+Accepted conformance results can be viewed at [conformance.opencontainers.org](https://conformance.opencontainers.org/).
 
-Registry conformance applies to the following workflow categories:
+## Requirements
+
+Registry APIs are grouped into the following categories:
 
 1. **Pull** - Clients are able to pull from the registry
 2. **Push** - Clients are able to push to the registry
@@ -134,17 +132,13 @@ All registries conforming to this specification MUST support, at a minimum, all 
 Registries SHOULD also support the **Push**, **Content Discovery**, and **Content Management** categories.
 A registry claiming conformance with one of these specification categories MUST implement all APIs in the claimed category.
 
-In order to test a registry's conformance against these workflow categories, please use the [conformance testing tool](./conformance/).
-
-### Workflow Categories
-
-#### Pull
+### Pull
 
 The process of pulling an object centers around retrieving two components: the manifest and one or more blobs.
 
 Typically, the first step in pulling an object is to retrieve the manifest. However, you MAY retrieve content from the registry in any order.
 
-##### Pulling manifests
+#### Pulling manifests
 
 To pull a manifest, perform a `GET` request to a URL in the following form:
 `/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
@@ -184,7 +178,7 @@ If the `<reference>` part of a manifest request is a digest, clients SHOULD veri
 
 If the manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
-##### Pulling blobs
+#### Pulling blobs
 
 To pull a blob, perform a `GET` request to a URL in the following form:
 `/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup>
@@ -201,7 +195,7 @@ If the blob is not found in the repository, the response code MUST be `404 Not F
 
 A registry SHOULD support the `Range` request header in accordance with [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-range-requests).
 
-##### Checking if content exists in the registry
+#### Checking if content exists in the registry
 
 In order to verify that a repository contains a given manifest or blob, make a `HEAD` request to a URL in the following form:
 
@@ -215,7 +209,7 @@ A successful response SHOULD contain the size in bytes of the uploaded blob in t
 
 If the blob or manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
-#### Push
+### Push
 
 Pushing an object typically works in the opposite order as a pull: the blobs making up the object are uploaded first, and the manifest last.
 A useful diagram is provided [here](https://github.com/google/go-containerregistry/tree/d7f8d06c87ed209507dd5f2d723267fe35b38a9f/pkg/v1/remote#anatomy-of-an-image-upload).
@@ -224,11 +218,11 @@ A registry MUST initially accept an otherwise valid manifest with a `subject` fi
 A registry MAY reject a manifest uploaded to the manifest endpoint with descriptors in other fields that reference a manifest or blob that does not exist in the registry.
 When a manifest is rejected for this reason, it MUST result in one or more `MANIFEST_BLOB_UNKNOWN` errors <sup>[code-1](#error-codes)</sup>.
 
-##### Pushing blobs
+#### Pushing blobs
 
 There are two ways to push blobs: chunked or monolithic.
 
-##### Pushing a blob monolithically
+#### Pushing a blob monolithically
 
 There are two ways to push a blob monolithically:
 1. A `POST` request followed by a `PUT` request
@@ -236,7 +230,7 @@ There are two ways to push a blob monolithically:
 
 ---
 
-###### POST then PUT
+##### POST then PUT
 
 To push a blob monolithically by using a POST request followed by a PUT request, there are two steps:
 1. Obtain a session id (upload URL)
@@ -287,7 +281,7 @@ With `<blob-location>` being a pullable blob URL.
 
 ---
 
-###### Single POST
+##### Single POST
 
 Registries MAY support pushing blobs using a single POST request.
 
@@ -318,8 +312,7 @@ Location: <blob-location>
 Here, `<blob-location>` is a pullable blob URL.
 This location does not necessarily have to be served by your registry, for example, in the case of a signed URL from some cloud storage provider that your registry generates.
 
-
-##### Pushing a blob in chunks
+#### Pushing a blob in chunks
 
 A chunked blob upload is accomplished in three phases:
 1. Obtain a session ID (upload URL) (`POST`)
@@ -426,7 +419,7 @@ The following chunk upload SHOULD use the `<location>` provided in the response.
 
 The `<end-of-range>` value is the position of the last uploaded byte of the blob.
 
-##### Mounting a blob from another repository
+#### Mounting a blob from another repository
 
 If a necessary blob exists already in another repository within the same registry, it can be mounted into a different repository via a `POST`
 request in the following format:
@@ -451,7 +444,7 @@ The registry MAY treat the `from` parameter as optional, and it MAY cross-mount 
 Alternatively, if a registry does not support cross-repository mounting or is unable to mount the requested blob, it SHOULD return a `202`.
 This indicates that the upload session has begun and that the client MAY proceed with the upload.
 
-##### Pushing Manifests
+#### Pushing Manifests
 
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers and body: `/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
 
@@ -494,7 +487,7 @@ A registry SHOULD enforce some limit on the maximum manifest size that it can ac
 A registry that enforces this limit SHOULD respond to a request to push a manifest over this limit with a response code `413 Payload Too Large`.
 Client and registry implementations SHOULD expect to be able to support manifest pushes of at least 4 megabytes.
 
-###### Pushing Manifests with Subject
+##### Pushing Manifests with Subject
 
 When processing a request for an image manifest with the `subject` field, a registry implementation that supports the [referrers API](#listing-referrers) MUST respond with the response header `OCI-Subject: <subject digest>` to indicate to the client that the registry processed the request's `subject`.
 
@@ -511,9 +504,9 @@ When pushing a manifest with the `subject` field and the `OCI-Subject` header wa
 1. Push the updated referrers list using the same [referrers tag schema](#referrers-tag-schema).
    The client MAY use conditional HTTP requests to prevent overwriting a referrers list that has changed since it was first pulled.
 
-#### Content Discovery
+### Content Discovery
 
-##### Listing Tags
+#### Listing Tags
 
 To fetch the list of tags, perform a `GET` request to a path in the following format: `/v2/<name>/tags/list` <sup>[end-8a](#endpoints)</sup>
 
@@ -564,7 +557,7 @@ Previous versions of this specification did not include the `Link` header.
 Clients depending on the number of tags returned matching `n` may prematurely stop pagination on registries using the `Link` header.
 When available, clients should prefer the `Link` header over using the `last` parameter for pagination.
 
-##### Listing Referrers
+#### Listing Referrers
 
 *Note: this feature was added in distibution-spec 1.1.
 Registries should see [Enabling the Referrers API](#enabling-the-referrers-api) before enabling this.*
@@ -664,13 +657,13 @@ If the [referrers API](#listing-referrers) returns a 404, the client MUST fallba
 The response SHOULD be an image index with the same content that would be expected from the referrers API.
 If the response to the [referrers API](#listing-referrers) is a 404, and the tag schema does not return a valid image index, the client SHOULD assume there are no referrers to the manifest.
 
-#### Content Management
+### Content Management
 
 Content management refers to the deletion of blobs, tags, and manifests.
 Registries MAY implement deletion or they MAY disable it.
 Similarly, a registry MAY implement tag deletion, while others MAY allow deletion only by manifest.
 
-##### Deleting tags
+#### Deleting tags
 
 To delete a tag, perform a `DELETE` request to a path in the following format: `/v2/<name>/manifests/<tag>` <sup>[end-9](#endpoints)</sup>
 
@@ -680,7 +673,7 @@ If tag deletion is disabled, the registry MUST respond with either a `400 Bad Re
 
 Once deleted, a `GET` to `/v2/<name>/manifests/<tag>` will return a 404.
 
-##### Deleting Manifests
+#### Deleting Manifests
 
 To delete a manifest, perform a `DELETE` request to a path in the following format: `/v2/<name>/manifests/<digest>` <sup>[end-9](#endpoints)</sup>
 
@@ -700,7 +693,7 @@ When deleting an image manifest that contains a `subject` field, and the [referr
 
 When deleting a manifest that has an associated [referrers tag schema](#referrers-tag-schema), clients MAY also delete the referrers tag when it returns a valid image index.
 
-##### Deleting Blobs
+#### Deleting Blobs
 
 To delete a blob, perform a `DELETE` request to a path in the following format: `/v2/<name>/blobs/<digest>` <sup>[end-10](#endpoints)</sup>
 
@@ -709,7 +702,7 @@ Upon success, the registry MUST respond with code `202 Accepted`.
 If the blob is not found, a `404 Not Found` code MUST be returned.
 If blob deletion is disabled, the registry MUST respond with either a `400 Bad Request` or a `405 Method Not Allowed`.
 
-### Registry Proxying
+## Registry Proxying
 
 A registry MAY operate as a proxy to another registry to delegate functionality or implement additional functionality.
 An example of delegating functionality is proxying pull operations to another registry.
@@ -729,17 +722,17 @@ A client SHOULD avoid sending `ns` query parameters to non-proxy registries.
 _Implementers note:_
 Authorization credentials for an upstream registry SHOULD NOT be sent to a proxy registry unless explicitly configured or instructed to do so by the credential owner.
 
-### Backwards Compatibility
+## Backwards Compatibility
 
 Client implementations MUST support registries that implement partial or older versions of the OCI Distribution Spec.
 This section describes client fallback procedures that MUST be implemented when a new/optional API is not available from a registry.
 
-#### Unavailable Referrers API
+### Unavailable Referrers API
 
 A client that pushes an image manifest with a defined `subject` field MUST verify the [referrers API](#listing-referrers) is available or fallback to updating the image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
 A client querying the [referrers API](#listing-referrers) and receiving a `404 Not Found` MUST fallback to using an image index pushed to a tag described by the [referrers tag schema](#referrers-tag-schema).
 
-##### Referrers Tag Schema
+#### Referrers Tag Schema
 
 The Referrers Tag associated with a [Content Digest](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> MUST match the Truncated Algorithm, a `-` character, and the Truncated Encoded section, with any characters not allowed by [`<reference>` tags](#pulling-manifests) replaced with `-`.
 The Truncated Algorithm associated with a Content Digest MUST match the digest's `algorithm` section truncated to 32 characters.
@@ -760,11 +753,11 @@ Maintaining the content of this tag is the responsibility of clients pushing and
 Protection against race conditions is the responsibility of clients and end users, and can be resolved by using a registry that provides the [referrers API](#listing-referrers).
 Clients MAY use a conditional HTTP push for registries that support ETag conditions to avoid conflicts with other clients.
 
-### Upgrade Procedures
+## Upgrade Procedures
 
 The following describes procedures for upgrading to a newer version of the spec and the process to enable new APIs.
 
-#### Enabling the Referrers API
+### Enabling the Referrers API
 
 The referrers API here is described by [Listing Referrers](#listing-referrers) and [end-12a](#endpoints).
 When registries add support for the referrers API, this API needs to account for manifests that were pushed before the API was available using the [Referrers Tag Schema](#referrers-tag-schema).
@@ -773,11 +766,11 @@ When registries add support for the referrers API, this API needs to account for
 1. Registries MAY include all preexisting image manifests with a `subject` field in the referrers API response.
 1. After the referrers API is enabled, Registries MUST include all newly pushed image manifests with a valid `subject` field in the referrers API response.
 
-### API
+## API
 
 The API operates over HTTP. Below is a summary of the endpoints used by the API.
 
-#### Determining Support
+### Determining Support
 
 To check whether or not the registry implements this specification, perform a `GET` request to the following endpoint: `/v2/` <sup>[end-1](#endpoints)</sup>.
 
@@ -785,7 +778,7 @@ If the response is `200 OK`, then the registry implements this specification.
 
 This endpoint MAY be used for authentication/authorization purposes, but this is out of the purview of this specification.
 
-#### Endpoints
+### Endpoints
 
 | ID      | Method         | API Endpoint                                                   | Success     | Failure           |
 | ------- | -------------- | -------------------------------------------------------------- | ----------- | ----------------- |
@@ -806,7 +799,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
 | end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
 
-#### Error Codes
+### Error Codes
 
 A `4XX` response code from the registry MAY return a body in any format. If the response body is in JSON format, it MUST
 have the following format:
@@ -847,7 +840,7 @@ The `code` field MUST be one of the following:
 | code-13 | `UNSUPPORTED`           | the operation is unsupported                               |
 | code-14 | `TOOMANYREQUESTS`       | too many requests                                          |
 
-#### Warnings
+### Warnings
 
 Registry implementations MAY include informational warnings in `Warning` headers, as described in [RFC 7234](https://www.rfc-editor.org/rfc/rfc7234#section-5.5).
 
@@ -867,7 +860,7 @@ If a client receives `Warning` response headers, it SHOULD report the warnings t
 Clients SHOULD deduplicate warnings from multiple associated responses.
 In accordance with RFC 7234, clients MUST NOT take any automated action based on the presence or contents of warnings, only report them to the user.
 
-### Appendix
+## Appendix
 
 The following is a list of documents referenced in this spec:
 
