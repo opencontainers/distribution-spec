@@ -139,6 +139,18 @@ func (a *api) GetFlags(opts ...apiDoOpt) map[string]bool {
 	return ret
 }
 
+func (a *api) VerifyDigest(resp *http.Response, dig digest.Digest, opts ...apiDoOpt) error {
+	flags := a.GetFlags(opts...)
+	digHeader := resp.Header.Get("Docker-Content-Digest")
+	if digHeader == "" && flags["RequireDigestHeader"] {
+		return fmt.Errorf("registry did not return a Docker-Content-Digest header")
+	}
+	if digHeader != "" && dig.String() != "" && digHeader != dig.String() {
+		return fmt.Errorf("Docker-Content-Digest header value expected %q, received %q", dig.String(), digHeader)
+	}
+	return nil
+}
+
 func (a *api) BlobDelete(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
 	u, err := url.Parse(registry + "/v2/" + repo + "/blobs/" + dig.String())
 	if err != nil {
@@ -178,13 +190,22 @@ func (a *api) BlobGetReq(registry, repo string, dig digest.Digest, td *testData,
 }
 
 func (a *api) BlobGetExistsFull(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	resp := http.Response{Header: http.Header{}}
 	opts = append(opts,
 		apiExpectStatus(http.StatusOK),
+		apiReturnResponse(&resp),
 	)
 	if val, ok := td.blobs[dig]; ok && (len(val) > 0 || dig == emptyDigest) {
 		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
 	}
-	return a.BlobGetReq(registry, repo, dig, td, opts...)
+	errs := []error{}
+	if err := a.BlobGetReq(registry, repo, dig, td, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 func (a *api) BlobHeadReq(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
@@ -204,14 +225,23 @@ func (a *api) BlobHeadReq(registry, repo string, dig digest.Digest, td *testData
 }
 
 func (a *api) BlobHeadExists(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
+	resp := http.Response{Header: http.Header{}}
 	opts = append(opts,
 		apiExpectStatus(http.StatusOK),
 		apiExpectBody([]byte{}),
+		apiReturnResponse(&resp),
 	)
 	if val, ok := td.blobs[dig]; ok && (len(val) > 0 || dig == emptyDigest) {
 		opts = append(opts, apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
 	}
-	return a.BlobHeadReq(registry, repo, dig, td, opts...)
+	errs := []error{}
+	if err := a.BlobHeadReq(registry, repo, dig, td, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
@@ -230,14 +260,17 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 	}
 	u.RawQuery = qa.Encode()
 	// TODO: add digest algorithm if not sha256
+	errs := []error{}
 	loc := ""
 	status := 0
+	resp := http.Response{Header: http.Header{}}
 	err = a.Do(
 		apiWithMethod("POST"),
 		apiWithURL(u),
 		apiExpectStatus(http.StatusCreated, http.StatusAccepted),
 		apiReturnHeader("Location", &loc),
 		apiReturnStatus(&status),
+		apiReturnResponse(&resp),
 		apiWithAnd(opts),
 	)
 	if err != nil {
@@ -246,68 +279,40 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 	if loc == "" {
 		return fmt.Errorf("blob post did not return a location")
 	}
-	if status == http.StatusCreated {
-		// verify returned location
-		if loc == "" {
-			return fmt.Errorf("blob put did not return a location")
-		}
+	if status == http.StatusAccepted {
+		// fallback to post+put
 		u, err = u.Parse(loc)
 		if err != nil {
-			return fmt.Errorf("could not parse location header %q: %w", loc, err)
+			return fmt.Errorf("blob post could not parse location header %q: %w", loc, err)
 		}
+		qa = u.Query()
+		qa.Set("digest", dig.String())
+		u.RawQuery = qa.Encode()
 		err = a.Do(
-			apiWithMethod("GET"),
+			apiWithMethod("PUT"),
 			apiWithURL(u),
-			apiExpectBody(bodyBytes),
-			apiExpectStatus(http.StatusOK),
+			apiWithContentLength(int64(len(bodyBytes))),
+			apiWithHeaderAdd("Content-Type", mtOctetStream),
+			apiWithBody(bodyBytes),
+			apiExpectStatus(http.StatusCreated),
+			apiReturnHeader("Location", &loc),
+			apiReturnResponse(&resp),
 			apiWithAnd(opts),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to verify returned location: %w", err)
+			return fmt.Errorf("blob put failed: %w", err)
 		}
-		// successful mount
-		return nil
+		errs = append(errs, fmt.Errorf("registry returned status %d, fell back to blob POST+PUT%.0w", status, errRegUnsupported))
+	} else if status != http.StatusCreated {
+		return fmt.Errorf("blob mount returned status %d", status)
 	}
-	// fallback to post+put
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("blob post could not parse location header %q: %w", loc, err)
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		return err
 	}
-	qa = u.Query()
-	qa.Set("digest", dig.String())
-	u.RawQuery = qa.Encode()
-	err = a.Do(
-		apiWithMethod("PUT"),
-		apiWithURL(u),
-		apiWithContentLength(int64(len(bodyBytes))),
-		apiWithHeaderAdd("Content-Type", mtOctetStream),
-		apiWithBody(bodyBytes),
-		apiExpectStatus(http.StatusCreated),
-		apiReturnHeader("Location", &loc),
-		apiWithAnd(opts),
-	)
-	if err != nil {
-		return fmt.Errorf("blob put failed: %w", err)
+	if err := a.BlobVerifyLocation(u, loc, bodyBytes, opts...); err != nil {
+		return err
 	}
-	// verify returned location
-	if loc == "" {
-		return fmt.Errorf("blob put did not return a location")
-	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("could not parse location header %q: %w", loc, err)
-	}
-	err = a.Do(
-		apiWithMethod("GET"),
-		apiWithURL(u),
-		apiExpectBody(bodyBytes),
-		apiExpectStatus(http.StatusOK),
-		apiWithAnd(opts),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to verify returned location: %w", err)
-	}
-	return fmt.Errorf("registry returned status %d, fell back to blob POST+PUT%.0w", status, errRegUnsupported)
+	return errors.Join(errs...)
 }
 
 func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
@@ -323,6 +328,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	// TODO: add digest algorithm if not sha256
 	minStr := ""
 	loc := ""
+	resp := http.Response{Header: http.Header{}}
 	err = a.Do(
 		apiWithMethod("POST"),
 		apiWithURL(u),
@@ -440,6 +446,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 				chunkOpts = append(chunkOpts,
 					apiExpectStatus(http.StatusCreated),
 					apiReturnHeader("Location", &loc),
+					apiReturnResponse(&resp),
 				)
 			}
 		} else {
@@ -481,6 +488,7 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 			putOpts = append([]apiDoOpt{
 				apiExpectStatus(http.StatusCreated),
 				apiReturnHeader("Location", &loc),
+				apiReturnResponse(&resp),
 			}, opts...)
 		}
 		err = a.Do(
@@ -497,23 +505,11 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	if flags["ExpectBadDigest"] {
 		return nil
 	}
-	// verify returned location
-	if loc == "" {
-		return fmt.Errorf("blob put did not return a location")
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		return err
 	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("could not parse location header %q: %w", loc, err)
-	}
-	err = a.Do(
-		apiWithMethod("GET"),
-		apiWithURL(u),
-		apiExpectBody(bodyBytes),
-		apiExpectStatus(http.StatusOK),
-		apiWithAnd(opts),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to verify returned location: %w", err)
+	if err := a.BlobVerifyLocation(u, loc, bodyBytes, opts...); err != nil {
+		return err
 	}
 	return nil
 }
@@ -530,6 +526,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	}
 	// TODO: add digest algorithm if not sha256
 	loc := ""
+	resp := http.Response{Header: http.Header{}}
 	err = a.Do(
 		apiWithMethod("POST"),
 		apiWithURL(u),
@@ -587,6 +584,7 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 		apiWithContentLength(0),
 		apiWithHeaderAdd("Content-Type", mtOctetStream),
 		apiReturnHeader("Location", &loc),
+		apiReturnResponse(&resp),
 		apiWithAnd(putOpts),
 	)
 	if err != nil {
@@ -595,23 +593,11 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	if flags["ExpectBadDigest"] {
 		return nil
 	}
-	// verify returned location
-	if loc == "" {
-		return fmt.Errorf("blob put did not return a location")
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		return err
 	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("could not parse location header %q: %w", loc, err)
-	}
-	err = a.Do(
-		apiWithMethod("GET"),
-		apiWithURL(u),
-		apiExpectBody(bodyBytes),
-		apiExpectStatus(http.StatusOK),
-		apiWithAnd(opts),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to verify returned location: %w", err)
+	if err := a.BlobVerifyLocation(u, loc, bodyBytes, opts...); err != nil {
+		return err
 	}
 	return nil
 }
@@ -666,6 +652,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	qa.Set("digest", dig.String())
 	u.RawQuery = qa.Encode()
 	loc := ""
+	resp := http.Response{Header: http.Header{}}
 	var status int
 	var postOpts []apiDoOpt
 	if flags["ExpectBadDigest"] {
@@ -686,6 +673,7 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 		apiWithBody(bodyBytes),
 		apiReturnStatus(&status),
 		apiReturnHeader("Location", &loc),
+		apiReturnResponse(&resp),
 		apiWithAnd(postOpts),
 	)
 	if err != nil {
@@ -717,6 +705,8 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 			apiWithContentLength(int64(len(bodyBytes))),
 			apiWithHeaderAdd("Content-Type", mtOctetStream),
 			apiWithBody(bodyBytes),
+			apiReturnHeader("Location", &loc),
+			apiReturnResponse(&resp),
 			apiWithAnd(putOpts),
 		)
 		if err != nil {
@@ -727,23 +717,11 @@ func (a *api) BlobPostOnly(registry, repo string, dig digest.Digest, td *testDat
 	if flags["ExpectBadDigest"] {
 		return nil
 	}
-	// verify returned location
-	if loc == "" {
-		return fmt.Errorf("blob put did not return a location")
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		return err
 	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("could not parse location header %q: %w", loc, err)
-	}
-	err = a.Do(
-		apiWithMethod("GET"),
-		apiWithURL(u),
-		apiExpectBody(bodyBytes),
-		apiExpectStatus(http.StatusOK),
-		apiWithAnd(opts),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to verify returned location: %w", err)
+	if err := a.BlobVerifyLocation(u, loc, bodyBytes, opts...); err != nil {
+		return err
 	}
 	return nil
 }
@@ -760,6 +738,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	}
 	// TODO: add digest algorithm if not sha256
 	loc := ""
+	resp := http.Response{Header: http.Header{}}
 	err = a.Do(
 		apiWithMethod("POST"),
 		apiWithURL(u),
@@ -788,6 +767,7 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 		putOpts = append([]apiDoOpt{
 			apiExpectStatus(http.StatusCreated),
 			apiReturnHeader("Location", &loc),
+			apiReturnResponse(&resp),
 		}, opts...)
 	}
 	err = a.Do(
@@ -804,11 +784,20 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	if flags["ExpectBadDigest"] {
 		return nil
 	}
-	// verify returned location
-	if loc == "" {
-		return fmt.Errorf("blob put did not return a location")
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		return err
 	}
-	u, err = u.Parse(loc)
+	if err := a.BlobVerifyLocation(u, loc, bodyBytes, opts...); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *api) BlobVerifyLocation(u *url.URL, loc string, bodyBytes []byte, opts ...apiDoOpt) error {
+	if loc == "" {
+		return fmt.Errorf("location header missing")
+	}
+	u, err := u.Parse(loc)
 	if err != nil {
 		return fmt.Errorf("could not parse location header %q: %w", loc, err)
 	}
@@ -869,15 +858,24 @@ func (a *api) ManifestGetExists(registry, repo, ref string, dig digest.Digest, t
 	opts = append(opts,
 		apiExpectStatus(http.StatusOK),
 	)
+	resp := http.Response{Header: http.Header{}}
 	if val, ok := td.manifests[dig]; ok && len(val) > 0 {
 		mediaType := detectMediaType(val)
 		opts = append(opts,
 			apiExpectBody(val),
 			apiExpectHeader("Content-Type", mediaType),
 			apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))),
+			apiReturnResponse(&resp),
 		)
 	}
-	return a.ManifestGetReq(registry, repo, ref, dig, td, opts...)
+	errs := []error{}
+	if err := a.ManifestGetReq(registry, repo, ref, dig, td, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 func (a *api) ManifestHeadReq(registry, repo, ref string, dig digest.Digest, td *testData, opts ...apiDoOpt) error {
@@ -903,14 +901,23 @@ func (a *api) ManifestHeadExists(registry, repo, ref string, dig digest.Digest, 
 		apiExpectStatus(http.StatusOK),
 		apiExpectBody([]byte{}),
 	)
+	resp := http.Response{Header: http.Header{}}
 	if val, ok := td.manifests[dig]; ok && len(val) > 0 {
 		mediaType := detectMediaType(val)
 		opts = append(opts,
 			apiExpectHeader("Content-Type", mediaType),
 			apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))),
+			apiReturnResponse(&resp),
 		)
 	}
-	return a.ManifestHeadReq(registry, repo, ref, dig, td, opts...)
+	errs := []error{}
+	if err := a.ManifestHeadReq(registry, repo, ref, dig, td, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	if err := a.VerifyDigest(&resp, dig, opts...); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
 }
 
 func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, referrersEnabled bool, opts ...apiDoOpt) error {
@@ -924,7 +931,7 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 		return err
 	}
 	mediaType := detectMediaType(bodyBytes)
-	resp := http.Response{}
+	resp := http.Response{Header: http.Header{}}
 	loc := ""
 	var putOpts []apiDoOpt
 	if flags["ExpectBadDigest"] {
@@ -944,6 +951,7 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 			putOpts = append(putOpts, apiExpectHeader("OCI-Subject", subj.Digest.String()))
 		}
 	}
+	errs := []error{}
 	err = a.Do(
 		apiWithMethod("PUT"),
 		apiWithURL(u),
@@ -953,42 +961,46 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 		apiWithAnd(putOpts),
 	)
 	if err != nil {
-		return fmt.Errorf("manifest put failed: %w", err)
+		errs = append(errs, fmt.Errorf("manifest put failed: %w", err))
 	}
 	// do not validate response if a failure was expected
 	if flags["ExpectBadDigest"] {
-		return nil
+		return errors.Join(errs...)
 	}
+	// validate the digest header
 	digHeader := resp.Header.Get("Docker-Content-Digest")
-	if digHeader == "" {
-		return fmt.Errorf("warning: registry does not return a Docker-Content-Digest header")
+	if digHeader == "" && flags["RequestDigestHeader"] {
+		errs = append(errs, fmt.Errorf("registry did not return a Docker-Content-Digest header"))
 	}
 	if digHeader != "" && digHeader != dig.String() {
-		return fmt.Errorf("Docker-Content-Digest header value expected %q, received %q", dig.String(), digHeader)
+		errs = append(errs, fmt.Errorf("Docker-Content-Digest header value expected %q, received %q", dig.String(), digHeader))
 	}
 	// verify returned location
 	if loc == "" {
-		return fmt.Errorf("blob put did not return a location")
+		errs = append(errs, fmt.Errorf("blob put did not return a location"))
+	} else {
+		u, err = u.Parse(loc)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("could not parse location header %q: %w", loc, err))
+		}
+		if err == nil {
+			err = a.Do(
+				apiWithMethod("GET"),
+				apiWithURL(u),
+				apiWithHeaderAdd("Accept", mtOCIIndex),
+				apiWithHeaderAdd("Accept", mtOCIImage),
+				apiExpectStatus(http.StatusOK),
+				apiExpectHeader("Content-Type", mediaType),
+				apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+				apiExpectBody(bodyBytes),
+				apiWithAnd(opts),
+			)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to verify returned location: %w", err))
+			}
+		}
 	}
-	u, err = u.Parse(loc)
-	if err != nil {
-		return fmt.Errorf("could not parse location header %q: %w", loc, err)
-	}
-	err = a.Do(
-		apiWithMethod("GET"),
-		apiWithURL(u),
-		apiWithHeaderAdd("Accept", mtOCIIndex),
-		apiWithHeaderAdd("Accept", mtOCIImage),
-		apiExpectStatus(http.StatusOK),
-		apiExpectHeader("Content-Type", mediaType),
-		apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
-		apiExpectBody(bodyBytes),
-		apiWithAnd(opts),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to verify returned location: %w", err)
-	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (a *api) PingReq(registry string, opts ...apiDoOpt) error {
