@@ -35,10 +35,12 @@ export OCI_API_PULL=true
 export OCI_API_PUSH=true # to disable push requests, see the OCI_RO_DATA variables below
 export OCI_API_BLOBS_ATOMIC=true # whether blob delete operations should be immediate
 export OCI_API_BLOBS_DELETE=true
+export OCI_API_BLOBS_DIGEST_HEADER=false # whether Docker-Content-Digest header is required
 export OCI_API_BLOBS_MOUNT_ANONYMOUS=true # attempt to mount a blob without a source repository
 export OCI_API_BLOBS_UPLOAD_CANCEL=false # cancel a running upload
 export OCI_API_MANIFESTS_ATOMIC=true # whether manifest delete operations should be immediate
 export OCI_API_MANIFESTS_DELETE=true
+export OCI_API_MANIFESTS_DIGEST_HEADER=false # whether Docker-Content-Digest header is required
 export OCI_API_TAGS_ATOMIC=true # whether tag delete operations should be immediate
 export OCI_API_TAGS_DELETE=true
 export OCI_API_TAGS_LIST=true
@@ -96,11 +98,13 @@ apis:
   blobs:
     atomic: true
     delete: true
+    digestHeader: false
     mountAnonymous: true
     uploadCancel: false
   manifests:
     atomic: true
     delete: true
+    digestHeader: false
   tags:
     atomic: true
     delete: true

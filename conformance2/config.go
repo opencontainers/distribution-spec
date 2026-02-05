@@ -64,13 +64,15 @@ type configAPI struct {
 type configBlobs struct {
 	Atomic         bool `config:"ATOMIC" yaml:"atomic"`
 	Delete         bool `config:"DELETE" yaml:"delete"`
+	DigestHeader   bool `config:"DIGEST_HEADER" yaml:"digestHeader"`
 	MountAnonymous bool `config:"MOUNT_ANONYMOUS" yaml:"mountAnonymous"`
 	UploadCancel   bool `config:"UPLOAD_CANCEL" yaml:"uploadCancel"`
 }
 
 type configManifests struct {
-	Atomic bool `config:"ATOMIC" yaml:"atomic"`
-	Delete bool `config:"DELETE" yaml:"delete"`
+	Atomic       bool `config:"ATOMIC" yaml:"atomic"`
+	Delete       bool `config:"DELETE" yaml:"delete"`
+	DigestHeader bool `config:"DIGEST_HEADER" yaml:"digestHeader"`
 }
 
 type configTags struct {
@@ -155,12 +157,14 @@ func configLoad() (config, error) {
 			Blobs: configBlobs{
 				Atomic:         true,
 				Delete:         true,
+				DigestHeader:   false,
 				MountAnonymous: true,
 				UploadCancel:   false,
 			},
 			Manifests: configManifests{
-				Atomic: true,
-				Delete: true,
+				Atomic:       true,
+				Delete:       true,
+				DigestHeader: false,
 			},
 			Tags: configTags{
 				Atomic: true,
@@ -190,6 +194,8 @@ func configLoad() (config, error) {
 	switch configVersion {
 	case "1.1+dev":
 		c.APIs.Blobs.UploadCancel = true
+		c.APIs.Blobs.DigestHeader = true
+		c.APIs.Manifests.DigestHeader = true
 		c.Version = "1.1+dev"
 	case "", "1.1":
 		c.Version = "1.1"

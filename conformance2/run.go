@@ -1405,7 +1405,11 @@ func (r *runner) TestHeadBlob(parent *results, tdName string, repo string, dig d
 			r.TestSkip(res, err, tdName, stateAPIBlobHead)
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
-		if err := r.API.BlobHeadExists(r.Config.schemeReg, repo, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		if r.Config.APIs.Blobs.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
+		if err := r.API.BlobHeadExists(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobHead)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
 		}
@@ -1416,7 +1420,6 @@ func (r *runner) TestHeadBlob(parent *results, tdName string, repo string, dig d
 
 func (r *runner) TestHeadManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
-	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-head-by-digest", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestHeadDigest); err != nil {
@@ -1425,7 +1428,10 @@ func (r *runner) TestHeadManifestDigest(parent *results, tdName string, repo str
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		apis = append(apis, stateAPIManifestHeadDigest)
-		opts = append(opts, apiSaveOutput(res.Output))
+		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		if r.Config.APIs.Manifests.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.ManifestHeadExists(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1437,7 +1443,6 @@ func (r *runner) TestHeadManifestDigest(parent *results, tdName string, repo str
 
 func (r *runner) TestHeadManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
-	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-head-by-tag", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestHeadTag); err != nil {
@@ -1446,7 +1451,10 @@ func (r *runner) TestHeadManifestTag(parent *results, tdName string, repo string
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		apis = append(apis, stateAPIManifestHeadTag)
-		opts = append(opts, apiSaveOutput(res.Output))
+		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		if r.Config.APIs.Manifests.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.ManifestHeadExists(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1666,7 +1674,11 @@ func (r *runner) TestPullBlob(parent *results, tdName string, repo string, dig d
 			r.TestSkip(res, err, tdName, stateAPIBlobGetFull)
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
-		if err := r.API.BlobGetExistsFull(r.Config.schemeReg, repo, dig, r.State.Data[tdName], apiSaveOutput(res.Output)); err != nil {
+		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		if r.Config.APIs.Blobs.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
+		if err := r.API.BlobGetExistsFull(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobGetFull)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
 		}
@@ -1677,7 +1689,6 @@ func (r *runner) TestPullBlob(parent *results, tdName string, repo string, dig d
 
 func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
-	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestGetDigest); err != nil {
@@ -1686,7 +1697,10 @@ func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo str
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		apis = append(apis, stateAPIManifestGetDigest)
-		opts = append(opts, apiSaveOutput(res.Output))
+		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		if r.Config.APIs.Manifests.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.ManifestGetExists(r.Config.schemeReg, repo, dig.String(), dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1698,7 +1712,6 @@ func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo str
 
 func (r *runner) TestPullManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
-	opts := []apiDoOpt{}
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIManifestGetTag); err != nil {
@@ -1707,7 +1720,10 @@ func (r *runner) TestPullManifestTag(parent *results, tdName string, repo string
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		apis = append(apis, stateAPIManifestGetTag)
-		opts = append(opts, apiSaveOutput(res.Output))
+		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		if r.Config.APIs.Manifests.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.ManifestGetExists(r.Config.schemeReg, repo, tag, dig, td, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1880,6 +1896,9 @@ func (r *runner) TestPushBlobPostPut(parent *results, tdName string, repo string
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		opts = append(opts, apiSaveOutput(res.Output))
+		if r.Config.APIs.Blobs.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.BlobPostPut(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPostPut)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1896,6 +1915,9 @@ func (r *runner) TestPushBlobPostOnly(parent *results, tdName string, repo strin
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		opts = append(opts, apiSaveOutput(res.Output))
+		if r.Config.APIs.Blobs.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.BlobPostOnly(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPostOnly)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1912,6 +1934,9 @@ func (r *runner) TestPushBlobPatchChunked(parent *results, tdName string, repo s
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		opts = append(opts, apiSaveOutput(res.Output))
+		if r.Config.APIs.Blobs.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.BlobPatchChunked(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPatchChunked)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1928,6 +1953,9 @@ func (r *runner) TestPushBlobPatchStream(parent *results, tdName string, repo st
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		opts = append(opts, apiSaveOutput(res.Output))
+		if r.Config.APIs.Blobs.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.BlobPatchStream(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...); err != nil {
 			r.TestFail(res, err, tdName, stateAPIBlobPatchStream)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1952,6 +1980,9 @@ func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo str
 		}
 		apis = append(apis, stateAPIManifestPutDigest)
 		opts = append(opts, apiSaveOutput(res.Output))
+		if r.Config.APIs.Manifests.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.ManifestPut(r.Config.schemeReg, repo, dig.String(), dig, td, r.Config.APIs.Referrer, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1976,6 +2007,9 @@ func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string
 		}
 		apis = append(apis, stateAPIManifestPutTag)
 		opts = append(opts, apiSaveOutput(res.Output))
+		if r.Config.APIs.Manifests.DigestHeader {
+			opts = append(opts, apiWithFlag("RequireDigestHeader"))
+		}
 		if err := r.API.ManifestPut(r.Config.schemeReg, repo, tag, dig, td, r.Config.APIs.Referrer, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
