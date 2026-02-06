@@ -62,23 +62,23 @@ type configAPI struct {
 }
 
 type configBlobs struct {
-	Atomic         bool `config:"ATOMIC" yaml:"atomic"`
-	Delete         bool `config:"DELETE" yaml:"delete"`
-	DigestHeader   bool `config:"DIGEST_HEADER" yaml:"digestHeader"`
-	MountAnonymous bool `config:"MOUNT_ANONYMOUS" yaml:"mountAnonymous"`
-	UploadCancel   bool `config:"UPLOAD_CANCEL" yaml:"uploadCancel"`
+	Atomic         bool `conformance:"ATOMIC" yaml:"atomic"`
+	Delete         bool `conformance:"DELETE" yaml:"delete"`
+	DigestHeader   bool `conformance:"DIGEST_HEADER" yaml:"digestHeader"`
+	MountAnonymous bool `conformance:"MOUNT_ANONYMOUS" yaml:"mountAnonymous"`
+	UploadCancel   bool `conformance:"UPLOAD_CANCEL" yaml:"uploadCancel"`
 }
 
 type configManifests struct {
-	Atomic       bool `config:"ATOMIC" yaml:"atomic"`
-	Delete       bool `config:"DELETE" yaml:"delete"`
-	DigestHeader bool `config:"DIGEST_HEADER" yaml:"digestHeader"`
+	Atomic       bool `conformance:"ATOMIC" yaml:"atomic"`
+	Delete       bool `conformance:"DELETE" yaml:"delete"`
+	DigestHeader bool `conformance:"DIGEST_HEADER" yaml:"digestHeader"`
 }
 
 type configTags struct {
-	Atomic bool `config:"ATOMIC" yaml:"atomic"`
-	Delete bool `config:"DELETE" yaml:"delete"`
-	List   bool `config:"LIST" yaml:"list"`
+	Atomic bool `conformance:"ATOMIC" yaml:"atomic"`
+	Delete bool `conformance:"DELETE" yaml:"delete"`
+	List   bool `conformance:"LIST" yaml:"list"`
 }
 
 type configData struct {
