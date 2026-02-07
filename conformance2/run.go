@@ -130,6 +130,22 @@ func (r *runner) GenerateData() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
+	// large manifest using a lot of annotations
+	tdName = "large-manifest"
+	r.State.Data[tdName] = newTestData("Image with Large Manifest")
+	r.State.DataStatus[tdName] = statusUnknown
+	dataTests = append(dataTests, tdName)
+	largeAnnotations := map[string]string{}
+	for i := range 390 {
+		largeAnnotations[fmt.Sprintf("large-annotation-%d", i)] = strings.Repeat("A", 10000)
+	}
+	_, err = r.State.Data[tdName].genManifestFull(
+		genWithTag("large-manifest"),
+		genWithAnnotations(largeAnnotations),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
 	// multi-platform index
 	if r.Config.Data.Index {
 		tdName = "index"
