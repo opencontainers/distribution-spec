@@ -2048,11 +2048,15 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 					}
 				}
 			}
-			// if multiple referrers exist, try to filter on artifactType
-			if len(r.State.Data[tdName].referrers[subj]) > 1 {
+			referrerATs := map[string]bool{}
+			for _, goal := range referrerGoal {
+				referrerATs[goal.ArtifactType] = true
+			}
+			// search for referrers filtered by artifactType
+			for referrerAT := range referrerATs {
 				var filtersHeader string
 				referrerResp, err := r.API.ReferrersList(r.Config.schemeReg, repo, subj, apiSaveOutput(res.Output),
-					apiWithURLParam("artifactType", mtExampleConf1),
+					apiWithURLParam("artifactType", referrerAT),
 					apiReturnHeader("OCI-Filters-Applied", &filtersHeader))
 				if err != nil {
 					errs = append(errs, err)
@@ -2066,7 +2070,7 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 						errs = append(errs, fmt.Errorf("registry does not set the expected OCI-Filters-Applied header for the artifactType%.0w", errRegUnsupported))
 					}
 					for _, goal := range referrerGoal {
-						if (!filtersApplied || goal.ArtifactType == mtExampleConf1) && !slices.ContainsFunc(referrerResp.Manifests, func(resp image.Descriptor) bool {
+						if (!filtersApplied || goal.ArtifactType == referrerAT) && !slices.ContainsFunc(referrerResp.Manifests, func(resp image.Descriptor) bool {
 							return resp.Digest == goal.Digest &&
 								resp.MediaType == goal.MediaType &&
 								resp.Size == goal.Size &&
@@ -2079,7 +2083,7 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 					if filtersApplied {
 						// verify no other entries are returned
 						for _, resp := range referrerResp.Manifests {
-							if resp.ArtifactType != mtExampleConf1 {
+							if resp.ArtifactType != referrerAT {
 								errs = append(errs, fmt.Errorf("referrers filter for artifactType %s included descriptor %v%.0w", mtExampleConf1, resp, errAPITestError))
 							}
 						}
