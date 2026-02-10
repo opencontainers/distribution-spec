@@ -147,9 +147,9 @@ func (r *runner) GenerateData() error {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
 	// multi-platform index
+	tdName = "index"
+	r.State.Data[tdName] = newTestData("Index")
 	if r.Config.Data.Index {
-		tdName = "index"
-		r.State.Data[tdName] = newTestData("Index")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genIndexFull(
@@ -162,11 +162,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// index containing an index
+	tdName = "nested-index"
+	r.State.Data[tdName] = newTestData("Nested Index")
 	if r.Config.Data.Index && r.Config.Data.IndexList {
-		tdName = "nested-index"
-		r.State.Data[tdName] = newTestData("Nested Index")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		dig1, err := r.State.Data[tdName].genIndexFull(
@@ -193,11 +195,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// empty index
+	tdName = "empty-index"
+	r.State.Data[tdName] = newTestData("Empty Index")
 	if r.Config.Data.Index {
-		tdName = "empty-index"
-		r.State.Data[tdName] = newTestData("Empty Index")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genIndexFull(
@@ -207,11 +211,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// artifact manifest
+	tdName = "artifact"
+	r.State.Data[tdName] = newTestData("Artifact")
 	if r.Config.Data.Artifact {
-		tdName = "artifact"
-		r.State.Data[tdName] = newTestData("Artifact")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genManifestFull(
@@ -225,11 +231,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// artifact index
+	tdName = "artifact-index"
+	r.State.Data[tdName] = newTestData("Artifact Index")
 	if r.Config.Data.ArtifactList {
-		tdName = "artifact-index"
-		r.State.Data[tdName] = newTestData("Artifact Index")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genIndexFull(
@@ -247,11 +255,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// artifact without layers
+	tdName = "artifact-without-layers"
+	r.State.Data[tdName] = newTestData("Artifact without Layers")
 	if r.Config.Data.Artifact {
-		tdName = "artifact-without-layers"
-		r.State.Data[tdName] = newTestData("Artifact without Layers")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genManifestFull(
@@ -266,11 +276,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// image and referrers
+	tdName = "artifacts-with-subject"
+	r.State.Data[tdName] = newTestData("Artifacts with Subject")
 	if r.Config.Data.Subject {
-		tdName = "artifacts-with-subject"
-		r.State.Data[tdName] = newTestData("Artifacts with Subject")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		subjDig, err := r.State.Data[tdName].genManifestFull(
@@ -318,11 +330,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// index and artifact-index with a subject
+	tdName = "index-with-subject"
+	r.State.Data[tdName] = newTestData("Index with Subject")
 	if r.Config.Data.SubjectList {
-		tdName = "index-with-subject"
-		r.State.Data[tdName] = newTestData("Index with Subject")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		subjDig, err := r.State.Data[tdName].genIndexFull(
@@ -348,11 +362,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// artifact with missing subject
+	tdName = "missing-subject"
+	r.State.Data[tdName] = newTestData("Missing Subject")
 	if r.Config.Data.SubjectMissing {
-		tdName = "missing-subject"
-		r.State.Data[tdName] = newTestData("Missing Subject")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		subjDesc := image.Descriptor{
@@ -376,11 +392,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// data field in descriptor
+	tdName = "data-field"
+	r.State.Data[tdName] = newTestData("Data Field")
 	if r.Config.Data.DataField {
-		tdName = "data-field"
-		r.State.Data[tdName] = newTestData("Data Field")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err := r.State.Data[tdName].genManifestFull(
@@ -390,11 +408,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// image with non-distributable layers
+	tdName = "non-distributable-layers"
+	r.State.Data[tdName] = newTestData("Non-distributable Layers")
 	if r.Config.Data.Nondistributable {
-		tdName = "non-distributable-layers"
-		r.State.Data[tdName] = newTestData("Non-distributable Layers")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 
@@ -450,11 +470,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// add a randomized unknown field to manifests and config
+	tdName = "custom-fields"
+	r.State.Data[tdName] = newTestData("Custom Fields")
 	if r.Config.Data.CustomFields {
-		tdName = "custom-fields"
-		r.State.Data[tdName] = newTestData("Custom Fields")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err = r.State.Data[tdName].genIndexFull(
@@ -468,11 +490,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// image with an empty layer list
+	tdName = "no-layers"
+	r.State.Data[tdName] = newTestData("No Layers")
 	if r.Config.Data.NoLayers {
-		tdName = "no-layers"
-		r.State.Data[tdName] = newTestData("No Layers")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err := r.State.Data[tdName].genManifestFull(
@@ -482,11 +506,13 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	// sparse manifests missing layers/platforms
+	tdName = "sparse"
+	r.State.Data[tdName] = newTestData("Sparse Manifests")
 	if r.Config.Data.Sparse {
-		tdName = "sparse"
-		r.State.Data[tdName] = newTestData("Sparse Manifests")
 		r.State.DataStatus[tdName] = statusUnknown
 		dataTests = append(dataTests, tdName)
 		_, err := r.State.Data[tdName].genManifestFull(
@@ -537,6 +563,8 @@ func (r *runner) GenerateData() error {
 		if err != nil {
 			return fmt.Errorf("failed to generate test data: %w", err)
 		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	tdName = "bad-digest-image"
 	r.State.Data[tdName] = newTestData("Bad Digest Image")
@@ -725,6 +753,10 @@ func (r *runner) TestAll() error {
 	algos := []digest.Algorithm{digest.SHA256}
 	if r.Config.Data.Sha512 {
 		algos = append(algos, digest.SHA512)
+	} else {
+		tdName := "blobs-" + digest.SHA512.String()
+		r.State.Data[tdName] = newTestData("Blobs " + digest.SHA512.String())
+		r.State.DataStatus[tdName] = statusDisabled
 	}
 	for _, algo := range algos {
 		err = r.TestBlobAPIs(r.Results, "blobs-"+algo.String(), "Blobs "+algo.String(), algo, repo, repo2)
@@ -735,6 +767,9 @@ func (r *runner) TestAll() error {
 
 	// loop over different types of data
 	for _, tdName := range dataTests {
+		if r.State.DataStatus[tdName] == statusDisabled {
+			continue
+		}
 		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
 			errs := []error{}
 			// push
@@ -1580,7 +1615,7 @@ func (r *runner) TestManifestErrors(parent *results, repo string) error {
 	err = r.ChildRun("invalid-digest-format", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		tdName := "invalid-manifest-digest"
-		r.State.Data[tdName] = newTestData("invalid manifest digest")
+		r.State.Data[tdName] = newTestData("Invalid Manifest Digest")
 		manDig, err := r.State.Data[tdName].genManifestFull(genWithLayerCount(1))
 		if err != nil {
 			return err
