@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/goccy/go-yaml"
 	digest "github.com/opencontainers/go-digest"
 	image "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -727,6 +728,20 @@ func (r *runner) ReportHTML(w io.Writer) error {
 	}
 	// execute the top level report template
 	return t.ExecuteTemplate(w, "report", data)
+}
+
+func (r *runner) ReportResultsYAML(w io.Writer) error {
+	results := struct {
+		APIs map[stateAPIType]status `yaml:"apis"`
+		Data map[string]status       `yaml:"data"`
+	}{
+		APIs: r.State.APIStatus,
+		Data: map[string]status{},
+	}
+	for k, v := range r.State.DataStatus {
+		results.Data[r.State.Data[k].name] = v
+	}
+	return yaml.NewEncoder(w).Encode(results)
 }
 
 func (r *runner) TestAll() error {
