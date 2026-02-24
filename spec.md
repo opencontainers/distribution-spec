@@ -472,6 +472,12 @@ The `<location>` is a pullable manifest URL.
 The Docker-Content-Digest header returns the canonical digest of the uploaded blob, and MUST be equal to the client provided digest.
 Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
+When pushing a manifest by digest, the registry MAY support the pushing of tags specified by addition of `tag` query 
+parameters. If a registry supports this, it MUST:
+
+1. Not limit the number of tags that can be pushed at once.
+1. For each tag that was successfully pushed, nclude an `OCI-Tag` response header in accordance with [RFC 2616 (section 4.2)](https://datatracker.ietf.org/doc/html/rfc2616#section-4.2) semantics
+
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
 A registry SHOULD enforce some limit on the maximum manifest size that it can accept.
