@@ -472,6 +472,22 @@ The `<location>` is a pullable manifest URL.
 The Docker-Content-Digest header returns the canonical digest of the uploaded blob, and MUST be equal to the client provided digest.
 Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
+When pushing a manifest by digest, the registry MAY support the pushing of tags specified by addition of `tag` query parameters.
+If a registry supports this, it:
+
+1. MUST support pushing 5 times at once, and SHOULD NOT set an upper limit
+1. For each tag that was successfully pushed, include an `OCI-Tag` response header in accordance with [RFC 2616 (section 4.2)](https://datatracker.ietf.org/doc/html/rfc2616#section-4.2) semantics.
+
+For example, if the client pushed a manifest with the following tags:
+```
+PUT /v2/<name>/manifests/<digest>?tag=1.2.3&tag=1.2&tag=1&tag=latest 
+```
+
+The server would respond with the following header:
+```
+OCI-Tag: 1.2.3, 1.2, 1, latest
+```
+
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
 A registry SHOULD enforce some limit on the maximum manifest size that it can accept.
@@ -728,24 +744,25 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 
 #### Endpoints
 
-| ID      | Method         | API Endpoint                                                   | Success     | Failure           |
-| ------- | -------------- | -------------------------------------------------------------- | ----------- | ----------------- |
-| end-1   | `GET`          | `/v2/`                                                         | `200`       | `404`/`401`       |
-| end-2   | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                    | `200`       | `404`             |
-| end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                             | `200`       | `404`             |
-| end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                    | `202`       | `404`             |
-| end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
-| end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
-| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`       |
-| end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`             |
-| end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
-| end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`              | `200`       | `404`             |
-| end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
-| end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`405`       |
-| end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`       | `404`             |
-| end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                                | `200`       | `404`/`400`       |
-| end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
-| end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
+| ID      | Method         | API Endpoint                                                 | Success     | Failure           |
+|---------|----------------|--------------------------------------------------------------|-------------|-------------------|
+| end-1   | `GET`          | `/v2/`                                                       | `200`       | `404`/`401`       |
+| end-2   | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                  | `200`       | `404`             |
+| end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                           | `200`       | `404`             |
+| end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                  | `202`       | `404`             |
+| end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                  | `201`/`202` | `404`/`400`       |
+| end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                       | `202`       | `404`/`416`       |
+| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`       | `201`       | `404`/`400`       |
+| end-7a  | `PUT`          | `/v2/<name>/manifests/<reference>`                           | `201`       | `404`             |
+| end-7b  | `PUT`          | `/v2/<name>/manifests/<digest>?tag=1&tag=2&tag=3`            | `201`       | `404`             |
+| end-8a  | `GET`          | `/v2/<name>/tags/list`                                       | `200`       | `404`             |
+| end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<integer>`            | `200`       | `404`             |
+| end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                           | `202`       | `404`/`400`/`405` |
+| end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                  | `202`       | `404`/`405`       |
+| end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>` | `201`       | `404`             |
+| end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                              | `200`       | `404`/`400`       |
+| end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`  | `200`       | `404`/`400`       |
+| end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                       | `204`       | `404`             |
 
 #### Error Codes
 
