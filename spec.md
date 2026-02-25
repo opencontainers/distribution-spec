@@ -476,7 +476,7 @@ When pushing a manifest by digest, the registry MAY support the pushing of tags 
 If a registry supports this, it MUST:
 
 1. Not limit the number of tags that can be pushed at once.
-1. For each tag that was successfully pushed, nclude an `OCI-Tag` response header in accordance with [RFC 2616 (section 4.2)](https://datatracker.ietf.org/doc/html/rfc2616#section-4.2) semantics
+1. For each tag that was successfully pushed, include an `OCI-Tag` response header in accordance with [RFC 2616 (section 4.2)](https://datatracker.ietf.org/doc/html/rfc2616#section-4.2) semantics.
 
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
