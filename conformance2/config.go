@@ -57,7 +57,7 @@ type configAPI struct {
 	Push      bool            `conformance:"PUSH" yaml:"push"`
 	Blobs     configBlobs     `conformance:"BLOBS" yaml:"blobs"`
 	Manifests configManifests `conformance:"MANIFESTS" yaml:"manifests"`
-	Tags      configTags      `conformance:"TAG" yaml:"tags"`
+	Tags      configTags      `conformance:"TAGS" yaml:"tags"`
 	Referrer  bool            `conformance:"REFERRER" yaml:"referrer"`
 }
 
