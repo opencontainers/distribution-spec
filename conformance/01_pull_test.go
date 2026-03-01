@@ -27,89 +27,72 @@ var test01Pull = func() {
 	g.Context(titlePull, func() {
 
 		var tag string
+		var blobRefs []string
+		var manifestRefs []string
 
 		g.Context("Setup", func() {
 			g.Specify("Populate registry with test blob", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", configs[0].Digest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", configs[0].ContentLength).
-					SetBody(configs[0].Content)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  configs[0].Digest,
+						Content: configs[0].Content,
+						Length:  configs[0].ContentLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Populate registry with test blob", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", configs[1].Digest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", configs[1].ContentLength).
-					SetBody(configs[1].Content)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  configs[1].Digest,
+						Content: configs[1].Content,
+						Length:  configs[1].ContentLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Populate registry with test layer", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.POST, "/v2/<name>/blobs/uploads/")
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				req = client.NewRequest(reggie.PUT, resp.GetRelativeLocation()).
-					SetQueryParam("digest", layerBlobDigest).
-					SetHeader("Content-Type", "application/octet-stream").
-					SetHeader("Content-Length", layerBlobContentLength).
-					SetBody(layerBlobData)
-				resp, err = client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				blobRefs = pushBlob(
+					&BlobInfo{
+						Digest:  layerBlobDigest,
+						Content: layerBlobData,
+						Length:  layerBlobContentLength,
+					},
+					blobRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Populate registry with test manifest", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
 				tag = testTagName
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(tag)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[0].Content)
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				manifestRefs = pushManifest(
+					&ManifestInfo{
+						Tag:     tag,
+						Digest:  manifests[0].Digest,
+						Content: manifests[0].Content},
+					manifestRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Populate registry with test manifest", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.PUT, "/v2/<name>/manifests/<reference>",
-					reggie.WithReference(manifests[1].Digest)).
-					SetHeader("Content-Type", "application/vnd.oci.image.manifest.v1+json").
-					SetBody(manifests[1].Content)
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAll(
-					BeNumerically(">=", 200),
-					BeNumerically("<", 300)))
+				manifestRefs = pushManifest(
+					&ManifestInfo{
+						Digest:  manifests[1].Digest,
+						Content: manifests[1].Content,
+					},
+					manifestRefs, g.GinkgoT(),
+				)
 			})
 
 			g.Specify("Get tag name from environment", func() {
@@ -271,111 +254,23 @@ var test01Pull = func() {
 
 		g.Context("Teardown", func() {
 			if deleteManifestBeforeBlobs {
-				g.Specify("Delete manifest[0] created in setup", func() {
+				g.Specify("Delete manifests created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-				})
-				g.Specify("Delete manifest[1] created in setup", func() {
-					SkipIfDisabled(pull)
-					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
+					deleteManifests(manifestRefs, g.GinkgoT())
 				})
 			}
 
-			g.Specify("Delete config[0] blob created in setup", func() {
+			g.Specify("Delete blobs created in setup", func() {
 				SkipIfDisabled(pull)
 				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[0].Digest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300),
-					),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
+				deleteBlobs(blobRefs, g.GinkgoT())
 			})
-			g.Specify("Delete config[1] blob created in setup", func() {
-				SkipIfDisabled(pull)
-				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(configs[1].Digest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300),
-					),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
-			})
-
-			g.Specify("Delete layer blob created in setup", func() {
-				SkipIfDisabled(pull)
-				RunOnlyIf(runPullSetup)
-				req := client.NewRequest(reggie.DELETE, "/v2/<name>/blobs/<digest>", reggie.WithDigest(layerBlobDigest))
-				resp, err := client.Do(req)
-				Expect(err).To(BeNil())
-				Expect(resp.StatusCode()).To(SatisfyAny(
-					SatisfyAll(
-						BeNumerically(">=", 200),
-						BeNumerically("<", 300),
-					),
-					Equal(http.StatusNotFound),
-					Equal(http.StatusMethodNotAllowed),
-				))
-			})
-
 			if !deleteManifestBeforeBlobs {
-				g.Specify("Delete manifest[0] created in setup", func() {
+				g.Specify("Delete manifests created in setup", func() {
 					SkipIfDisabled(pull)
 					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[0].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
-				})
-				g.Specify("Delete manifest[1] created in setup", func() {
-					SkipIfDisabled(pull)
-					RunOnlyIf(runPullSetup)
-					req := client.NewRequest(reggie.DELETE, "/v2/<name>/manifests/<digest>", reggie.WithDigest(manifests[1].Digest))
-					resp, err := client.Do(req)
-					Expect(err).To(BeNil())
-					Expect(resp.StatusCode()).To(SatisfyAny(
-						SatisfyAll(
-							BeNumerically(">=", 200),
-							BeNumerically("<", 300),
-						),
-						Equal(http.StatusMethodNotAllowed),
-					))
+					deleteManifests(manifestRefs, g.GinkgoT())
 				})
 			}
 		})
