@@ -136,7 +136,7 @@ func (s *status) UnmarshalText(text []byte) error {
 	case "disabled":
 		*s = statusDisabled
 	case "fail":
-		*s = statusDisabled
+		*s = statusFail
 	case "error":
 		*s = statusError
 	case "unknown":
