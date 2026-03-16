@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +25,11 @@ func mainRun(legacy bool) {
 		fmt.Fprintf(os.Stderr, "failed to setup test: %v\n", err)
 		return
 	}
-	_ = r.TestAll()
+	err = r.TestAll()
+	if err != nil && !errors.Is(err, errRegUnsupported) && !errors.Is(err, errAPITestFail) &&
+		!errors.Is(err, errAPITestSkip) && !errors.Is(err, errAPITestDisabled) {
+		fmt.Fprintf(os.Stderr, "failed to run tests: %v", err)
+	}
 	// show results
 	r.Report(os.Stdout)
 	// generate reports
@@ -71,5 +76,8 @@ func mainRun(legacy bool) {
 	}
 	if c.Legacy {
 		fmt.Fprintf(os.Stderr, "WARNING: \"go test\" is deprecated. Please update to using \"go build\".\n")
+	}
+	if r.Results.Status != statusPass {
+		os.Exit(1)
 	}
 }
