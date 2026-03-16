@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   run:
@@ -11,16 +14,15 @@ jobs:
     steps:
       - name: checkout source code
         uses: actions/checkout@v4
-      - name: Start a test registry (zot)
+      - name: Start a test registry
         run: |
           set -x
           make registry-ci
       - name: Run OCI distribution-spec conformance
         env:
-          OCI_ROOT_URL: http://localhost:5000
-          OCI_NAMESPACE: myorg/myrepo
-          OCI_TEST_PULL: 1
-          OCI_TEST_PUSH: 1
-          OCI_TEST_CONTENT_DISCOVERY: 1
-          OCI_TEST_CONTENT_MANAGEMENT: 1
+          OCI_REGISTRY: "localhost:5000"
+          OCI_TLS: "disable"
+          OCI_REPO1: "myorg/myrepo"
+          OCI_REPO2: "myorg/myrepo2"
+          OCI_RESULTS_DIR: "."
         uses: ./

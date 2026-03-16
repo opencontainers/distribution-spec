@@ -587,11 +587,15 @@ func (r *runner) GenerateData() error {
 }
 
 func (r *runner) Report(w io.Writer) {
-	fmt.Fprintf(w, "Test results\n")
+	_, _ = fmt.Fprintf(w, "Test results\n")
 	r.Results.ReportWalkErr(w, "")
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 
-	fmt.Fprintf(w, "OCI Conformance Result: %s\n", r.Results.Status.String())
+	_, _ = fmt.Fprintf(w, "Configuration:\n")
+	_, _ = fmt.Fprintf(w, "  %s", strings.ReplaceAll(r.Config.Report(), "\n", "\n  "))
+	_, _ = fmt.Fprintf(w, "\n")
+
+	_, _ = fmt.Fprintf(w, "OCI Conformance Result: %s\n", r.Results.Status.String())
 	padWidth := 30
 
 	statusTotal := 0
@@ -600,27 +604,27 @@ func (r *runner) Report(w io.Writer) {
 		if len(i.String()) < padWidth {
 			pad = strings.Repeat(".", padWidth-len(i.String()))
 		}
-		fmt.Fprintf(w, "  %s%s: %10d\n", i.String(), pad, r.Results.Counts[i])
+		_, _ = fmt.Fprintf(w, "  %s%s: %10d\n", i.String(), pad, r.Results.Counts[i])
 		statusTotal += r.Results.Counts[i]
 	}
 	pad := strings.Repeat(".", padWidth-len("Total"))
-	fmt.Fprintf(w, "  %s%s: %10d\n\n", "Total", pad, statusTotal)
+	_, _ = fmt.Fprintf(w, "  %s%s: %10d\n\n", "Total", pad, statusTotal)
 
 	if len(r.Results.Errs) > 0 {
-		fmt.Fprintf(w, "Errors:\n%s\n\n", errors.Join(r.Results.Errs...))
+		_, _ = fmt.Fprintf(w, "Errors:\n%s\n\n", errors.Join(r.Results.Errs...))
 	}
 
-	fmt.Fprintf(w, "API conformance:\n")
+	_, _ = fmt.Fprintf(w, "API conformance:\n")
 	for i := range stateAPIMax {
 		pad := ""
 		if len(i.String()) < padWidth {
 			pad = strings.Repeat(".", padWidth-len(i.String()))
 		}
-		fmt.Fprintf(w, "  %s%s: %10s\n", i.String(), pad, r.State.APIStatus[i].String())
+		_, _ = fmt.Fprintf(w, "  %s%s: %10s\n", i.String(), pad, r.State.APIStatus[i].String())
 	}
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 
-	fmt.Fprintf(w, "Data conformance:\n")
+	_, _ = fmt.Fprintf(w, "Data conformance:\n")
 	tdNames := []string{}
 	for tdName := range r.State.Data {
 		tdNames = append(tdNames, tdName)
@@ -631,13 +635,9 @@ func (r *runner) Report(w io.Writer) {
 		if len(r.State.Data[tdName].name) < padWidth {
 			pad = strings.Repeat(".", padWidth-len(r.State.Data[tdName].name))
 		}
-		fmt.Fprintf(w, "  %s%s: %10s\n", r.State.Data[tdName].name, pad, r.State.DataStatus[tdName].String())
+		_, _ = fmt.Fprintf(w, "  %s%s: %10s\n", r.State.Data[tdName].name, pad, r.State.DataStatus[tdName].String())
 	}
-	fmt.Fprintf(w, "\n")
-
-	fmt.Fprintf(w, "Configuration:\n")
-	fmt.Fprintf(w, "  %s", strings.ReplaceAll(r.Config.Report(), "\n", "\n  "))
-	fmt.Fprintf(w, "\n")
+	_, _ = fmt.Fprintf(w, "\n")
 }
 
 func (r *runner) ReportJunit(w io.Writer) error {
@@ -732,11 +732,13 @@ func (r *runner) ReportHTML(w io.Writer) error {
 
 func (r *runner) ReportResultsYAML(w io.Writer) error {
 	results := struct {
-		APIs map[stateAPIType]status `yaml:"apis"`
-		Data map[string]status       `yaml:"data"`
+		Config config                  `yaml:"config"`
+		APIs   map[stateAPIType]status `yaml:"apis"`
+		Data   map[string]status       `yaml:"data"`
 	}{
-		APIs: r.State.APIStatus,
-		Data: map[string]status{},
+		Config: r.Config.Redact(),
+		APIs:   r.State.APIStatus,
+		Data:   map[string]status{},
 	}
 	for k, v := range r.State.DataStatus {
 		results.Data[r.State.Data[k].name] = v

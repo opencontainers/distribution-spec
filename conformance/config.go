@@ -23,6 +23,8 @@ const (
 	biVCSCommit    = "vcs.revision"
 )
 
+var Version = "unknown"
+
 type config struct {
 	Registry   string       `conformance:"REGISTRY" yaml:"registry"`                // hostname:port of registry server
 	TLS        tls          `conformance:"TLS" yaml:"tls"`                          // tls configuration for communicating with the registry
@@ -192,12 +194,12 @@ func configLoad() (config, error) {
 		},
 	}
 	switch configVersion {
-	case "1.1+dev":
+	case "dev", "1.1+dev":
 		c.APIs.Blobs.UploadCancel = true
 		c.APIs.Blobs.DigestHeader = true
 		c.APIs.Manifests.DigestHeader = true
 		c.Version = "1.1+dev"
-	case "", "1.1":
+	case "", "stable", "1.1":
 		c.Version = "1.1"
 	case "1.0":
 		c.APIs.Blobs.MountAnonymous = false
@@ -237,6 +239,10 @@ func configLoad() (config, error) {
 				break
 			}
 		}
+	}
+	// fall back to version injected from the makefile ldflags parameter
+	if c.Commit == "" {
+		c.Commit = Version
 	}
 	return c, nil
 }
@@ -433,7 +439,7 @@ func confLegacyEnv(c *config) error {
 	return nil
 }
 
-func (c config) Report() string {
+func (c config) Redact() config {
 	// censor credentials
 	if c.LoginUser != "" {
 		c.LoginUser = "***"
@@ -441,7 +447,11 @@ func (c config) Report() string {
 	if c.LoginPass != "" {
 		c.LoginPass = "***"
 	}
-	b, err := yaml.Marshal(c)
+	return c
+}
+
+func (c config) Report() string {
+	b, err := yaml.Marshal(c.Redact())
 	if err != nil {
 		return fmt.Sprintf("failed to marshal config: %v", err)
 	}

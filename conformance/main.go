@@ -28,11 +28,9 @@ func mainRun(legacy bool) {
 	// show results
 	r.Report(os.Stdout)
 	// generate reports
-	os.MkdirAll(c.ResultsDir, 0755)
-	// write config.yaml
-	err = os.WriteFile(filepath.Join(c.ResultsDir, "config.yaml"), []byte(r.Config.Report()), 0644)
+	err = os.MkdirAll(c.ResultsDir, 0755)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to create config.yaml: %v\n", err)
+		fmt.Fprintf(os.Stderr, "failed create results directory: %v\n", err)
 		return
 	}
 	// write results.yaml

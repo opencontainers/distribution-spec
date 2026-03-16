@@ -44,11 +44,11 @@ func (r *results) Count(s string) int {
 }
 
 func (r *results) ReportWalkErr(w io.Writer, prefix string) {
-	fmt.Fprintf(w, "%s%s: %s\n", prefix, r.Name, r.Status)
+	_, _ = fmt.Fprintf(w, "%s%s: %s\n", prefix, r.Name, r.Status)
 	if len(r.Children) == 0 && len(r.Errs) > 0 {
 		// show errors from leaf nodes
 		for _, err := range r.Errs {
-			fmt.Fprintf(w, "%s - %s\n", prefix, err.Error())
+			_, _ = fmt.Fprintf(w, "%s - %s\n", prefix, err.Error())
 		}
 	}
 	if len(r.Children) > 0 {

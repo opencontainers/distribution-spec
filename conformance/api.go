@@ -1405,17 +1405,25 @@ type wrapTransport struct {
 
 func (wt *wrapTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if wt.out != nil {
-		_ = printRequest(req, wt.out)
+		if err := printRequest(req, wt.out); err != nil {
+			return nil, err
+		}
 	}
 	resp, err := wt.orig.RoundTrip(req)
 	if wt.out != nil {
 		if err == nil {
-			_ = printResponse(resp, wt.out)
+			if err := printResponse(resp, wt.out); err != nil {
+				return resp, err
+			}
 		}
 		if err != nil {
-			fmt.Fprintf(wt.out, "%s\n~~~ Error ~~~\n%s\n", strings.Repeat("-", 80), err.Error())
+			if _, err := fmt.Fprintf(wt.out, "%s\n~~~ Error ~~~\n%s\n", strings.Repeat("-", 80), err.Error()); err != nil {
+				return resp, err
+			}
 		}
-		fmt.Fprintf(wt.out, "%s\n", strings.Repeat("=", 80))
+		if _, err := fmt.Fprintf(wt.out, "%s\n", strings.Repeat("=", 80)); err != nil {
+			return resp, err
+		}
 	}
 	return resp, err
 }
@@ -1483,52 +1491,80 @@ func mediaTypeBase(orig string) string {
 
 func printBody(body []byte, w io.Writer) error {
 	if len(body) == 0 {
-		fmt.Fprintf(w, "--- Empty body ---\n")
+		if _, err := fmt.Fprintf(w, "--- Empty body ---\n"); err != nil {
+			return err
+		}
 		return nil
 	}
 	ct := http.DetectContentType(body)
 	switch mediaTypeBase(ct) {
 	case "application/json", "text/plain":
-		fmt.Fprintf(w, "%.*s\n", truncateBody, string(body))
+		if _, err := fmt.Fprintf(w, "%.*s\n", truncateBody, string(body)); err != nil {
+			return err
+		}
 		if len(body) > truncateBody {
-			fmt.Fprintf(w, "--- Truncated body from %d to %d bytes ---\n", len(body), truncateBody)
+			if _, err := fmt.Fprintf(w, "--- Truncated body from %d to %d bytes ---\n", len(body), truncateBody); err != nil {
+				return err
+			}
 		}
 	default:
-		fmt.Fprintf(w, "--- Output of %s not supported, %d bytes not shown ---\n", ct, len(body))
+		if _, err := fmt.Fprintf(w, "--- Output of %s not supported, %d bytes not shown ---\n", ct, len(body)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func printHeaders(headers http.Header, w io.Writer) error {
-	fmt.Fprintf(w, "Headers:\n")
+	if _, err := fmt.Fprintf(w, "Headers:\n"); err != nil {
+		return err
+	}
 	for _, k := range slices.Sorted(maps.Keys(headers)) {
-		fmt.Fprintf(w, "  %25s: %v\n", k, headers[k])
+		if _, err := fmt.Fprintf(w, "  %25s: %v\n", k, headers[k]); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func printRequest(req *http.Request, w io.Writer) error {
-	fmt.Fprintf(w, "%s\n~~~ REQUEST ~~~\n", strings.Repeat("=", 80))
-	fmt.Fprintf(w, "Method: %s\nURL: %s\n", req.Method, req.URL.String())
-	printHeaders(req.Header, w)
+	if _, err := fmt.Fprintf(w, "%s\n~~~ REQUEST ~~~\n", strings.Repeat("=", 80)); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "Method: %s\nURL: %s\n", req.Method, req.URL.String()); err != nil {
+		return err
+	}
+	if err := printHeaders(req.Header, w); err != nil {
+		return err
+	}
 	body, err := cloneBodyReq(req)
 	if err != nil {
 		return err
 	}
-	printBody(body, w)
+	if err := printBody(body, w); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func printResponse(resp *http.Response, w io.Writer) error {
-	fmt.Fprintf(w, "%s\n~~~ RESPONSE ~~~\n", strings.Repeat("-", 80))
-	fmt.Fprintf(w, "Status: %d\n", resp.StatusCode)
-	printHeaders(resp.Header, w)
+	if _, err := fmt.Fprintf(w, "%s\n~~~ RESPONSE ~~~\n", strings.Repeat("-", 80)); err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "Status: %d\n", resp.StatusCode); err != nil {
+		return err
+	}
+	if err := printHeaders(resp.Header, w); err != nil {
+		return err
+	}
 	body, err := cloneBodyResp(resp)
 	if err != nil {
 		return err
 	}
-	printBody(body, w)
+	if err := printBody(body, w); err != nil {
+		return err
+	}
 
 	return nil
 }
