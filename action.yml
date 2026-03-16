@@ -21,7 +21,7 @@ runs:
         missing=false
         for v in ${required_env_vars[@]}; do
           if [[ "${!v}" == "" ]]; then
-            echo "Error: the following environment variable is required: ${v}" >&2
+            echo "::error title=Missing variable::Missing required variable ${v}"
             missing=true
           fi
         done
@@ -36,10 +36,10 @@ runs:
         missing=false
         for v in ${required_env_vars[@]}; do
           if [[ "${!v}" == "" ]]; then
-            echo "Error: fallback variable not found: ${v}" >&2
+            echo "::error title=Missing fallback variable::Missing fallback variable ${v}"
             missing=true
           else
-            echo "Warning: variable ${v} is deprecated." >&2
+            echo "::warning title=Deprecated fallback variable::Variable ${v} has been deprecated"
           fi
         done
         if [[ "${missing}" == "false" ]]; then
@@ -75,6 +75,7 @@ runs:
       run: |
         set -x
         set +e
+        OCI_RESULTS_DIR=${OCI_RESULTS_DIR:-.}
         conformance
         conformance_rc="$?"
         set -e
