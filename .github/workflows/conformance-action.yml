@@ -15,13 +15,15 @@ jobs:
       - name: checkout source code
         uses: actions/checkout@v4
       - name: Start a test registry
+        id: setup
         run: |
           set -x
           make registry-ci
+          echo "port=$(docker port oci-conformance-olareg 5000| head -1 | cut -f2 -d:)" >>$GITHUB_OUTPUT
       - name: Run OCI distribution-spec conformance
         env:
-          OCI_REGISTRY: "localhost:5000"
-          OCI_TLS: "disable"
+          OCI_REGISTRY: "localhost:${{ steps.setup.outputs.port }}"
+          OCI_TLS: "disabled"
           OCI_REPO1: "myorg/myrepo"
           OCI_REPO2: "myorg/myrepo2"
           OCI_RESULTS_DIR: "."
