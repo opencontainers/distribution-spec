@@ -27,11 +27,7 @@ const (
 )
 
 var (
-	dataTests             = []string{}
-	dataFailManifestTests = []struct {
-		tdName string
-		opts   []apiDoOpt
-	}{}
+	dataTests = []string{}
 )
 
 type runner struct {
@@ -63,6 +59,11 @@ func runnerNew(c config) (*runner, error) {
 		State:   stateNew(),
 		Results: resultsNew(testName, nil),
 		Log:     slog.New(slog.NewTextHandler(c.LogWriter, &slog.HandlerOptions{Level: lvl})),
+	}
+	for api := range stateAPIMax {
+		if err := r.APIRequire(api); errors.Is(err, errAPITestDisabled) {
+			r.State.APIStatus[api] = statusDisabled
+		}
 	}
 	return &r, nil
 }
@@ -567,22 +568,72 @@ func (r *runner) GenerateData() error {
 	} else {
 		r.State.DataStatus[tdName] = statusDisabled
 	}
+	// non-canonical digests require tag parameters to push tags, so only test by digest
+	tdName = "sha512"
+	r.State.Data[tdName] = newTestData("Digest Algorithm sha512")
+	if r.Config.Data.Sha512 {
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err := r.State.Data[tdName].genIndexFull(
+			genWithAlgo(digest.SHA512),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
+	}
+	// push using tag parameters and sha256 digest
+	tdName = "tag-param-sha256"
+	r.State.Data[tdName] = newTestData("Tag Param")
+	if r.Config.APIs.Manifests.TagParam {
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err = r.State.Data[tdName].genIndexFull(
+			genWithTag("tag-param-sha256"), // top level index will have two tags
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		for i, dig := range r.State.Data[tdName].manOrder {
+			r.State.Data[tdName].tags[fmt.Sprintf("%s-%d", "tag-param-sha256", i)] = dig
+			r.State.Data[tdName].pushOpts[dig] = []apiDoOpt{apiWithFlag("TagParam")}
+		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
+	}
+	// push using tag parameters and sha512 digest
+	tdName = "tag-param-sha512"
+	r.State.Data[tdName] = newTestData("Tag Param sha512")
+	if r.Config.APIs.Manifests.TagParam && r.Config.Data.Sha512 {
+		r.State.DataStatus[tdName] = statusUnknown
+		dataTests = append(dataTests, tdName)
+		_, err := r.State.Data[tdName].genIndexFull(
+			genWithTag("tag-param-sha512"), // top level index will have two tags
+			genWithAlgo(digest.SHA512),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		for i, dig := range r.State.Data[tdName].manOrder {
+			r.State.Data[tdName].tags[fmt.Sprintf("%s-%d", "tag-param-sha512", i)] = dig
+			r.State.Data[tdName].pushOpts[dig] = []apiDoOpt{apiWithFlag("TagParam")}
+		}
+	} else {
+		r.State.DataStatus[tdName] = statusDisabled
+	}
 	tdName = "bad-digest-image"
 	r.State.Data[tdName] = newTestData("Bad Digest Image")
 	r.State.DataStatus[tdName] = statusUnknown
-	dataFailManifestTests = append(dataFailManifestTests, struct {
-		tdName string
-		opts   []apiDoOpt
-	}{tdName: tdName, opts: []apiDoOpt{apiWithFlag("ExpectBadDigest")}})
+	dataTests = append(dataTests, tdName)
 	dig, err := r.State.Data[tdName].genManifestFull()
 	if err != nil {
 		return fmt.Errorf("failed to generate test data: %w", err)
 	}
+	r.State.Data[tdName].pullOpts[dig] = []apiDoOpt{apiWithFlag("SkipPullTest")}
+	r.State.Data[tdName].pushOpts[dig] = []apiDoOpt{apiWithFlag("ExpectBadDigest")}
 	// add some whitespace to make the digest mismatch
 	r.State.Data[tdName].manifests[dig] = append(r.State.Data[tdName].manifests[dig], []byte("  ")...)
-
-	// TODO: sha512 digest
-
 	return nil
 }
 
@@ -817,33 +868,6 @@ func (r *runner) TestAll() error {
 				errs = append(errs, err)
 			}
 			return errors.Join(errs...)
-		})
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-
-	// other tests with expected failures to push the manifest
-	for _, failTest := range dataFailManifestTests {
-		tdName := failTest.tdName
-		err = r.ChildRun(tdName, r.Results, func(r *runner, res *results) error {
-			errs := []error{}
-			for dig := range r.State.Data[tdName].blobs {
-				err := r.TestPushBlobAny(res, tdName, repo, dig)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
-				}
-			}
-			for i, dig := range r.State.Data[tdName].manOrder {
-				err := r.TestPushManifestDigest(res, tdName, repo, dig, failTest.opts...)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to push manifest %d, digest %s%.0w", i, dig.String(), err))
-				}
-			}
-			if len(errs) > 0 {
-				return errors.Join(errs...)
-			}
-			return nil
 		})
 		if err != nil {
 			errs = append(errs, err)
@@ -1310,6 +1334,9 @@ func (r *runner) TestDelete(parent *results, tdName string, repo string) error {
 
 func (r *runner) TestDeleteTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
 	td := r.State.Data[tdName]
+	if !td.tagPushed[tag] {
+		return nil // tag was not pushed so skip the attempt to delete it
+	}
 	return r.ChildRun("tag-delete", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPITagDelete); err != nil {
 			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
@@ -1443,19 +1470,19 @@ func (r *runner) TestHead(parent *results, tdName string, repo string) error {
 	return r.ChildRun("head", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		for tag, dig := range r.State.Data[tdName].tags {
-			err := r.TestHeadManifestTag(res, tdName, repo, tag, dig)
+			err := r.TestHeadManifestTag(res, tdName, repo, tag, dig, r.State.Data[tdName].pullOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to send head request for manifest by tag %s%.0w", tag, err))
 			}
 		}
 		for i, dig := range r.State.Data[tdName].manOrder {
-			err := r.TestHeadManifestDigest(res, tdName, repo, dig)
+			err := r.TestHeadManifestDigest(res, tdName, repo, dig, r.State.Data[tdName].pullOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to send head request for manifest %d, digest %s%.0w", i, dig.String(), err))
 			}
 		}
 		for dig := range r.State.Data[tdName].blobs {
-			err := r.TestHeadBlob(res, tdName, repo, dig)
+			err := r.TestHeadBlob(res, tdName, repo, dig, r.State.Data[tdName].pullOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to send head request for blob %s%.0w", dig.String(), err))
 			}
@@ -1467,7 +1494,11 @@ func (r *runner) TestHead(parent *results, tdName string, repo string) error {
 	})
 }
 
-func (r *runner) TestHeadBlob(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestHeadBlob(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
+	flags := r.API.GetFlags(opts...)
+	if flags["SkipPullTest"] {
+		return nil
+	}
 	return r.ChildRun("blob-head", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobHead); err != nil {
 			r.TestSkip(res, err, tdName, stateAPIBlobHead)
@@ -1486,7 +1517,11 @@ func (r *runner) TestHeadBlob(parent *results, tdName string, repo string, dig d
 	})
 }
 
-func (r *runner) TestHeadManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestHeadManifestDigest(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
+	flags := r.API.GetFlags(opts...)
+	if flags["SkipPullTest"] {
+		return nil
+	}
 	td := r.State.Data[tdName]
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-head-by-digest", parent, func(r *runner, res *results) error {
@@ -1509,7 +1544,11 @@ func (r *runner) TestHeadManifestDigest(parent *results, tdName string, repo str
 	})
 }
 
-func (r *runner) TestHeadManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
+func (r *runner) TestHeadManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest, opts ...apiDoOpt) error {
+	flags := r.API.GetFlags(opts...)
+	if flags["SkipPullTest"] {
+		return nil
+	}
 	td := r.State.Data[tdName]
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-head-by-tag", parent, func(r *runner, res *results) error {
@@ -1650,7 +1689,7 @@ func (r *runner) TestManifestErrors(parent *results, repo string) error {
 				r.TestSkip(res, err, tdName, stateAPIManifestPutDigest)
 				return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 			}
-			if err := r.API.ManifestPut(r.Config.schemeReg, repo, "sha256:baddigeststring", manDig, r.State.Data[tdName], r.Config.APIs.Referrer,
+			if err := r.API.ManifestPut(r.Config.schemeReg, repo, "sha256:baddigeststring", manDig, r.State.Data[tdName], r.Config.APIs.Referrer, nil,
 				apiWithFlag("ExpectBadDigest"), apiSaveOutput(res.Output)); err != nil {
 				r.TestFail(res, err, tdName, stateAPIManifestPutDigest)
 				return fmt.Errorf("%.0w%w", errAPITestFail, err)
@@ -1712,19 +1751,19 @@ func (r *runner) TestPull(parent *results, tdName string, repo string) error {
 	return r.ChildRun("pull", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		for tag, dig := range r.State.Data[tdName].tags {
-			err := r.TestPullManifestTag(res, tdName, repo, tag, dig)
+			err := r.TestPullManifestTag(res, tdName, repo, tag, dig, r.State.Data[tdName].pullOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to pull manifest by tag %s%.0w", tag, err))
 			}
 		}
 		for i, dig := range r.State.Data[tdName].manOrder {
-			err := r.TestPullManifestDigest(res, tdName, repo, dig)
+			err := r.TestPullManifestDigest(res, tdName, repo, dig, r.State.Data[tdName].pullOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to pull manifest %d, digest %s%.0w", i, dig.String(), err))
 			}
 		}
 		for dig := range r.State.Data[tdName].blobs {
-			err := r.TestPullBlob(res, tdName, repo, dig)
+			err := r.TestPullBlob(res, tdName, repo, dig, r.State.Data[tdName].pullOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to pull blob %s%.0w", dig.String(), err))
 			}
@@ -1736,13 +1775,17 @@ func (r *runner) TestPull(parent *results, tdName string, repo string) error {
 	})
 }
 
-func (r *runner) TestPullBlob(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestPullBlob(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
+	flags := r.API.GetFlags(opts...)
+	if flags["SkipPullTest"] {
+		return nil
+	}
 	return r.ChildRun("blob-get", parent, func(r *runner, res *results) error {
 		if err := r.APIRequire(stateAPIBlobGetFull); err != nil {
 			r.TestSkip(res, err, tdName, stateAPIBlobGetFull)
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
-		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		opts = append(opts, apiSaveOutput(res.Output))
 		if r.Config.APIs.Blobs.DigestHeader {
 			opts = append(opts, apiWithFlag("RequireDigestHeader"))
 		}
@@ -1755,7 +1798,11 @@ func (r *runner) TestPullBlob(parent *results, tdName string, repo string, dig d
 	})
 }
 
-func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo string, dig digest.Digest) error {
+func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
+	flags := r.API.GetFlags(opts...)
+	if flags["SkipPullTest"] {
+		return nil
+	}
 	td := r.State.Data[tdName]
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
@@ -1765,7 +1812,7 @@ func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo str
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		apis = append(apis, stateAPIManifestGetDigest)
-		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		opts = append(opts, apiSaveOutput(res.Output))
 		if r.Config.APIs.Manifests.DigestHeader {
 			opts = append(opts, apiWithFlag("RequireDigestHeader"))
 		}
@@ -1778,7 +1825,11 @@ func (r *runner) TestPullManifestDigest(parent *results, tdName string, repo str
 	})
 }
 
-func (r *runner) TestPullManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest) error {
+func (r *runner) TestPullManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest, opts ...apiDoOpt) error {
+	flags := r.API.GetFlags(opts...)
+	if flags["SkipPullTest"] {
+		return nil
+	}
 	td := r.State.Data[tdName]
 	apis := []stateAPIType{}
 	return r.ChildRun("manifest-by-tag", parent, func(r *runner, res *results) error {
@@ -1788,7 +1839,7 @@ func (r *runner) TestPullManifestTag(parent *results, tdName string, repo string
 			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
 		}
 		apis = append(apis, stateAPIManifestGetTag)
-		opts := []apiDoOpt{apiSaveOutput(res.Output)}
+		opts = append(opts, apiSaveOutput(res.Output))
 		if r.Config.APIs.Manifests.DigestHeader {
 			opts = append(opts, apiWithFlag("RequireDigestHeader"))
 		}
@@ -1805,19 +1856,19 @@ func (r *runner) TestPush(parent *results, tdName string, repo string) error {
 	return r.ChildRun("push", parent, func(r *runner, res *results) error {
 		errs := []error{}
 		for dig := range r.State.Data[tdName].blobs {
-			err := r.TestPushBlobAny(res, tdName, repo, dig)
+			err := r.TestPushBlobAny(res, tdName, repo, dig, r.State.Data[tdName].pushOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to push blob %s%.0w", dig.String(), err))
 			}
 		}
 		for i, dig := range r.State.Data[tdName].manOrder {
-			err := r.TestPushManifestDigest(res, tdName, repo, dig)
+			err := r.TestPushManifestDigest(res, tdName, repo, dig, r.State.Data[tdName].pushOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to push manifest %d, digest %s%.0w", i, dig.String(), err))
 			}
 		}
 		for tag, dig := range r.State.Data[tdName].tags {
-			err := r.TestPushManifestTag(res, tdName, repo, tag, dig)
+			err := r.TestPushManifestTag(res, tdName, repo, tag, dig, r.State.Data[tdName].pushOpts[dig]...)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("failed to push manifest tag %s%.0w", tag, err))
 			}
@@ -2034,26 +2085,54 @@ func (r *runner) TestPushBlobPatchStream(parent *results, tdName string, repo st
 }
 
 func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo string, dig digest.Digest, opts ...apiDoOpt) error {
-	td := r.State.Data[tdName]
-	apis := []stateAPIType{}
-	subj := detectSubject(td.manifests[dig])
-	if subj != nil {
-		apis = append(apis, stateAPIManifestPutSubject)
-	}
 	return r.ChildRun("manifest-by-digest", parent, func(r *runner, res *results) error {
-		if err := r.APIRequire(stateAPIManifestPutDigest); err != nil {
-			r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
-			r.TestSkip(res, err, tdName, stateAPIManifestPutDigest)
-			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
+		td := r.State.Data[tdName]
+		apis := []stateAPIType{stateAPIManifestPutDigest}
+		resp := http.Response{Header: http.Header{}}
+		putOpts := []apiDoOpt{apiReturnResponse(&resp)}
+		subj := detectSubject(td.manifests[dig])
+		if subj != nil {
+			apis = append(apis, stateAPIManifestPutSubject)
 		}
-		apis = append(apis, stateAPIManifestPutDigest)
+		flags := r.API.GetFlags(opts...)
+		expectTags := []string{}
+		if flags["TagParam"] {
+			apis = append(apis, stateAPIManifestPutTagParam)
+			for tag, d := range td.tags {
+				if d == dig {
+					putOpts = append(putOpts, apiWithURLParam("tag", tag))
+					expectTags = append(expectTags, tag)
+				}
+			}
+		}
+		for _, api := range apis {
+			if err := r.APIRequire(api); err != nil {
+				r.State.DataStatus[tdName] = r.State.DataStatus[tdName].Set(statusSkip)
+				r.TestSkip(res, err, tdName, api)
+				return fmt.Errorf("%.0w%w", errAPITestSkip, err)
+			}
+		}
 		opts = append(opts, apiSaveOutput(res.Output))
 		if r.Config.APIs.Manifests.DigestHeader {
 			opts = append(opts, apiWithFlag("RequireDigestHeader"))
 		}
-		if err := r.API.ManifestPut(r.Config.schemeReg, repo, dig.String(), dig, td, r.Config.APIs.Referrer, opts...); err != nil {
+		if err := r.API.ManifestPut(r.Config.schemeReg, repo, dig.String(), dig, td, r.Config.APIs.Referrer, putOpts, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		if len(expectTags) > 0 {
+			errs := []error{}
+			for _, tag := range expectTags {
+				if slices.Contains(resp.Header.Values("OCI-Tag"), tag) {
+					td.tagPushed[tag] = true
+				} else {
+					errs = append(errs, fmt.Errorf("header missing OCI-Tag: %s%.0w", tag, errRegUnsupported))
+				}
+			}
+			if len(errs) > 0 {
+				r.TestFail(res, errors.Join(errs...), tdName, stateAPIManifestPutTagParam)
+				return fmt.Errorf("%.0w%w", errAPITestFail, errors.Join(errs...))
+			}
 		}
 		r.TestPass(res, tdName, apis...)
 		return nil
@@ -2062,6 +2141,9 @@ func (r *runner) TestPushManifestDigest(parent *results, tdName string, repo str
 
 func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string, tag string, dig digest.Digest, opts ...apiDoOpt) error {
 	td := r.State.Data[tdName]
+	if td.tagPushed[tag] {
+		return nil // tag already pushed (likely as a tag parameter in the digest push)
+	}
 	apis := []stateAPIType{}
 	subj := detectSubject(td.manifests[dig])
 	if subj != nil {
@@ -2078,10 +2160,11 @@ func (r *runner) TestPushManifestTag(parent *results, tdName string, repo string
 		if r.Config.APIs.Manifests.DigestHeader {
 			opts = append(opts, apiWithFlag("RequireDigestHeader"))
 		}
-		if err := r.API.ManifestPut(r.Config.schemeReg, repo, tag, dig, td, r.Config.APIs.Referrer, opts...); err != nil {
+		if err := r.API.ManifestPut(r.Config.schemeReg, repo, tag, dig, td, r.Config.APIs.Referrer, nil, opts...); err != nil {
 			r.TestFail(res, err, tdName, apis...)
 			return fmt.Errorf("%.0w%w", errAPITestFail, err)
 		}
+		td.tagPushed[tag] = true
 		r.TestPass(res, tdName, apis...)
 		return nil
 	})
@@ -2292,6 +2375,10 @@ func (r *runner) APIRequire(apis ...stateAPIType) error {
 			stateAPIBlobPush, stateAPIBlobPostOnly, stateAPIBlobPostPut,
 			stateAPIBlobPatchChunked, stateAPIBlobPatchStream, stateAPIBlobMountSource:
 			if !r.Config.APIs.Push {
+				configDisabled = true
+			}
+		case stateAPIManifestPutTagParam:
+			if !r.Config.APIs.Push || !r.Config.APIs.Manifests.TagParam {
 				configDisabled = true
 			}
 		case stateAPIBlobCancel:

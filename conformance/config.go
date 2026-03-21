@@ -75,6 +75,7 @@ type configManifests struct {
 	Atomic       bool `conformance:"ATOMIC" yaml:"atomic"`
 	Delete       bool `conformance:"DELETE" yaml:"delete"`
 	DigestHeader bool `conformance:"DIGEST_HEADER" yaml:"digestHeader"`
+	TagParam     bool `conformance:"TAG_PARAM" yaml:"tagParam"`
 }
 
 type configTags struct {
@@ -167,6 +168,7 @@ func configLoad() (config, error) {
 				Atomic:       true,
 				Delete:       true,
 				DigestHeader: false,
+				TagParam:     false,
 			},
 			Tags: configTags{
 				Atomic: true,
@@ -198,6 +200,7 @@ func configLoad() (config, error) {
 		c.APIs.Blobs.UploadCancel = true
 		c.APIs.Blobs.DigestHeader = true
 		c.APIs.Manifests.DigestHeader = true
+		c.APIs.Manifests.TagParam = true
 		c.Version = "1.1+dev"
 	case "", "stable", "1.1":
 		c.Version = "1.1"

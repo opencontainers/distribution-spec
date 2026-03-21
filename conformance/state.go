@@ -40,6 +40,7 @@ const (
 	stateAPIBlobDeleteAtomic
 	stateAPIManifestPutDigest
 	stateAPIManifestPutTag
+	stateAPIManifestPutTagParam
 	stateAPIManifestPutSubject
 	stateAPIManifestGetDigest
 	stateAPIManifestGetTag
@@ -92,6 +93,8 @@ func (a stateAPIType) String() string {
 		return "Manifest put by digest"
 	case stateAPIManifestPutTag:
 		return "Manifest put by tag"
+	case stateAPIManifestPutTagParam:
+		return "Manifest put with tag params"
 	case stateAPIManifestPutSubject:
 		return "Manifest put with subject"
 	case stateAPIManifestGetDigest:
@@ -161,6 +164,8 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPIManifestPutDigest
 	case "Manifest put by tag":
 		*a = stateAPIManifestPutTag
+	case "Manifest put with tag params":
+		*a = stateAPIManifestPutTagParam
 	case "Manifest put with subject":
 		*a = stateAPIManifestPutSubject
 	case "Manifest get by digest":

@@ -78,6 +78,7 @@ func mainRun(legacy bool) {
 		fmt.Fprintf(os.Stderr, "WARNING: \"go test\" is deprecated. Please update to using \"go build\".\n")
 	}
 	if r.Results.Status != statusPass {
+		fmt.Fprintf(os.Stderr, "*** Conformance test detected a failure. ***\n")
 		os.Exit(1)
 	}
 }

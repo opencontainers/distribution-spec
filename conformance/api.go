@@ -920,7 +920,7 @@ func (a *api) ManifestHeadExists(registry, repo, ref string, dig digest.Digest, 
 	return errors.Join(errs...)
 }
 
-func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, referrersEnabled bool, opts ...apiDoOpt) error {
+func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *testData, referrersEnabled bool, putOpts []apiDoOpt, opts ...apiDoOpt) error {
 	flags := a.GetFlags(opts...)
 	bodyBytes, ok := td.manifests[dig]
 	if !ok {
@@ -933,16 +933,16 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 	mediaType := detectMediaType(bodyBytes)
 	resp := http.Response{Header: http.Header{}}
 	loc := ""
-	var putOpts []apiDoOpt
+	putOpts = append(putOpts, opts...)
 	if flags["ExpectBadDigest"] {
 		putOpts = append([]apiDoOpt{
 			apiExpectStatus(http.StatusBadRequest),
-		}, opts...)
+		}, putOpts...)
 	} else {
 		putOpts = append([]apiDoOpt{
 			apiExpectStatus(http.StatusCreated),
 			apiReturnHeader("Location", &loc),
-		}, opts...)
+		}, putOpts...)
 	}
 	if referrersEnabled {
 		// if the referrers API is being tested, verify OCI-Subject header is returned when appropriate
@@ -1170,7 +1170,7 @@ func apiWithURLParam(key, val string) apiDoOpt {
 				return fmt.Errorf("URL must be set before adding a parameter")
 			}
 			params := req.URL.Query()
-			params.Set(key, val)
+			params.Add(key, val)
 			req.URL.RawQuery = params.Encode()
 			return nil
 		},
@@ -1243,13 +1243,13 @@ func apiExpectBody(bodyExpect []byte) apiDoOpt {
 func apiExpectHeader(key, val string) apiDoOpt {
 	return apiDoOpt{
 		respFn: func(resp *http.Response) error {
-			cur := resp.Header.Get(key)
+			cur := resp.Header.Values(key)
 			if val == "" {
-				if cur == "" {
+				if len(cur) == 0 {
 					return fmt.Errorf("missing header %q", key)
 				}
 			} else {
-				if cur != val {
+				if !slices.Contains(cur, val) {
 					return fmt.Errorf("header value mismatch for %q, expected %q, received %q", key, val, cur)
 				}
 			}

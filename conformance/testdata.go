@@ -37,22 +37,28 @@ const (
 type testData struct {
 	name      string // name of data set for logs
 	tags      map[string]digest.Digest
+	tagPushed map[string]bool
 	desc      map[digest.Digest]*image.Descriptor
 	blobs     map[digest.Digest][]byte
 	manifests map[digest.Digest][]byte
 	manOrder  []digest.Digest // ordered list to push manifests, the last is optionally tagged
 	referrers map[digest.Digest][]*image.Descriptor
+	pullOpts  map[digest.Digest][]apiDoOpt
+	pushOpts  map[digest.Digest][]apiDoOpt
 }
 
 func newTestData(name string) *testData {
 	return &testData{
 		name:      name,
 		tags:      map[string]digest.Digest{},
+		tagPushed: map[string]bool{},
 		desc:      map[digest.Digest]*image.Descriptor{},
 		blobs:     map[digest.Digest][]byte{},
 		manifests: map[digest.Digest][]byte{},
 		manOrder:  []digest.Digest{},
 		referrers: map[digest.Digest][]*image.Descriptor{},
+		pullOpts:  map[digest.Digest][]apiDoOpt{},
+		pushOpts:  map[digest.Digest][]apiDoOpt{},
 	}
 }
 

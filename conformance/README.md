@@ -41,6 +41,7 @@ export OCI_API_BLOBS_UPLOAD_CANCEL=false # cancel a running upload
 export OCI_API_MANIFESTS_ATOMIC=true # whether manifest delete operations should be immediate
 export OCI_API_MANIFESTS_DELETE=true
 export OCI_API_MANIFESTS_DIGEST_HEADER=false # whether Docker-Content-Digest header is required
+export OCI_API_MANIFESTS_TAG_PARAM=false # push manifest by digest with tags as parameters
 export OCI_API_TAGS_ATOMIC=true # whether tag delete operations should be immediate
 export OCI_API_TAGS_DELETE=true
 export OCI_API_TAGS_LIST=true
@@ -105,6 +106,7 @@ apis:
     atomic: true
     delete: true
     digestHeader: false
+    tagParam: false
   tags:
     atomic: true
     delete: true
