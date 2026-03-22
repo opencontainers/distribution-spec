@@ -24,14 +24,13 @@ ifeq "$(strip $(PANDOC))" ''
 	endif
 endif
 
-GOLANGCILINT_CONTAINER ?= ghcr.io/opencontainers/golangci-lint:v1.52.1@sha256:d3d3d56f9706ebe843c1b06686c385877ba65b33f39507cdbeb22f482adce65a
+GOLANGCILINT_CONTAINER ?= docker.io/golangci/golangci-lint:v2.11.3@sha256:e838e8ab68aaefe83e2408691510867ade9329c0e0b895a3fb35eb93d1c2a4ba
 ifeq "$(strip $(GOLANGCILINT))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		GOLANGCILINT = $(DOCKER) run \
 			--rm \
 			-v $(shell pwd)/:/input:ro \
 			-e GOCACHE=/tmp/.cache \
-			-e GO111MODULE=on \
 			-e GOLANGCI_LINT_CACHE=/tmp/.cache \
 			--entrypoint /bin/bash \
 			-u $(shell id -u) \
@@ -85,35 +84,70 @@ install.tools: .install.gitvalidation
 .install.gitvalidation:
 	go install github.com/vbatts/git-validation@latest
 
-conformance: conformance-test conformance-binary
+conformance: conformance-test conformance-cmd
 
 conformance-test:
 	$(GOLANGCILINT) -c 'cd conformance && golangci-lint run -v'
 
 conformance-binary: $(OUTPUT_DIRNAME)/conformance.test
 
-TEST_REGISTRY_CONTAINER ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.1.7@sha256:2114797f00696011f38cc94c72f5773c84b1036562df5034d05ea19075179ad1
-registry-ci:
-	docker rm -f oci-conformance && \
+conformance-cmd: $(OUTPUT_DIRNAME)/conformance
+
+registry-ci: registry-ci-olareg
+
+TEST_REGISTRY_IMAGE_OLAREG ?= ghcr.io/olareg/olareg:edge
+registry-ci-olareg:
+	docker rm -f oci-conformance-olareg && \
+		docker run --rm -d \
+			--name=oci-conformance-olareg \
+			-p 5000 \
+			$(TEST_REGISTRY_IMAGE_OLAREG) serve --store-type mem --api-delete --api-blob-delete --api-sparse-image --api-sparse-index && \
+		sleep 2
+
+TEST_REGISTRY_IMAGE_ZOT ?= ghcr.io/project-zot/zot-minimal-linux-amd64:v2.1.7@sha256:2114797f00696011f38cc94c72f5773c84b1036562df5034d05ea19075179ad1
+registry-ci-zot:
+	docker rm -f oci-conformance-zot && \
 		mkdir -p $(OUTPUT_DIRNAME) && \
 		echo '{"distSpecVersion":"1.1.0-dev","storage":{"rootDirectory":"/tmp/zot","gc":false,"dedupe":false},"http":{"address":"0.0.0.0","port":"5000"},"log":{"level":"debug"}}' > $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json
-		docker run -d \
+		docker run --rm -d \
 			-v $(shell pwd)/$(OUTPUT_DIRNAME)/zot-config.json:/etc/zot/config.json \
-			--name=oci-conformance \
-			-p 5000:5000 \
-			$(TEST_REGISTRY_CONTAINER) && \
+			--name=oci-conformance-zot \
+			-p 5000 \
+			$(TEST_REGISTRY_IMAGE_ZOT) && \
 		sleep 5
 
-conformance-ci:
-	export OCI_ROOT_URL="http://localhost:5000" && \
-		export OCI_NAMESPACE="myorg/myrepo" && \
-		export OCI_TEST_PULL=1 && \
-		export OCI_TEST_PUSH=1 && \
-		export OCI_TEST_CONTENT_DISCOVERY=1 && \
-		export OCI_TEST_CONTENT_MANAGEMENT=1 && \
-		$(shell pwd)/$(OUTPUT_DIRNAME)/conformance.test
+conformance-ci: conformance-ci-olareg
 
-$(OUTPUT_DIRNAME)/conformance.test:
+conformance-ci-olareg: $(OUTPUT_DIRNAME)/conformance
+	export OCI_VERSION="dev" && \
+		export OCI_REGISTRY="localhost:$$(docker port oci-conformance-olareg 5000| head -1 | cut -f2 -d:)" && \
+		export OCI_TLS="disabled" && \
+		export OCI_REPO1="myorg/myrepo" && \
+		export OCI_REPO2="myorg/myrepo2" && \
+		export OCI_RESULTS_DIR="." && \
+		export OCI_DATA_SPARSE=true && \
+		$(shell pwd)/$(OUTPUT_DIRNAME)/conformance
+
+conformance-ci-zot: $(OUTPUT_DIRNAME)/conformance
+	export OCI_REGISTRY="localhost:$$(docker port oci-conformance-zot 5000| head -1 | cut -f2 -d:)" && \
+		export OCI_TLS="disabled" && \
+		export OCI_REPO1="myorg/myrepo" && \
+		export OCI_REPO2="myorg/myrepo2" && \
+		export OCI_RESULTS_DIR="." && \
+		$(shell pwd)/$(OUTPUT_DIRNAME)/conformance
+
+clean-ci:
+	docker rm -f oci-conformance-olareg oci-conformance-zot
+
+$(OUTPUT_DIRNAME)/conformance: conformance/*.go conformance/go.mod
+	cd conformance && \
+		CGO_ENABLED=0 go build -o $(shell pwd)/$(OUTPUT_DIRNAME)/conformance \
+			--ldflags="-X github.com/opencontainers/distribution-spec/conformance.Version=$(CONFORMANCE_VERSION)"
+
+$(OUTPUT_DIRNAME)/conformance.test: conformance/*.go conformance/go.mod
 	cd conformance && \
 		CGO_ENABLED=0 go test -c -o $(shell pwd)/$(OUTPUT_DIRNAME)/conformance.test \
 			--ldflags="-X github.com/opencontainers/distribution-spec/conformance.Version=$(CONFORMANCE_VERSION)"
+
+clean: clean-ci
+	rm -rf header.html junit.xml report.html results.yaml output conformance/results
