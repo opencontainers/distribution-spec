@@ -9,18 +9,17 @@ GOLANGCILINT	?= $(shell command -v golangcli-lint 2>/dev/null)
 OUTPUT_DIRNAME	?= output/
 DOC_FILENAME	?= oci-distribution-spec
 
-PANDOC_CONTAINER ?= ghcr.io/opencontainers/pandoc:2.9.2.1-9.fc34.x86_64@sha256:590c5c7aaa6e8e7a4debae7e9102c837daa0c8a76f8f5b5c9831ea5f755e3e95
+# pinned to a 3.1 release due to a regression, see https://github.com/jgm/pandoc/issues/10952 before upgrading
+PANDOC_CONTAINER ?= docker.io/pandoc/latex:3.1@sha256:1cf54d9214a9b52de2f58cf5895cc596a5960711a54d7938dc72f2b23473caf3
 ifeq "$(strip $(PANDOC))" ''
 	ifneq "$(strip $(DOCKER))" ''
 		PANDOC = $(DOCKER) run \
 			--rm \
-			-v $(shell pwd)/:/input/:ro \
-			-v $(shell pwd)/$(OUTPUT_DIRNAME)/:/$(OUTPUT_DIRNAME)/ \
-			-u $(shell id -u) \
-			--workdir /input \
+			-v "$(CURDIR)/:/workdir/:ro" \
+			-v "$(CURDIR)/$(OUTPUT_DIRNAME)/:/workdir/$(OUTPUT_DIRNAME)/" \
+			-u "$(shell id -u):$(shell id -g)" \
+			--workdir /workdir \
 			$(PANDOC_CONTAINER)
-		PANDOC_SRC := /input/
-		PANDOC_DST := /
 	endif
 endif
 
@@ -75,10 +74,9 @@ $(OUTPUT_DIRNAME)/$(DOC_FILENAME).html: header.html $(DOC_FILES) $(FIGURE_FILES)
 endif
 
 header.html: .tool/genheader.go specs-go/version.go
-	rm -f go.mod go.sum && \
-    go mod init github.com/opencontainers/distribution-spec && \
-	go get github.com/opencontainers/distribution-spec/specs-go && \
-	go run .tool/genheader.go > $@
+	go work init ./specs-go ./.tool && \
+	go run .tool/genheader.go > $@ && \
+	rm go.work
 
 install.tools: .install.gitvalidation
 
