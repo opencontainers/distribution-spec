@@ -3,7 +3,6 @@
 output
 header.html
 tags
-go.mod
-go.sum
+go.work
 junit.xml
 report.html

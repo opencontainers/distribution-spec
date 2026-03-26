@@ -1,0 +1,4 @@
+github.com/opencontainers/distribution-spec/specs-go v0.0.0-20210623213441-eb171947459c h1:7zh9TklTB1x95V7yygkuKSdBlgsCjQvamWTEKPkK80o=
+github.com/opencontainers/distribution-spec/specs-go v0.0.0-20210623213441-eb171947459c/go.mod h1:aA4vdXRS8E1TG7pLZOz85InHi3BiPdErh8IpJN6E0x4=
+github.com/opencontainers/distribution-spec/specs-go v0.0.0-20260313153622-5e57cc0a07ea h1:2gucIpEeV3BzUKWXcLuDAYKPnPcVwVBi+f63IS2WBQA=
+github.com/opencontainers/distribution-spec/specs-go v0.0.0-20260313153622-5e57cc0a07ea/go.mod h1:Va0IMqkjv62YSEytL4sgxrkiD9IzU0T0bX/ZZEtMnSQ=
