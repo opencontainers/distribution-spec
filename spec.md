@@ -226,6 +226,8 @@ When a manifest is rejected for this reason, it MUST result in one or more `MANI
 
 There are two ways to push blobs: chunked or monolithic.
 
+In each implementation, if the client provided digest is invalid or uses an unsupported algorithm, the registry SHOULD respond with a response code `400 Bad Request`.
+
 #### Pushing a blob monolithically
 
 There are two ways to push a blob monolithically:
@@ -329,6 +331,12 @@ The process remains unchanged for chunked upload, except that the post request M
 ```
 Content-Length: 0
 ```
+
+When pushing a blob with a digest algorithm other than `sha256`, the post request SHOULD include the `digest-algorithm` parameter:
+
+`/v2/<name>/blobs/uploads/?digest-algorithm=<algorithm>` <sup>[end-4c](#endpoints)</sup>
+
+Here, `<digest-algorithm>` is the algorithm the registry should use for the blob, e.g. `digest-algorithm=sha512`.
 
 If the registry has a minimum chunk size, the `POST` response SHOULD include the following header, where `<size>` is the size in bytes (see the blob `PATCH` definition for usage):
 
@@ -810,6 +818,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                             | `200`       | `404`             |
 | end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                    | `202`       | `404`             |
 | end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
+| end-4c  | `POST`         | `/v2/<name>/blobs/uploads/?digest-algorithm=<algorithm>`       | `201`/`202` | `404`/`400`       |
 | end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
 | end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`/`416` |
 | end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
