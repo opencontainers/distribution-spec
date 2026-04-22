@@ -504,6 +504,27 @@ The `<location>` is a pullable manifest URL.
 The Docker-Content-Digest header returns the digest of the uploaded blob, and MUST be equal to the client provided digest.
 Clients MAY ignore the value but if it is used, the client SHOULD verify the value against the uploaded blob data.
 
+When pushing a manifest by digest, the registry MAY support the pushing of tags specified by addition of `tag` query parameters.
+If a registry supports this, it:
+
+1. SHOULD support pushing at least 10 tags per request.
+1. MAY return a `414 Request-URI Too Long` status if too many tags are included in the request.
+1. MUST include an `OCI-Tag` response header, in accordance with [RFC 9110 (section 5)](https://www.rfc-editor.org/rfc/rfc9110#name-fields) semantics, for each accepted tag.
+
+Clients MAY see other status codes (`431 Request Header Fields Too Large`) depending on the registry implementation.
+
+For example, if the client pushed a manifest with the following tags:
+```
+PUT /v2/<name>/manifests/<digest>?tag=1.2.3&tag=1.2&tag=1&tag=latest 
+```
+
+The server could respond with the following headers:
+```
+OCI-Tag: 1.2.3, 1.2, 1
+OCI-Tag: latest
+```
+Which would indicate tags `1.2.3`, `1.2`, `1`, and `latest` were created.
+
 An attempt to pull a nonexistent repository MUST return response code `404 Not Found`.
 
 A registry SHOULD enforce some limit on the maximum manifest size that it can accept.
@@ -804,7 +825,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 ### Endpoints
 
 | ID      | Method         | API Endpoint                                                   | Success     | Failure           |
-| ------- | -------------- | -------------------------------------------------------------- | ----------- | ----------------- |
+|---------| -------------- |----------------------------------------------------------------| ----------- |-------------------|
 | end-1   | `GET`          | `/v2/`                                                         | `200`       | `404`/`401`       |
 | end-2   | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                    | `200`       | `404`             |
 | end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                             | `200`       | `404`             |
@@ -812,7 +833,8 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
 | end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
 | end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`/`416` |
-| end-7   | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
+| end-7a  | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
+| end-7b  | `PUT`          | `/v2/<name>/manifests/<digest>?tag=1&tag=2&tag=3`              | `201`       | `404`/`413`        |
 | end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
 | end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
 | end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
