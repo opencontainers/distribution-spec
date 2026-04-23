@@ -1,233 +1,185 @@
-## Conformance Tests
+# OCI Distribution Spec Conformance Test
 
-### How to Run
+The distribution-spec conformance test is used to verify the various HTTP endpoints on a registry generate the appropriate responses and handle different types of data.
 
-#### Binary
+## Configuration
 
-Requires Go 1.17+.
+The test is configured by either a yaml configuration file or environment variables.
+When a setting is configured by multiple sources, the precedence from highest to lowest is the environment variable, then yaml configuration file, and lastly any legacy environment variables.
 
-In this directory, build the test binary:
-```
-go test -c
-```
+Most registries can be tested by setting the registry, repository, and login credentials.
+For APIs with a valid unsupported response code, attempts are made to track the missing feature without needing to manually disable the test.
 
-This will produce an executable at `conformance.test`.
+### Environment Variables
 
-Next, set environment variables with your registry details:
-```
-# Registry details
-export OCI_ROOT_URL="https://r.myreg.io"
-export OCI_NAMESPACE="myorg/myrepo"
-export OCI_CROSSMOUNT_NAMESPACE="myorg/other"
-export OCI_USERNAME="myuser"
-export OCI_PASSWORD="mypass"
+Environment variables can be used to set any configuration setting in the conformance test.
+The available variables and their default stable values are listed here:
 
-# Which workflows to run
-export OCI_TEST_PULL=1
-export OCI_TEST_PUSH=1
-export OCI_TEST_CONTENT_DISCOVERY=1
-export OCI_TEST_CONTENT_MANAGEMENT=1
+```shell
+# several variables are used to configure the overall conformance test process
+export OCI_CONFIGURATION="oci-conformance.yaml" # see Yaml Configuration File below
+export OCI_RESULTS_DIR="./results" # output of the conformance test will be written here, see Results below
+export OCI_VERSION="1.1" # distribution-spec version to test against, this adjusts default values for the API tests, also accepts "stable" and "dev"
+export OCI_LOG="warn" # adjust logging threshold: debug, info, warn, error (this does not affect the generated reports)
 
-# Extra settings
-export OCI_HIDE_SKIPPED_WORKFLOWS=0
-export OCI_DEBUG=0
-export OCI_DELETE_MANIFEST_BEFORE_BLOBS=0 # defaults to OCI_DELETE_MANIFEST_BEFORE_BLOBS=1 if not set
-```
+# the registry settings typically need to be configured
+export OCI_REGISTRY="localhost:5000"
+export OCI_TLS="enabled" # enabled (https), insecure (self signed), or disabled (http)
+export OCI_REPO1="conformance/repo1"
+export OCI_REPO2="conformance/repo2"
+export OCI_USERNAME=
+export OCI_PASSWORD=
+export OCI_CACHE_AUTH=true # whether to cache auth headers between compatible requests
 
-Lastly, run the tests:
-```
-./conformance.test
-```
+# API settings can be used to skip specific API endpoints
+export OCI_API_PULL=true
+export OCI_API_PUSH=true # to disable push requests, see the OCI_RO_DATA variables below
+export OCI_API_BLOBS_ATOMIC=true # whether blob delete operations should be immediate
+export OCI_API_BLOBS_DELETE=true
+export OCI_API_BLOBS_DIGEST_HEADER=false # whether Docker-Content-Digest header is required
+export OCI_API_BLOBS_MOUNT_ANONYMOUS=true # attempt to mount a blob without a source repository
+export OCI_API_BLOBS_UPLOAD_CANCEL=false # cancel a running upload
+export OCI_API_MANIFESTS_ATOMIC=true # whether manifest delete operations should be immediate
+export OCI_API_MANIFESTS_DELETE=true
+export OCI_API_MANIFESTS_DIGEST_HEADER=false # whether Docker-Content-Digest header is required
+export OCI_API_MANIFESTS_TAG_PARAM=false # push manifest by digest with tags as parameters
+export OCI_API_TAGS_ATOMIC=true # whether tag delete operations should be immediate
+export OCI_API_TAGS_DELETE=true
+export OCI_API_TAGS_LIST=true
+export OCI_API_REFERRER=true
 
-Note: for some registries, you may need to create `OCI_NAMESPACE` ahead of time.
+# Data settings are used to generate a variety of OCI content
+export OCI_DATA_IMAGE=true # note, this must be left enabled for any tests to run
+export OCI_DATA_INDEX=true
+export OCI_DATA_INDEX_LIST=true # an index containing a nested index
+export OCI_DATA_SPARSE=false # manifest where some descriptors have not been pushed
+export OCI_DATA_ARTIFACT=true # an OCI artifact packaged as an image with an artifactType
+export OCI_DATA_SUBJECT=true # an OCI image with the subject field defined
+export OCI_DATA_SUBJECT_MISSING=true # pushes content with a subject referencing a non-existent digest
+export OCI_DATA_ARTIFACT_LIST=true # an OCI index with an artifactType
+export OCI_DATA_SUBJECT_LIST=true # an OCI index with the subject field defined
+export OCI_DATA_DATA_FIELD=true # descriptors with the data field populated
+export OCI_DATA_NONDISTRIBUTABLE=true # an OCI image containing nondistributable layer references that have not been pushed
+export OCI_DATA_CUSTOM_FIELDS=true # manifests and config json with additional fields
+export OCI_DATA_NO_LAYERS=true # image manifest with an empty layer list
+export OCI_DATA_EMPTY_BLOB=true # zero byte blob
+export OCI_DATA_SHA512=true # content pushed using the sha512 digest algorithm
 
-This will produce `junit.xml` and `report.html` in the current directory with the results. To choose an alternative directory:
+# For testing read-only registries, images must be preloaded.
+# OCI_API_PUSH=false must be set, and disabling DELETE APIs is recommended.
+# All requests are performed against the OCI_REPO1 repository.
+export OCI_RO_DATA_TAGS= # space separated list of tags
+export OCI_RO_DATA_MANIFESTS= # space separated list of manifest digests
+export OCI_RO_DATA_BLOBS= # space separated list of blob digests
+export OCI_RO_DATA_REFERRERS= # space separated list of subject digests for the referrers API
 
-```
-export OCI_REPORT_DIR=/alternative/directory
-```
-
-To disable writing of the result files:
-
-```
-export OCI_REPORT_DIR=none
-```
-
-#### Testing registry workflows
-
-The tests are broken down into 4 major categories:
-
-1. Pull - Highest priority - All OCI registries MUST support pulling OCI container
-images.
-2. Push - Registries need a way to get content to be pulled, but clients can/should
-be more forgiving here. For example, if needing to fallback after an unsupported endpoint.
-3. Content Discovery - Includes tag listing (and possibly search in the future).
-4. Content Management - Lowest Priority - Includes tag, blob, and repo deletion.
-(Note: Many registries may have other ways to accomplish this than the OCI API.)
-
-In addition, each category has its own setup and teardown processes where appropriate.
-
-##### Pull
-
-The Pull tests validate that content can be retrieved from a registry.
-
-These tests are run when the following is set in the environment:
-```
-OCI_TEST_PULL=1
-```
-
-Regardless of whether the Push tests are enabled, as part of setup for the Pull tests,
-content will be uploaded to the registry.
-If you wish to prevent this, you can set the following environment variables pointing
-to content already present in the registry:
-
-```
-# Optional: set to prevent automatic setup
-OCI_MANIFEST_DIGEST=<digest>
-OCI_TAG_NAME=<tag>
-OCI_BLOB_DIGEST=<digest>
+# other settings
+export OCI_FILTER_TEST= # used to filter a specific branch of tests in, e.g. "OCI Conformance Test/sha256 blobs"
 ```
 
-##### Push
+### Yaml Configuration File
 
-The Push tests validate that content can be uploaded to a registry.
+The conformance test will load `oci-conformance.yaml` by default, which can be configured with the `OCI_CONFIGURATION` environment variable.
 
-To enable the Push tests, you must explicitly set the following in the environment:
+The default yaml configuration is shown below and matches the environment variables described above:
 
-```
-# Required to enable
-OCI_TEST_PUSH=1
-```
-
-Some registries may require a workaround for Authorization during the push flow. To set your own scope, set the following in the environment:
-
-```
-# Set the auth scope
-OCI_AUTH_SCOPE="repository:mystuff/myrepo:pull,push"
-```
-
-Most registries currently require at least one layer to be uploaded (and referenced in the appropriate section of the manifest)
-before a manifest upload will succeed. By default, the push tests will attempt to push two manifests: one with a single layer,
-and another with no layers. If the empty-layer test is causing a failure, it can be skipped by setting the following in the
-environment:
-
-```
-# Enable layer upload
-OCI_SKIP_EMPTY_LAYER_PUSH_TEST=1
-```
-
-The test suite will need access to a second namespace. This namespace is used to check support for cross-repository mounting
-of blobs, and may need to be configured on the server-side in advance. It is specified by setting the following in
-the environment:
-
-```
-# The destination repository for cross-repository mounting:
-OCI_CROSSMOUNT_NAMESPACE="myorg/other"
-```
-
-If you want to test the behaviour of automatic content discovery, you should set the `OCI_AUTOMATIC_CROSSMOUNT` variable.
-
-```
-# Do not test automatic cross mounting
-unset OCI_AUTOMATIC_CROSSMOUNT
-
-# Test that automatic cross mounting is working as expected
-OCI_AUTOMATIC_CROSSMOUNT=1
-
-# Test that automatic cross mounting is disabled
-OCI_AUTOMATIC_CROSSMOUNT=0
-```
-
-##### Content Discovery
-
-The Content Discovery tests validate that the contents of a registry can be discovered.
-
-To enable the Content Discovery tests, you must explicitly set the following in the environment:
-
-```
-# Required to enable
-OCI_TEST_CONTENT_DISCOVERY=1
-```
-
-As part of setup of these tests, a manifest and associated tags will be pushed to the registry.
-If you wish to prevent this, you can set the following environment variable pointing
-to list of tags to be returned from `GET /v2/<name>/tags/list`:
-
-```
-# Optional: set to prevent automatic setup
-OCI_TAG_LIST=<tag1>,<tag2>,<tag3>,<tag4>
+```yaml
+resultsDir: ./results
+version: "1.1"
+registry: localhost:5000
+tls: enabled
+repo1: conformance/repo1
+repo2: conformance/repo2
+username: ""
+password: ""
+cacheAuth: true
+logging: warn
+filterTest: ""
+apis:
+  pull: true
+  push: true
+  blobs:
+    atomic: true
+    delete: true
+    digestHeader: false
+    mountAnonymous: true
+    uploadCancel: false
+  manifests:
+    atomic: true
+    delete: true
+    digestHeader: false
+    tagParam: false
+  tags:
+    atomic: true
+    delete: true
+    list: true
+  referrer: true
+data:
+  image: true
+  index: true
+  indexList: true
+  sparse: false
+  artifact: true
+  subject: true
+  subjectMissing: true
+  artifactList: true
+  subjectList: true
+  dataField: true
+  nondistributable: true
+  customFields: true
+  noLayers: true
+  emptyBlob: true
+  sha512: true
+roData:
+  tags: []
+  manifests: []
+  blobs: []
+  referrers: []
 ```
 
-##### Content Management
+## Running the Test
 
-The Content Management tests validate that the contents of a registry can be deleted or otherwise modified.
+The test is available to be run with Go, Docker, or GitHub Actions.
 
-To enable the Content Management tests, you must explicitly set the following in the environment:
+### Go
 
-```
-# Required to enable
-OCI_TEST_CONTENT_MANAGEMENT=1
-```
+The tests require Go 1.24 or greater.
 
-Note: The Content Management tests explicitly depend upon the Push and Content Discovery tests, as there is no
-way to test content management without also supporting push and content discovery.
+They can be run directly with:
 
-#### HTML Report
-By default, the HTML report will show tests from all workflows. To hide workflows that have been disabled from
-the report, you must set the following in the environment:
-
-```
-# Required to hide disabled workflows
-OCI_HIDE_SKIPPED_WORKFLOWS=1
+```shell
+go run -buildvcs=true .
 ```
 
-#### Teardown Order
+Or to compile and run separately:
 
-By default, the teardown phase of each test deletes blobs before manifests. Some registries require the opposite order, deleting manifests before blobs. In this case, you must set the following in the environment:
-
-```
-# Required to delete manifests before blobs
-OCI_DELETE_MANIFEST_BEFORE_BLOBS=1
+```shell
+go build -o conformance .
+./conformance
 ```
 
-#### Container Image
+### Docker
 
-You may use the [Dockerfile](./Dockerfile) located in this directory
-to build a container image that contains the test binary.
+First configure the test with environment variables or a configuration file as described above.
+Then build and run the conformance test using a command similar to below:
 
-Example (using `docker`):
-```
-# build the image, using git SHA as the version
-docker build -t conformance:latest \
-    --build-arg VERSION=$(git log --format="%H" -n 1) .
-
-# run the image
-docker run --rm \
-  -v $(pwd)/results:/results \
-  -w /results \
-  -e OCI_ROOT_URL="https://r.myreg.io" \
-  -e OCI_NAMESPACE="myorg/myrepo" \
-  -e OCI_USERNAME="myuser" \
-  -e OCI_PASSWORD="mypass" \
-  -e OCI_TEST_PULL=1 \
-  -e OCI_TEST_PUSH=1 \
-  -e OCI_TEST_CONTENT_DISCOVERY=1 \
-  -e OCI_TEST_CONTENT_MANAGEMENT=1 \
-  -e OCI_HIDE_SKIPPED_WORKFLOWS=0 \
-  -e OCI_DEBUG=0 \
-  -e OCI_DELETE_MANIFEST_BEFORE_BLOBS=0 \
+```shell
+docker build -t conformance .
+docker run -it --rm --net=host \
+  -u "$(id -u):$(id -g)" \
+  -v "$(pwd)/results:/results" \
+  -e OCI_REGISTRY -e OCI_TLS -e OCI_REPO1 -e OCI_REPO2 -e OCI_USERNAME -e OCI_PASSWORD -e OCI_VERSION \
   conformance:latest
 ```
 
-This will create a local `results/` directory containing all of the test report files.
+Additional environment variables can be specified as needed, or the `oci-conformance.yaml` file can be passed as a volume, mounted at `/oci-conformance.yaml` inside the container.
 
-#### GitHub Action
+### GitHub Actions
 
-A GitHub Action is provided by this repo which you can use
-as part of a GitHub-based CI pipeline.
+A GitHub Action is provided by this repo which you can use as part of a GitHub-based CI pipeline.
 
-The following example will build the binary off of the main branch,
-run the tests, and upload `junit.xml` and `report.html` as build artifacts:
+The following example will build the binary off of the main branch, run the tests, and upload `results.yaml`, `report.html`, and `junit.xml` as build artifacts.
+Configure the environment variables, and add additional settings as needed from the variables defined in [environment variables](#environment-variables) above.
 
 ```yaml
 # Place in repo at .github/workflows/oci-distribution-conformance.yml
@@ -239,26 +191,27 @@ jobs:
     steps:
       - name: Run OCI Distribution Spec conformance tests
         uses: opencontainers/distribution-spec@main
-        # you can also run against a specific tag or commit instead
-        # uses: opencontainers/distribution-spec@v1.1.0
         env:
-          OCI_ROOT_URL: https://myreg.io
-          OCI_NAMESPACE: mytestorg/mytestrepo
+          OCI_VERSION: "stable"
+          OCI_REGISTRY: "myreg.io"
+          OCI_TLS: "enabled"
+          OCI_REPO1: "conformance/repo1"
+          OCI_REPO2: "conformance/repo2"
           OCI_USERNAME: ${{ secrets.MY_REGISTRY_USERNAME }}
           OCI_PASSWORD: ${{ secrets.MY_REGISTRY_PASSWORD }}
-          OCI_TEST_PULL: 1
-          OCI_TEST_PUSH: 1
-          OCI_TEST_CONTENT_DISCOVERY: 1
-          OCI_TEST_CONTENT_MANAGEMENT: 1
-          OCI_HIDE_SKIPPED_WORKFLOWS: 0
-          OCI_DEBUG: 0
-          OCI_DELETE_MANIFEST_BEFORE_BLOBS: 0
 ```
 
-You can also add a badge pointing to list of runs for this action using the following markdown:
+You can also add a badge pointing to list of runs for this action using the following markdown (replacing `<org>` and `<repo>` with your GitHub repo details):
 
-```
+```markdown
 [![](https://github.com/<org>/<repo>/workflows/oci-distribution-conformance/badge.svg)](https://github.com/<org>/<repo>/actions?query=workflow%3Aoci-distribution-conformance)
 ```
 
-(replacing `<org>` and `<repo>` with your GitHub repo details).
+## Results
+
+A summary of the test is output to the screen along with any logging.
+The results directory (`results` by default) is populated with the following files:
+
+- `result.yaml`: YAML parsable results of the API and data tests, including the redacted configuration.
+- `report.html`: Full report of the test, including redacted output of each request and response.
+- `junit.xml`: JUnit report.
