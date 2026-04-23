@@ -601,6 +601,39 @@ Previous versions of this specification did not include the `Link` header.
 Clients depending on the number of tags returned matching `n` may prematurely stop pagination on registries using the `Link` header.
 When available, clients should prefer the `Link` header over using the `last` parameter for pagination.
 
+#### Listing Tag History
+
+To fetch the history of a given tag, perform a `GET` request to a path in the following format: `/v2/<name>/tag/<tag>/history` <sup>[end-15](#endpoints)</sup>
+
+`<name>` is the namespace of the repository, and `<tag>` is the name of the tag to get the history of.
+
+Assuming a repository and tag are found, this request MUST return a `200 OK` response code.
+
+Upon success, the response MUST be a JSON list of descriptors the tag has referenced.
+The registry SHOULD include the timestamp the tag was created as an annotation on the descriptor, and the response sorted in descending order by creation date (newest first).
+
+<bits about paging behavior>
+
+```json
+[
+	{
+		"mediaType": "application/vnd.oci.image.manifest.v1+json",
+		"size": 1234,
+		"digest": "sha256:a1a1a1...",
+		"annotations": {
+			"org.opencontainers.tag.created": "2026-05-04T03:02:01Z"
+		}
+	},{
+		"mediaType": "application/vnd.oci.image.manifest.v1+json",
+		"size": 1234,
+		"digest": "sha256:b2b2b2...",
+		"annotations": {
+			"org.opencontainers.tag.created": "2026-04-03T02:01:00Z"
+		}
+	}
+]
+```
+
 #### Listing Referrers
 
 *Note: this feature was added in distibution-spec 1.1.
@@ -824,26 +857,27 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 
 ### Endpoints
 
-| ID      | Method         | API Endpoint                                                   | Success     | Failure           |
-|---------| -------------- |----------------------------------------------------------------| ----------- |-------------------|
-| end-1   | `GET`          | `/v2/`                                                         | `200`       | `404`/`401`       |
-| end-2   | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                    | `200`       | `404`             |
-| end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                             | `200`       | `404`             |
-| end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                    | `202`       | `404`             |
-| end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
-| end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
-| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`/`416` |
-| end-7a  | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
-| end-7b  | `PUT`          | `/v2/<name>/manifests/<digest>?tag=1&tag=2&tag=3`              | `201`       | `404`/`413`        |
-| end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
-| end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
-| end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
-| end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`400`/`405` |
-| end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`/`202` | `404`             |
-| end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                                | `200`       | `404`/`400`       |
-| end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
-| end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
-| end-14  | `DELETE`       | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`/`400`       |
+| ID      | Method         | API Endpoint                                                 | Success     | Failure           |
+|---------| -------------- |--------------------------------------------------------------| ----------- |-------------------|
+| end-1   | `GET`          | `/v2/`                                                       | `200`       | `404`/`401`       |
+| end-2   | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                  | `200`       | `404`             |
+| end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                           | `200`       | `404`             |
+| end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                  | `202`       | `404`             |
+| end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                  | `201`/`202` | `404`/`400`       |
+| end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                       | `202`       | `404`/`416`       |
+| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`       | `201`       | `404`/`400`/`416` |
+| end-7a  | `PUT`          | `/v2/<name>/manifests/<reference>`                           | `201`       | `404`/`413`       |
+| end-7b  | `PUT`          | `/v2/<name>/manifests/<digest>?tag=1&tag=2&tag=3`            | `201`       | `404`/`413`        |
+| end-8a  | `GET`          | `/v2/<name>/tags/list`                                       | `200`       | `404`             |
+| end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`            | `200`       | `404`             |
+| end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                           | `202`       | `404`/`400`/`405` |
+| end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                  | `202`       | `404`/`400`/`405` |
+| end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>` | `201`/`202` | `404`             |
+| end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                              | `200`       | `404`/`400`       |
+| end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`  | `200`       | `404`/`400`       |
+| end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                       | `204`       | `404`             |
+| end-14  | `DELETE`       | `/v2/<name>/blobs/uploads/<reference>`                       | `204`       | `404`/`400`       |
+| end-15  | `GET`          | `/v2/<name>/tag/<tag>/history?n=<integer>`                   | `200`       | `404`             |
 
 ### Error Codes
 
