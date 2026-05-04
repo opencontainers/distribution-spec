@@ -82,11 +82,11 @@ GET /v2/<name>/_oci/tag-history/<tag>
 
 A successful request MUST return a `200 OK` response code.
 If the repository does not exist, the registry MUST return a `404 Not Found` response code.
-If the tag has no history or the registry does not implement this extension, the registry MUST return a `404 Not Found` response code.
+If the tag has no history, the registry MUST return a `404 Not Found` response code.
 Tag history SHOULD remain queryable after the tag is deleted.
-Deleted manifests SHOULD NOT be removed from tag history.
+Deleted manifests MUST NOT be removed from tag history.
+History entries for deleted manifests MUST continue to include the descriptor fields recorded when the tag was assigned to the manifest.
 Tag history MAY be deleted after the repository is deleted.
-If a pinned digest is provided with the tag, the registry MUST return a `404 Not Found` if the digest is not part of the tag's history.
 
 Upon success, the response body MUST be a JSON array of descriptor objects in the following format:
 
@@ -105,9 +105,10 @@ Content-Type: application/json
         }
     },
     {
-        "mediaType": "application/vnd.oci.image.manifest.v1+json",
-        "size": 1234,
-        "digest": "sha256:a1a1a1...",
+        "mediaType": "application/vnd.oci.empty.v1+json",
+        "digest": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "size": 2,
+        "data": "e30=",
         "annotations": {
             "org.opencontainers.tag.deleted": "2026-05-03T03:02:01Z"
         }
@@ -125,9 +126,7 @@ Content-Type: application/json
 
 Results MUST be sorted in descending order by the history entry timestamp, which is either the `org.opencontainers.tag.created` annotation value or the `org.opencontainers.tag.deleted` annotation value (i.e. the most recent entry appears first).
 
-Each descriptor object in the response MUST be a create or delete entry.
-A descriptor for a tag creation event MUST describe the manifest the tag was assigned to.
-A descriptor for a tag deletion event MUST describe the manifest the tag pointed to immediately before deletion.
+Each descriptor object in the response MUST be either a manifest descriptor or a delete marker.
 
 Manifest descriptors MUST include the following properties:
 
@@ -145,15 +144,37 @@ Manifest descriptors MUST include the following properties:
 
 - **`annotations`** *map of strings*, REQUIRED
 
-  Annotations associated with the historical tag entry. MUST include exactly one of the following event annotations:
+  Annotations associated with the historical tag entry. MUST include:
 
-  - **`org.opencontainers.tag.created`** *string*
+  - **`org.opencontainers.tag.created`** *string*, REQUIRED
 
-    REQUIRED for tag creation events. The RFC 3339 timestamp at which the tag was assigned to this manifest. Used as the sort key and as the cursor for time-based pagination.
+    The RFC 3339 timestamp at which the tag was assigned to this manifest. Used as the sort key and as the cursor for time-based pagination.
 
-  - **`org.opencontainers.tag.deleted`** *string*
+Delete markers MUST be represented by the OCI empty descriptor and MUST include the following properties:
 
-    REQUIRED for tag deletion events. The RFC 3339 timestamp at which the tag was deleted from this manifest. Used as the sort key and as the cursor for time-based pagination.
+- **`mediaType`** *string*, REQUIRED
+
+  MUST be `application/vnd.oci.empty.v1+json`.
+
+- **`digest`** *string*, REQUIRED
+
+  MUST be `sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a`.
+
+- **`size`** *integer*, REQUIRED
+
+  MUST be `2`.
+
+- **`data`** *string*, REQUIRED
+
+  MUST be `e30=`.
+
+- **`annotations`** *map of strings*, REQUIRED
+
+  Annotations associated with the historical tag entry. MUST include:
+
+  - **`org.opencontainers.tag.deleted`** *string*, REQUIRED
+
+    The RFC 3339 timestamp at which the tag was deleted. Used as the sort key and as the cursor for time-based pagination.
 
 ##### Query Parameters
 
@@ -163,7 +184,7 @@ The following query parameters MAY be provided:
 
   Specifies the maximum number of results to return.
   The registry MAY return fewer results than requested if fewer historical entries exist.
-  When `n` is zero, this endpoint MUST return an empty array, useful for determining if history is available (200) or not (404) for the tag query.
+  When `n` is zero, this endpoint MUST return an empty array.
   When `n` is not specified, the registry MAY apply a default limit.
 
 - **`before`** *string (RFC 3339 timestamp)*, OPTIONAL
