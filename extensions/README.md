@@ -24,9 +24,12 @@ _notice_: All new `/extensions/_<extention>.md` docs MUST be added to this table
 Extension names MUST be unique.
 Extensions recorded in this distribution-spec are considered canonical definitions.
 
-Extensions are specified by extension name (`<extension>`) aligning with the project, followed by the `<component>`, and last by by the `<module>`.
-This constitutes the URI segments of the extension endpoint.
+Extensions are specified by an underscore followed by the extension name (`_<extension>`) aligning with the project.
+The rest of the URI segments are defined by the extension.
+They MUST be defined in a way that prevents clashes between routes on the same extension.
 Additional options may be passed as parameters to the endpoint.
+
+The following is an example of a potential extension:
 
 ```http
 _<extension>/<component>/<module>[?<key>=<value>&...]
