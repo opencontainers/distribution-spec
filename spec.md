@@ -611,7 +611,7 @@ When available, clients should prefer the `Link` header over using the `last` pa
 
 #### Listing Referrers
 
-*Note: this feature was added in distibution-spec 1.1.
+*Note: this feature was added in distribution-spec 1.1.
 Registries should see [Enabling the Referrers API](#enabling-the-referrers-api) before enabling this.*
 
 To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>` <sup>[end-12a](#endpoints)</sup>.
