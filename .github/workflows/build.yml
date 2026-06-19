@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   run:
@@ -11,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        go: ['1.21', '1.22']
+        go: ['stable', 'oldstable']
 
     steps:
       - name: checkout source code
@@ -47,5 +50,6 @@ jobs:
         with:
           name: oci-conformance-results-${{ matrix.go }}
           path: |
+            ./results.yaml
             ./report.html
             ./junit.xml

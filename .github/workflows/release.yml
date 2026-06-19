@@ -26,10 +26,6 @@ jobs:
           fi
           VERSION=$(echo "${VERSION}" | sed -r 's#/+#-#g')
           TAGS="${IMAGE}:${VERSION}"
-          if [[ $VERSION == "${{ github.event.repository.default_branch }}" ]]; then
-            GITSHA="$(git rev-parse --short HEAD)"
-            TAGS="${TAGS},${IMAGE}:${GITSHA}"
-          fi
           if [[ $VERSION =~ ^v[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
             MINOR=${VERSION%.*}
             MAJOR=${MINOR%.*}

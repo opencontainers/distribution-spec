@@ -1,6 +1,5 @@
-vendor/
-junit.xml
-report.html
+conformance
 conformance.test
-tags
-env.sh
+oci-conformance.yaml
+results/**
+vendor/
