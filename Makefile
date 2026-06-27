@@ -43,7 +43,7 @@ endif
 DOC_FILES	:= spec.md
 FIGURE_FILES	:=
 
-test: .gitvalidation
+test: .gitvalidation check-license
 
 # When this is running in GitHub, it will only check the GitHub commit range
 .gitvalidation:
@@ -81,6 +81,11 @@ install.tools: .install.gitvalidation
 
 .install.gitvalidation:
 	go install github.com/vbatts/git-validation@latest
+
+.PHONY: check-license
+check-license: ## check license headers in source files
+	@echo "checking license headers"
+	@./.tool/check-license
 
 conformance: conformance-test conformance-cmd
 
