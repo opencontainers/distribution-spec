@@ -77,7 +77,7 @@ Several terms are used frequently in this document and warrant basic definitions
 
 ### Notational Conventions
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](https://tools.ietf.org/html/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) (Bradner, S., "Key words for use in RFCs to Indicate Requirement Levels", BCP 14, RFC 2119, March 1997).
 
 ## Use Cases
 
@@ -165,7 +165,7 @@ The registry SHOULD NOT include parameters on the `Content-Type` header.
 The client SHOULD ignore parameters on the `Content-Type` header.
 The `Content-Type` header SHOULD match what the client [pushed as the manifest's `Content-Type`](#pushing-manifests).
 If the manifest has a `mediaType` field, clients SHOULD reject unless the `mediaType` field's value matches the type specified by the `Content-Type` header.
-For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negotiation.md) and [RFC7231](https://www.rfc-editor.org/rfc/rfc7231#section-3.1.1.1).
+For more information on the use of `Accept` headers and content negotiation, please see [Content Negotiation](./content-negotiation.md) and [RFC 7231 (section 3.1.1.1)](https://www.rfc-editor.org/rfc/rfc7231#section-3.1.1.1).
 
 A GET request to an existing manifest URL MUST provide the expected manifest, with a response code that MUST be `200 OK`.
 A successful response MUST contain the digest of the uploaded blob in the header `Docker-Content-Digest`.
@@ -193,7 +193,7 @@ Clients SHOULD verify that the response body matches the requested digest.
 
 If the blob is not found in the repository, the response code MUST be `404 Not Found`.
 
-A registry SHOULD support the `Range` request header in accordance with [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-range-requests).
+A registry SHOULD support the `Range` request header in accordance with [RFC 9110 (section 14)](https://www.rfc-editor.org/rfc/rfc9110#section-14).
 
 #### Checking if content exists in the registry
 
@@ -226,6 +226,8 @@ When a manifest is rejected for this reason, it MUST result in one or more `MANI
 
 There are two ways to push blobs: chunked or monolithic.
 
+In each implementation, if the client provided digest is invalid or uses an unsupported algorithm, the registry SHOULD respond with a response code `400 Bad Request`.
+
 #### Pushing a blob monolithically
 
 There are two ways to push a blob monolithically:
@@ -256,7 +258,7 @@ The `<location>` does not necessarily need to be provided by the registry itself
 In fact, offloading to another server can be a [better strategy](https://www.backblaze.com/blog/design-thinking-b2-apis-the-hidden-costs-of-s3-compatibility/).
 
 Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path).
-For more information, see [RFC 7231](https://tools.ietf.org/html/rfc7231#section-7.1.2).
+For more information, see [RFC 7231 (section 7.1.2)](https://www.rfc-editor.org/rfc/rfc7231#section-7.1.2).
 
 Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
@@ -329,6 +331,12 @@ The process remains unchanged for chunked upload, except that the post request M
 ```
 Content-Length: 0
 ```
+
+When pushing a blob with a digest algorithm other than `sha256`, the post request SHOULD include the `digest-algorithm` parameter:
+
+`/v2/<name>/blobs/uploads/?digest-algorithm=<algorithm>` <sup>[end-4c](#endpoints)</sup>
+
+Here, `<digest-algorithm>` is the algorithm the registry should use for the blob, e.g. `digest-algorithm=sha512`.
 
 If the registry has a minimum chunk size, the `POST` response SHOULD include the following header, where `<size>` is the size in bytes (see the blob `PATCH` definition for usage):
 
@@ -472,7 +480,7 @@ This indicates that the upload session has begun and that the client MAY proceed
 To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers and body: `/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
 
 Clients SHOULD set the `Content-Type` header to the type of the manifest being pushed.
-The client SHOULD NOT include parameters on the `Content-Type` header (see [RFC7231](https://www.rfc-editor.org/rfc/rfc7231#section-3.1.1.1)).
+The client SHOULD NOT include parameters on the `Content-Type` header (see [RFC 7231 (section 3.1.1.1)](https://www.rfc-editor.org/rfc/rfc7231#section-3.1.1.1)).
 The registry SHOULD ignore parameters on the `Content-Type` header.
 All manifests SHOULD include a `mediaType` field declaring the type of the manifest being pushed.
 If a manifest includes a `mediaType` field, clients MUST set the `Content-Type` header to the value specified by the `mediaType` field.
@@ -509,7 +517,7 @@ If a registry supports this, it:
 
 1. SHOULD support pushing at least 10 tags per request.
 1. MAY return a `414 Request-URI Too Long` status if too many tags are included in the request.
-1. MUST include an `OCI-Tag` response header, in accordance with [RFC 9110 (section 5)](https://www.rfc-editor.org/rfc/rfc9110#name-fields) semantics, for each accepted tag.
+1. MUST include an `OCI-Tag` response header, in accordance with [RFC 9110 (section 5)](https://www.rfc-editor.org/rfc/rfc9110#section-5) semantics, for each accepted tag.
 
 Clients MAY see other status codes (`431 Request Header Fields Too Large`) depending on the registry implementation.
 
@@ -580,7 +588,7 @@ In this case, the path will look like the following: `/v2/<name>/tags/list?n=<in
 The response to such a request MAY return fewer than `<int>` results, but only when the total number of tags attached to the repository is less than `<int>` or a `Link` header is provided.
 Otherwise, the response MUST include `<int>` results.
 A `Link` header MAY be included in the response when additional tags are available.
-If included, the `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
+If included, the `Link` header MUST be set according to [RFC 5988](https://www.rfc-editor.org/rfc/rfc5988) with the Relation Type `rel="next"`.
 When `n` is zero, this endpoint MUST return an empty list, and MUST NOT include a `Link` header.
 Without the `last` query parameter (described next), the list returned will start at the beginning of the list and include `<int>` results.
 As above, the tags MUST be in lexical or "ASCIIbetical" order.
@@ -603,7 +611,7 @@ When available, clients should prefer the `Link` header over using the `last` pa
 
 #### Listing Referrers
 
-*Note: this feature was added in distibution-spec 1.1.
+*Note: this feature was added in distribution-spec 1.1.
 Registries should see [Enabling the Referrers API](#enabling-the-referrers-api) before enabling this.*
 
 To fetch the list of referrers, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>` <sup>[end-12a](#endpoints)</sup>.
@@ -662,7 +670,7 @@ If a query results in no matching referrers, an empty manifest list MUST be retu
 
 A `Link` header MUST be included in the response when the descriptor list cannot be returned in a single manifest.
 Each response is an image index with different descriptors in the `manifests` field.
-The `Link` header MUST be set according to [RFC5988](https://www.rfc-editor.org/rfc/rfc5988.html) with the Relation Type `rel="next"`.
+The `Link` header MUST be set according to [RFC 5988](https://www.rfc-editor.org/rfc/rfc5988) with the Relation Type `rel="next"`.
 
 The registry SHOULD support filtering on `artifactType`.
 To fetch the list of referrers with a filter, perform a `GET` request to a path in the following format: `/v2/<name>/referrers/<digest>?artifactType=<artifactType>` <sup>[end-12b](#endpoints)</sup>.
@@ -812,7 +820,11 @@ When registries add support for the referrers API, this API needs to account for
 
 ## API
 
-The API operates over HTTP. Below is a summary of the endpoints used by the API.
+The API operates over HTTP.
+Where this specification does not define specific behavior, implementations SHOULD follow the HTTP semantics defined in [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110).
+Registries MAY respond to any request with a redirect per [RFC 9110 (section 15.4)](https://www.rfc-editor.org/rfc/rfc9110#section-15.4); clients SHOULD follow such redirects, and MUST NOT forward `Authorization` headers across host boundaries unless explicitly configured to do so.
+The status codes documented in this specification are those returned after any redirects have been followed.
+Below is a summary of the endpoints used by the API.
 
 ### Determining Support
 
@@ -831,6 +843,7 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 | end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                             | `200`       | `404`             |
 | end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                    | `202`       | `404`             |
 | end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
+| end-4c  | `POST`         | `/v2/<name>/blobs/uploads/?digest-algorithm=<algorithm>`       | `201`/`202` | `404`/`400`       |
 | end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
 | end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`/`416` |
 | end-7a  | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
@@ -886,9 +899,11 @@ The `code` field MUST be one of the following:
 | code-13 | `UNSUPPORTED`           | the operation is unsupported                               |
 | code-14 | `TOOMANYREQUESTS`       | too many requests                                          |
 
+A `429 Too Many Requests` response ([RFC 6585 (section 4)](https://www.rfc-editor.org/rfc/rfc6585#section-4)) SHOULD include a `Retry-After` header per [RFC 9110 (section 10.2.3)](https://www.rfc-editor.org/rfc/rfc9110#section-10.2.3).
+
 ### Warnings
 
-Registry implementations MAY include informational warnings in `Warning` headers, as described in [RFC 7234](https://www.rfc-editor.org/rfc/rfc7234#section-5.5).
+Registry implementations MAY include informational warnings in `Warning` headers, as described in [RFC 7234 (section 5.5)](https://www.rfc-editor.org/rfc/rfc7234#section-5.5).
 
 If included, `Warning` headers MUST specify a `warn-code` of `299` and a `warn-agent` of `-`, and MUST NOT specify a `warn-date` value.
 
