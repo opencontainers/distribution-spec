@@ -82,11 +82,11 @@ GET /v2/<name>/_oci/tag-history/<tag>
 
 A successful request MUST return a `200 OK` response code.
 If the repository does not exist, the registry MUST return a `404 Not Found` response code.
-If the tag has no history or the registry does not implement this extension, the registry MUST return a `404 Not Found` response code.
+If the registry does not implement this extension, the registry MUST return a `404 Not Found` response code.
+If the tag has no history, the registry SHOULD return a `200 OK` response code with an empty array.
 Tag history SHOULD remain queryable after the tag is deleted.
 Deleted manifests SHOULD NOT be removed from tag history.
 Tag history MAY be deleted after the repository is deleted.
-If a pinned digest is provided with the tag, the registry MUST return a `404 Not Found` if the digest is not part of the tag's history.
 
 Upon success, the response body MUST be a JSON array of descriptor objects in the following format:
 
@@ -101,7 +101,7 @@ Content-Type: application/json
         "size": 1234,
         "digest": "sha256:a1a1a1...",
         "annotations": {
-            "org.opencontainers.tag.created": "2026-05-04T03:02:01Z"
+            "org.opencontainers.distribution.tag.created": "2026-05-04T03:02:01Z"
         }
     },
     {
@@ -109,7 +109,7 @@ Content-Type: application/json
         "size": 1234,
         "digest": "sha256:a1a1a1...",
         "annotations": {
-            "org.opencontainers.tag.deleted": "2026-05-03T03:02:01Z"
+            "org.opencontainers.distribution.tag.deleted": "2026-05-03T03:02:01Z"
         }
     },
     {
@@ -117,13 +117,13 @@ Content-Type: application/json
         "size": 1234,
         "digest": "sha256:b2b2b2...",
         "annotations": {
-            "org.opencontainers.tag.created": "2026-04-03T02:01:00Z"
+            "org.opencontainers.distribution.tag.created": "2026-04-03T02:01:00Z"
         }
     }
 ]
 ```
 
-Results MUST be sorted in descending order by the history entry timestamp, which is either the `org.opencontainers.tag.created` annotation value or the `org.opencontainers.tag.deleted` annotation value (i.e. the most recent entry appears first).
+Results MUST be sorted in descending order by the history entry timestamp, which is either the `org.opencontainers.distribution.tag.created` annotation value or the `org.opencontainers.distribution.tag.deleted` annotation value (i.e. the most recent entry appears first).
 
 Each descriptor object in the response MUST be a create or delete entry.
 A descriptor for a tag creation event MUST describe the manifest the tag was assigned to.
@@ -147,11 +147,11 @@ Manifest descriptors MUST include the following properties:
 
   Annotations associated with the historical tag entry. MUST include exactly one of the following event annotations:
 
-  - **`org.opencontainers.tag.created`** *string*
+  - **`org.opencontainers.distribution.tag.created`** *string*
 
     REQUIRED for tag creation events. The RFC 3339 timestamp at which the tag was assigned to this manifest. Used as the sort key and as the cursor for time-based pagination.
 
-  - **`org.opencontainers.tag.deleted`** *string*
+  - **`org.opencontainers.distribution.tag.deleted`** *string*
 
     REQUIRED for tag deletion events. The RFC 3339 timestamp at which the tag was deleted from this manifest. Used as the sort key and as the cursor for time-based pagination.
 
@@ -169,7 +169,13 @@ The following query parameters MAY be provided:
 - **`before`** *string (RFC 3339 timestamp)*, OPTIONAL
 
   When provided, only entries whose history entry timestamp is strictly less than (i.e. older than) `before` will be returned.
-  This is used for time-based pagination: pass the `org.opencontainers.tag.created` or `org.opencontainers.tag.deleted` value of the last entry returned in the previous response to retrieve the next page.
+  This is used for time-based pagination: pass the `org.opencontainers.distribution.tag.created` or `org.opencontainers.distribution.tag.deleted` value of the last entry returned in the previous response to retrieve the next page.
+
+- **`digest`** *string*, OPTIONAL
+
+  When provided, the registry will validate if the provided digest was part of the given tag's history.
+  If it was not, a `400 Bad Request` response is given. 
+  If it was, the tag listing response will include a descriptor with the provided digest along with the relevant create/delete timestamps.
 
 ##### Pagination Example
 
