@@ -6,3 +6,4 @@ tags
 go.work
 junit.xml
 report.html
+results.yaml

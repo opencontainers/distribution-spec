@@ -15,15 +15,38 @@ runs:
       run: |
         set -x
         required_env_vars=(
+          "OCI_REGISTRY"
+          "OCI_REPO1"
+        )
+        missing=false
+        for v in ${required_env_vars[@]}; do
+          if [[ "${!v}" == "" ]]; then
+            echo "::error title=Missing variable::Missing required variable ${v}"
+            missing=true
+          fi
+        done
+        if [[ "${missing}" == "false" ]]; then
+          exit 0
+        fi
+        # fallback to previous variables
+        required_env_vars=(
           "OCI_ROOT_URL"
           "OCI_NAMESPACE"
         )
+        missing=false
         for v in ${required_env_vars[@]}; do
           if [[ "${!v}" == "" ]]; then
-            echo "Error: the following environment variable is required: ${v}"
-            exit 1
+            echo "::error title=Missing fallback variable::Missing fallback variable ${v}"
+            missing=true
+          else
+            echo "::warning title=Deprecated fallback variable::Variable ${v} has been deprecated"
           fi
         done
+        if [[ "${missing}" == "false" ]]; then
+          exit 0
+        else
+          exit 1
+        fi
 
     - name: Build OCI distribution-spec conformance binary
       shell: bash
@@ -34,14 +57,16 @@ runs:
         # Enter the directory containing the checkout of this action which is surpisingly hard to do (but we did it... #OCI)
         cd "$(dirname $(find $(find ~/work/_actions -name distribution-spec -print -quit) -name Makefile -print -quit))"
         
-        # The .git folder is not present, but the dirname is the requested action ref, so use this as the conformance version
-        conformance_version="$(basename "${PWD}")"
-        echo "conformance-version=${conformance_version}" >> $GITHUB_OUTPUT
+        # The .git folder is not present, but the dirname is the requested action ref, so use this as the commit version
+        commit_version="$(basename "${PWD}")"
 
         # Build the conformance binary
-        CONFORMANCE_VERSION="${conformance_version}" OUTPUT_DIRNAME=bin make conformance-binary
+        CONFORMANCE_VERSION="${commit_version}" OUTPUT_DIRNAME=bin make conformance-cmd
 
-        # Add bin to the PATH so we can just run "conformance.test"
+        # The spec version is independent of the conformance git commit
+        echo "oci-spec-version=${OCI_VERSION:-stable}" >> $GITHUB_OUTPUT
+
+        # Add bin to the PATH so we can just run "conformance"
         echo "${PWD}/bin" >> $GITHUB_PATH
 
     - name: Run OCI distribution-spec conformance binary
@@ -50,7 +75,8 @@ runs:
       run: |
         set -x
         set +e
-        conformance.test
+        OCI_RESULTS_DIR=${OCI_RESULTS_DIR:-.}
+        conformance
         conformance_rc="$?"
         set -e
         if [[ -f report.html ]]; then
@@ -62,9 +88,10 @@ runs:
 
     - name: Upload OCI distribution-spec conformance results as build artifact
       if: always() && steps.run-conformance.outputs.has-report == 'true'
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
       with:
-        name: oci-distribution-spec-conformance-results-${{ steps.build-conformance.outputs.conformance-version }}
+        name: oci-distribution-spec-conformance-results-${{ steps.build-conformance.outputs.oci-spec-version }}
         path: |
+          results.yaml
           report.html
           junit.xml
