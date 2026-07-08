@@ -14,10 +14,12 @@ The basis of the Extension API (`_oci`) should be emulated for all extensions.
 
 _notice_: All new `/extensions/_<extention>.md` docs MUST be added to this table.
 
-| Extension                | Summary                                              |
-|:------------------------:|:----------------------------------------------------:|
-| [`_oci`](./_oci.md)      | Extensions discovering extensions on registry server |
-| `_catalog`               | Reserved prior extension                             |
+| Extension           | Summary                                                                                                           |
+|:--------------------|:------------------------------------------------------------------------------------------------------------------|
+| [`_oci`](./_oci.md) | Extensions discovering extensions on registry server                                                              |
+| `_catalog`          | Reserved prior extension                                                                                          |
+| `_chainguard`       | Used by [Chainguard](https://edu.chainguard.dev/chainguard/chainguard-images/features/using-the-tag-history-api/) |
+| `_docker`           | Used by Docker Hub                                                                                                |
 
 ## Name
 
