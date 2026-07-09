@@ -31,6 +31,7 @@ jobs:
           export PATH="$(go env GOPATH)/bin:${PATH}"
           make install.tools
           make .gitvalidation
+          make check-license
           make docs conformance
 
           set +e

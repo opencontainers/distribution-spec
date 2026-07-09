@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Copyright the Open Container Initiative Contributors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,13 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.24-alpine AS build
+set -o errexit
+set -o nounset
+set -o pipefail
 
-COPY . .
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/conformance .
-ENTRYPOINT [ "/usr/local/bin/conformance" ]
+ret=0
 
-FROM scratch
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=build /usr/local/bin/conformance /conformance
-ENTRYPOINT [ "/conformance" ]
+for file in $(find . -type f -iname '*.go' ! -path './vendor/*'); do
+	if ! head -n3 "${file}" | grep -Eq "(Copyright the Open Container Initiative Contributors|generated|GENERATED)"; then
+		echo "${file}:missing license header"
+		ret=1
+	fi
+done
+
+exit $ret
