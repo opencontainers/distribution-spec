@@ -75,7 +75,7 @@ runs:
       run: |
         set -x
         set +e
-        OCI_RESULTS_DIR=${OCI_RESULTS_DIR:-.}
+        export OCI_RESULTS_DIR=${OCI_RESULTS_DIR:-.}
         conformance
         conformance_rc="$?"
         set -e
