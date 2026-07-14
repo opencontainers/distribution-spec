@@ -145,12 +145,12 @@ clean-ci:
 $(OUTPUT_DIRNAME)/conformance: conformance/*.go conformance/go.mod
 	cd conformance && \
 		CGO_ENABLED=0 go build -o $(shell pwd)/$(OUTPUT_DIRNAME)/conformance \
-			--ldflags="-X github.com/opencontainers/distribution-spec/conformance.Version=$(CONFORMANCE_VERSION)"
+			-ldflags "-X main.Version=$(CONFORMANCE_VERSION)" .
 
 $(OUTPUT_DIRNAME)/conformance.test: conformance/*.go conformance/go.mod
 	cd conformance && \
 		CGO_ENABLED=0 go test -c -o $(shell pwd)/$(OUTPUT_DIRNAME)/conformance.test \
-			--ldflags="-X github.com/opencontainers/distribution-spec/conformance.Version=$(CONFORMANCE_VERSION)"
+			-ldflags "-X github.com/opencontainers/distribution-spec/conformance.Version=$(CONFORMANCE_VERSION)" .
 
 clean: clean-ci
 	rm -rf header.html junit.xml report.html results.yaml output conformance/results
