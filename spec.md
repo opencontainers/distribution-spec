@@ -141,11 +141,11 @@ Typically, the first step in pulling an object is to retrieve the manifest. Howe
 #### Pulling manifests
 
 To pull a manifest, perform a `GET` request to a URL in the following form:
-`/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup>
+`/v2/<name>/manifests/<tag-or-digest>` <sup>[end-3](#endpoints)</sup>
 
 `<name>` refers to the namespace of the repository.
-`<reference>` MUST be either (a) the digest of the manifest or (b) a tag.
-The `<reference>` MUST NOT be in any other format.
+`<tag-or-digest>` MUST be either (a) the digest of the manifest or (b) a tag.
+The `<tag-or-digest>` MUST NOT be in any other format.
 Throughout this document, `<name>` MUST match the following regular expression:
 
 `[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*(\/[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*)*`
@@ -155,7 +155,7 @@ Many clients impose a limit of 255 characters on the length of the concatenation
 If the registry name is `registry.example.org:5000`, those clients would be limited to a `<name>` of 229 characters (255 minus 25 for the registry hostname and port and minus 1 for a `/` separator).
 For compatibility with those clients, registries should avoid values of `<name>` that would cause this limit to be exceeded.
 
-Throughout this document, `<reference>` as a tag MUST be at most 128 characters in length and MUST match the following regular expression:
+Throughout this document, `<tag-or-digest>` as a tag MUST be at most 128 characters in length and MUST match the following regular expression:
 
 `[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}`
 
@@ -174,7 +174,7 @@ The `Docker-Content-Digest` header, if present on the response, returns the dige
 If the digest does differ, it MAY be the case that the hashing algorithms used do not match.
 See [Content Digests](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> for information on how to detect the hashing algorithm in use.
 Most clients MAY ignore the value, but if it is used, the client MUST verify the value matches the returned manifest.
-If the `<reference>` part of a manifest request is a digest, clients SHOULD verify the returned manifest matches this digest.
+If the `<tag-or-digest>` part of a manifest request is a digest, clients SHOULD verify the returned manifest matches this digest.
 
 If the manifest is not found in the repository, the response code MUST be `404 Not Found`.
 
@@ -199,7 +199,7 @@ A registry SHOULD support the `Range` request header in accordance with [RFC 911
 
 In order to verify that a repository contains a given manifest or blob, make a `HEAD` request to a URL in the following form:
 
-`/v2/<name>/manifests/<reference>` <sup>[end-3](#endpoints)</sup> (for manifests), or
+`/v2/<name>/manifests/<tag-or-digest>` <sup>[end-3](#endpoints)</sup> (for manifests), or
 
 `/v2/<name>/blobs/<digest>` <sup>[end-2](#endpoints)</sup> (for blobs).
 
@@ -250,19 +250,19 @@ Here, `<name>` refers to the namespace of the repository.
 Upon success, the response MUST have a code of `202 Accepted`, and MUST include the following header:
 
 ```
-Location: <location>
+Location: <blob-push-location>
 ```
 
-The `<location>` MUST contain a UUID representing a unique session ID for the upload to follow.
-The `<location>` does not necessarily need to be provided by the registry itself.
+The `<blob-push-location>` MUST contain a UUID representing a unique session ID for the upload to follow.
+The `<blob-push-location>` does not necessarily need to be provided by the registry itself.
 In fact, offloading to another server can be a [better strategy](https://www.backblaze.com/blog/design-thinking-b2-apis-the-hidden-costs-of-s3-compatibility/).
 
 Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path).
 For more information, see [RFC 7231 (section 7.1.2)](https://www.rfc-editor.org/rfc/rfc7231#section-7.1.2).
 
-Once the `<location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
+Once the `<blob-push-location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
 
-`<location>?digest=<digest>` <sup>[end-6](#endpoints)</sup>
+`<blob-push-location>?digest=<digest>` <sup>[end-6](#endpoints)</sup>
 ```
 Content-Length: <length>
 Content-Type: application/octet-stream
@@ -271,8 +271,8 @@ Content-Type: application/octet-stream
 <upload byte stream>
 ```
 
-The `<location>` MAY contain critical query parameters.
-Additionally, it SHOULD match exactly the `<location>` obtained from the `POST` request.
+The `<blob-push-location>` MAY contain critical query parameters.
+Additionally, it SHOULD match exactly the `<blob-push-location>` obtained from the `POST` request.
 It SHOULD NOT be assembled manually by clients except where absolute/relative conversion is necessary.
 
 Here, `<digest>` is the digest of the blob being uploaded, and `<length>` is its size in bytes.
@@ -344,12 +344,12 @@ If the registry has a minimum chunk size, the `POST` response SHOULD include the
 OCI-Chunk-Min-Length: <size>
 ```
 
-Please reference the above section for restrictions on the `<location>`.
+Please reference the above section for restrictions on the `<blob-push-location>`.
 
 ---
 To upload a chunk, issue a `PATCH` request to a URL path in the following format, and with the following headers and body:
 
-URL path: `<location>` <sup>[end-5](#endpoints)</sup>
+URL path: `<blob-push-location>` <sup>[end-5](#endpoints)</sup>
 ```
 Content-Type: application/octet-stream
 Content-Range: <range>
@@ -359,7 +359,7 @@ Content-Length: <length>
 <upload byte stream of chunk>
 ```
 
-The `<location>` refers to the URL obtained from the preceding `POST` request.
+The `<blob-push-location>` refers to the URL obtained from the preceding `POST` request.
 
 The `<range>` refers to the byte range of the chunk, and MUST be inclusive on both ends.
 The first chunk's range MUST begin with `0`.
@@ -376,11 +376,11 @@ The final chunk MAY have any length.
 The response for each successful chunk upload MUST be `202 Accepted`, and MUST have the following headers:
 
 ```
-Location: <location>
+Location: <blob-push-location>
 Range: 0-<end-of-range>
 ```
 
-Each consecutive chunk upload SHOULD use the `<location>` provided in the response to the previous chunk upload.
+Each consecutive chunk upload SHOULD use the `<blob-push-location>` provided in the response to the previous chunk upload.
 
 The `<end-of-range>` value is the position of the last uploaded byte of the blob, matching the end value of the `Content-Range` in the request.
 
@@ -395,7 +395,7 @@ Regardless of how the final chunk is uploaded, the session MUST be closed with a
 
 To close the session, issue a `PUT` request to a url in the following format, and with the following headers (and optional body, depending on whether or not the final chunk was uploaded already via a `PATCH` request):
 
-`<location>?digest=<digest>`
+`<blob-push-location>?digest=<digest>`
 ```
 Content-Length: <length of chunk, if present>
 Content-Range: <range of chunk, if present>
@@ -418,18 +418,18 @@ If the final chunk is uploaded out of order, the registry MUST respond with a `4
 
 ---
 
-To get the current status after a 416 error, issue a `GET` request to a URL `<location>` <sup>[end-13](#endpoints)</sup>.
+To get the current status after a 416 error, issue a `GET` request to a URL `<blob-push-location>` <sup>[end-13](#endpoints)</sup>.
 
-The `<location>` refers to the URL obtained from any preceding `POST` or `PATCH` request.
+The `<blob-push-location>` refers to the URL obtained from any preceding `POST` or `PATCH` request.
 
-The response to an active upload `<location>` MUST be a `204 No Content` response code, and MUST have the following headers:
+The response to an active upload `<blob-push-location>` MUST be a `204 No Content` response code, and MUST have the following headers:
 
 ```
-Location: <location>
+Location: <blob-push-location>
 Range: 0-<end-of-range>
 ```
 
-The following chunk upload SHOULD use the `<location>` provided in the response.
+The following chunk upload SHOULD use the `<blob-push-location>` provided in the response.
 
 The `<end-of-range>` value is the position of the last uploaded byte of the blob.
 
@@ -437,12 +437,12 @@ The `<end-of-range>` value is the position of the last uploaded byte of the blob
 
 During a blob upload, the session may be canceled with a `DELETE` request:
 
-URL path: `<location>` <sup>[end-14](#endpoints)</sup>
+URL path: `<blob-push-location>` <sup>[end-14](#endpoints)</sup>
 ```
 Content-Length: 0
 ```
 
-The `<location>` refers to the URL obtained from the preceding `POST` or `PATCH` request.
+The `<blob-push-location>` refers to the URL obtained from the preceding `POST` or `PATCH` request.
 
 If successful, the response SHOULD be a `204 No Content` response code.
 
@@ -477,7 +477,7 @@ This indicates that the upload session has begun and that the client MAY proceed
 
 #### Pushing Manifests
 
-To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers and body: `/v2/<name>/manifests/<reference>` <sup>[end-7](#endpoints)</sup>
+To push a manifest, perform a `PUT` request to a path in the following format, and with the following headers and body: `/v2/<name>/manifests/<tag-or-digest>` <sup>[end-7](#endpoints)</sup>
 
 Clients SHOULD set the `Content-Type` header to the type of the manifest being pushed.
 The client SHOULD NOT include parameters on the `Content-Type` header (see [RFC 7231 (section 3.1.1.1)](https://www.rfc-editor.org/rfc/rfc7231#section-3.1.1.1)).
@@ -496,7 +496,7 @@ Manifest byte stream:
 }
 ```
 
-`<name>` is the namespace of the repository, and the `<reference>` MUST be either a) a digest or b) a tag.
+`<name>` is the namespace of the repository, and the `<tag-or-digest>` MUST be either a) a digest or b) a tag.
 
 The uploaded manifest MUST reference any blobs that make up the object.
 However, the list of blobs MAY be empty.
@@ -786,7 +786,7 @@ A client querying the [referrers API](#listing-referrers) and receiving a `404 N
 
 #### Referrers Tag Schema
 
-The Referrers Tag associated with a [Content Digest](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> MUST match the Truncated Algorithm, a `-` character, and the Truncated Encoded section, with any characters not allowed by [`<reference>` tags](#pulling-manifests) replaced with `-`.
+The Referrers Tag associated with a [Content Digest](https://github.com/opencontainers/image-spec/blob/v1.0.1/descriptor.md#digests) <sup>[apdx-3](#appendix)</sup> MUST match the Truncated Algorithm, a `-` character, and the Truncated Encoded section, with any characters not allowed by [`<tag-or-digest>` tags](#pulling-manifests) replaced with `-`.
 The Truncated Algorithm associated with a Content Digest MUST match the digest's `algorithm` section truncated to 32 characters.
 The Truncated Encoded section associated with a Content Digest MUST match the digest's `encoded` section truncated to 64 characters.
 
@@ -840,23 +840,23 @@ This endpoint MAY be used for authentication/authorization purposes, but this is
 |---------| -------------- |----------------------------------------------------------------| ----------- |-------------------|
 | end-1   | `GET`          | `/v2/`                                                         | `200`       | `404`/`401`       |
 | end-2   | `GET` / `HEAD` | `/v2/<name>/blobs/<digest>`                                    | `200`       | `404`             |
-| end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<reference>`                             | `200`       | `404`             |
+| end-3   | `GET` / `HEAD` | `/v2/<name>/manifests/<tag-or-digest>`                         | `200`       | `404`             |
 | end-4a  | `POST`         | `/v2/<name>/blobs/uploads/`                                    | `202`       | `404`             |
 | end-4b  | `POST`         | `/v2/<name>/blobs/uploads/?digest=<digest>`                    | `201`/`202` | `404`/`400`       |
 | end-4c  | `POST`         | `/v2/<name>/blobs/uploads/?digest-algorithm=<algorithm>`       | `201`/`202` | `404`/`400`       |
-| end-5   | `PATCH`        | `/v2/<name>/blobs/uploads/<reference>`                         | `202`       | `404`/`416`       |
-| end-6   | `PUT`          | `/v2/<name>/blobs/uploads/<reference>?digest=<digest>`         | `201`       | `404`/`400`/`416` |
-| end-7a  | `PUT`          | `/v2/<name>/manifests/<reference>`                             | `201`       | `404`/`413`       |
-| end-7b  | `PUT`          | `/v2/<name>/manifests/<digest>?tag=1&tag=2&tag=3`              | `201`       | `404`/`413`        |
+| end-5   | `PATCH`        | `<blob-push-location>`                                         | `202`       | `404`/`416`       |
+| end-6   | `PUT`          | `<blob-push-location>?digest=<digest>`                         | `201`       | `404`/`400`/`416` |
+| end-7a  | `PUT`          | `/v2/<name>/manifests/<tag-or-digest>`                         | `201`       | `404`/`413`       |
+| end-7b  | `PUT`          | `/v2/<name>/manifests/<digest>?tag=1&tag=2&tag=3`              | `201`       | `404`/`413`       |
 | end-8a  | `GET`          | `/v2/<name>/tags/list`                                         | `200`       | `404`             |
 | end-8b  | `GET`          | `/v2/<name>/tags/list?n=<integer>&last=<tagname>`              | `200`       | `404`             |
-| end-9   | `DELETE`       | `/v2/<name>/manifests/<reference>`                             | `202`       | `404`/`400`/`405` |
+| end-9   | `DELETE`       | `/v2/<name>/manifests/<tag-or-digest>`                         | `202`       | `404`/`400`/`405` |
 | end-10  | `DELETE`       | `/v2/<name>/blobs/<digest>`                                    | `202`       | `404`/`400`/`405` |
 | end-11  | `POST`         | `/v2/<name>/blobs/uploads/?mount=<digest>&from=<other_name>`   | `201`/`202` | `404`             |
 | end-12a | `GET`          | `/v2/<name>/referrers/<digest>`                                | `200`       | `404`/`400`       |
 | end-12b | `GET`          | `/v2/<name>/referrers/<digest>?artifactType=<artifactType>`    | `200`       | `404`/`400`       |
-| end-13  | `GET`          | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`             |
-| end-14  | `DELETE`       | `/v2/<name>/blobs/uploads/<reference>`                         | `204`       | `404`/`400`       |
+| end-13  | `GET`          | `<blob-push-location>`                                         | `204`       | `404`             |
+| end-14  | `DELETE`       | `<blob-push-location>`                                         | `204`       | `404`/`400`       |
 
 ### Error Codes
 
