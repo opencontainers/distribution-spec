@@ -253,11 +253,12 @@ Upon success, the response MUST have a code of `202 Accepted`, and MUST include 
 Location: <blob-push-location>
 ```
 
-The `<blob-push-location>` MUST contain a UUID representing a unique session ID for the upload to follow.
-The `<blob-push-location>` does not necessarily need to be provided by the registry itself.
+The `<blob-push-location>` MUST contain a unique ID for the upload to follow.
+The `<blob-push-location>` SHOULD be `/v2/<name>/blobs/uploads/<unique-id>`, where `<unique-id>` is a unique ID.
+The `<blob-push-location>` MAY be provided by a server other than the registry itself.
 In fact, offloading to another server can be a [better strategy](https://www.backblaze.com/blog/design-thinking-b2-apis-the-hidden-costs-of-s3-compatibility/).
 
-Optionally, the location MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path).
+The `<blob-push-location>` MAY be absolute (containing the protocol and/or hostname), or it MAY be relative (containing just the URL path).
 For more information, see [RFC 7231 (section 7.1.2)](https://www.rfc-editor.org/rfc/rfc7231#section-7.1.2).
 
 Once the `<blob-push-location>` has been obtained, perform the upload proper by making a `PUT` request to the following URL path, and with the following headers and body:
