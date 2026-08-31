@@ -914,6 +914,11 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 			blobAPIsTestedByAlgo[algo] = &[stateAPIMax]bool{}
 		}
 		blobAPITests := []string{"post only", "post+put", "chunked single", "stream", "mount", "mount anonymous", "mount missing", "post cancel"}
+		if algo != digest.Canonical {
+			// the initial POST for these APIs precedes the client sending the digest, so also
+			// verify the registry accepts the digest-algorithm hint for non-canonical algorithms
+			blobAPITests = append(blobAPITests, "post+put with digest-algorithm", "chunked with digest-algorithm", "stream with digest-algorithm")
+		}
 		for _, name := range blobAPITests {
 			dig, _, err := r.State.Data[tdName].genBlob(genWithBlobSize(512), genWithAlgo(algo))
 			if err != nil {
@@ -1024,6 +1029,24 @@ func (r *runner) TestBlobAPIs(parent *results, tdName, tdDesc string, algo diges
 				case "stream":
 					api = stateAPIBlobPatchStream
 					err = r.TestPushBlobPatchStream(res, tdName, repo, dig)
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "post+put with digest-algorithm":
+					api = stateAPIBlobPostPut
+					err = r.TestPushBlobPostPut(res, tdName, repo, dig, apiWithFlag("DigestAlgorithmParam"))
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "chunked with digest-algorithm":
+					api = stateAPIBlobPatchChunked
+					err = r.TestPushBlobPatchChunked(res, tdName, repo, dig, apiWithFlag("DigestAlgorithmParam"))
+					if err != nil {
+						errs = append(errs, err)
+					}
+				case "stream with digest-algorithm":
+					api = stateAPIBlobPatchStream
+					err = r.TestPushBlobPatchStream(res, tdName, repo, dig, apiWithFlag("DigestAlgorithmParam"))
 					if err != nil {
 						errs = append(errs, err)
 					}

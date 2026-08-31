@@ -290,7 +290,6 @@ func (a *api) BlobMount(registry, repo, source string, dig digest.Digest, td *te
 		qa.Set("from", source)
 	}
 	u.RawQuery = qa.Encode()
-	// TODO: add digest algorithm if not sha256
 	errs := []error{}
 	loc := ""
 	status := 0
@@ -356,7 +355,11 @@ func (a *api) BlobPatchChunked(registry, repo string, dig digest.Digest, td *tes
 	if err != nil {
 		return err
 	}
-	// TODO: add digest algorithm if not sha256
+	if flags["DigestAlgorithmParam"] {
+		qa := u.Query()
+		qa.Set("digest-algorithm", dig.Algorithm().String())
+		u.RawQuery = qa.Encode()
+	}
 	minStr := ""
 	loc := ""
 	resp := http.Response{Header: http.Header{}}
@@ -555,7 +558,11 @@ func (a *api) BlobPatchStream(registry, repo string, dig digest.Digest, td *test
 	if err != nil {
 		return err
 	}
-	// TODO: add digest algorithm if not sha256
+	if flags["DigestAlgorithmParam"] {
+		qa := u.Query()
+		qa.Set("digest-algorithm", dig.Algorithm().String())
+		u.RawQuery = qa.Encode()
+	}
 	loc := ""
 	resp := http.Response{Header: http.Header{}}
 	err = a.Do(
@@ -767,7 +774,11 @@ func (a *api) BlobPostPut(registry, repo string, dig digest.Digest, td *testData
 	if err != nil {
 		return err
 	}
-	// TODO: add digest algorithm if not sha256
+	if flags["DigestAlgorithmParam"] {
+		qa := u.Query()
+		qa.Set("digest-algorithm", dig.Algorithm().String())
+		u.RawQuery = qa.Encode()
+	}
 	loc := ""
 	resp := http.Response{Header: http.Header{}}
 	err = a.Do(
