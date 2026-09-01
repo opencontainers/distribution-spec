@@ -227,7 +227,7 @@ func (a *api) BlobGetExistsFull(registry, repo string, dig digest.Digest, td *te
 		apiReturnResponse(&resp),
 	)
 	if val, ok := td.blobs[dig]; ok && (len(val) > 0 || dig == emptyDigest) {
-		opts = append(opts, apiExpectBody(val), apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))))
+		opts = append(opts, apiExpectBody(val), apiExpectContentLength(len(val)))
 	}
 	errs := []error{}
 	if err := a.BlobGetReq(registry, repo, dig, td, opts...); err != nil {
@@ -895,7 +895,7 @@ func (a *api) ManifestGetExists(registry, repo, ref string, dig digest.Digest, t
 		opts = append(opts,
 			apiExpectBody(val),
 			apiExpectHeader("Content-Type", mediaType),
-			apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(val))),
+			apiExpectContentLength(len(val)),
 			apiReturnResponse(&resp),
 		)
 	}
@@ -1022,7 +1022,7 @@ func (a *api) ManifestPut(registry, repo, ref string, dig digest.Digest, td *tes
 				apiWithHeaderAdd("Accept", mtOCIImage),
 				apiExpectStatus(http.StatusOK),
 				apiExpectHeader("Content-Type", mediaType),
-				apiExpectHeader("Content-Length", fmt.Sprintf("%d", len(bodyBytes))),
+				apiExpectContentLength(len(bodyBytes)),
 				apiExpectBody(bodyBytes),
 				apiWithAnd(opts),
 			)
@@ -1288,6 +1288,57 @@ func apiExpectHeader(key, val string) apiDoOpt {
 					return fmt.Errorf("header value mismatch for %q, expected %q, received %q", key, val, cur)
 				}
 			}
+			return nil
+		},
+	}
+}
+
+// apiExpectContentLength verifies the Content-Length header on a response body of a known
+// length. Unlike apiExpectHeader, a missing header is tolerated when resp.Uncompressed is set:
+// Go's http.Transport transparently decodes a transport-compressed (e.g. gzip) response and
+// strips Content-Length in the process, since it no longer describes the decoded body. The spec
+// permits transport compression and never makes Content-Length a MUST on a GET, so this is not a
+// registry bug -- it's our own client quietly doing content-decoding on our behalf.
+func apiExpectContentLength(n int) apiDoOpt {
+	return apiDoOpt{
+		respFn: func(resp *http.Response) error {
+			cur := resp.Header.Values("Content-Length")
+			if len(cur) == 0 && resp.Uncompressed {
+				return nil
+			}
+			want := strconv.Itoa(n)
+			if !slices.Contains(cur, want) {
+				return fmt.Errorf("header value mismatch for %q, expected %q, received %q", "Content-Length", want, cur)
+			}
+			return nil
+		},
+	}
+}
+
+func apiExpectNoHeader(key string) apiDoOpt {
+	return apiDoOpt{
+		respFn: func(resp *http.Response) error {
+			if cur := resp.Header.Values(key); len(cur) > 0 {
+				return fmt.Errorf("unexpected header %q, received %q", key, cur)
+			}
+			return nil
+		},
+	}
+}
+
+// apiReturnRawBody captures the response body verbatim (no transparent decoding), for callers
+// that need to inspect a possibly transport-compressed body themselves. It restores resp.Body
+// with a fresh reader over the same bytes so later opts can still read it.
+func apiReturnRawBody(body *[]byte) apiDoOpt {
+	return apiDoOpt{
+		respFn: func(resp *http.Response) error {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("failed to read body: %w", err)
+			}
+			_ = resp.Body.Close()
+			resp.Body = io.NopCloser(bytes.NewReader(b))
+			*body = b
 			return nil
 		},
 	}

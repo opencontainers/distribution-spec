@@ -64,6 +64,11 @@ const (
 	stateAPIManifestDeleteAtomic
 	stateAPIReferrers
 	stateAPIPing
+	stateAPITransportCompressionNegotiate
+	stateAPITransportCompressionManifest
+	stateAPITransportCompressionConfigBlob
+	stateAPITransportCompressionRange
+	stateAPITransportCompressionHead
 	stateAPIMax // number of APIs for iterating
 )
 
@@ -127,6 +132,16 @@ func (a stateAPIType) String() string {
 		return "Referrers"
 	case stateAPIPing:
 		return "Ping"
+	case stateAPITransportCompressionNegotiate:
+		return "Transport compression negotiation"
+	case stateAPITransportCompressionManifest:
+		return "Transport compression (manifest)"
+	case stateAPITransportCompressionConfigBlob:
+		return "Transport compression (config blob)"
+	case stateAPITransportCompressionRange:
+		return "Transport compression (range)"
+	case stateAPITransportCompressionHead:
+		return "Transport compression (HEAD)"
 	}
 }
 
@@ -198,6 +213,16 @@ func (a *stateAPIType) UnmarshalText(b []byte) error {
 		*a = stateAPIReferrers
 	case "Ping":
 		*a = stateAPIPing
+	case "Transport compression negotiation":
+		*a = stateAPITransportCompressionNegotiate
+	case "Transport compression (manifest)":
+		*a = stateAPITransportCompressionManifest
+	case "Transport compression (config blob)":
+		*a = stateAPITransportCompressionConfigBlob
+	case "Transport compression (range)":
+		*a = stateAPITransportCompressionRange
+	case "Transport compression (HEAD)":
+		*a = stateAPITransportCompressionHead
 	}
 	return nil
 }

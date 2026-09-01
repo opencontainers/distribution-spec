@@ -15,6 +15,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"crypto/rand"
 	"encoding/xml"
 	"errors"
@@ -66,19 +68,9 @@ func runnerNew(c config) (*runner, error) {
 		apiOpts = append(apiOpts, apiWithAuth(c.LoginUser, c.LoginPass, c.CacheAuth))
 	}
 
-	// TODO <tianon> ideally we wouldn't just blatantly DisableCompression here, but we currently (2026-08-27) have a bunch of tests that assume Content-Length is set that Go's transparent handling of transport compression makes fail if a server happens to implement transport compression
-	client := &http.Client{}
-	if t, ok := http.DefaultTransport.(*http.Transport); ok {
-		transport := t.Clone()
-		transport.DisableCompression = true
-		client.Transport = transport
-	} else {
-		return nil, fmt.Errorf("changing the DefaultTransport is not supported")
-	}
-
 	r := runner{
 		Config:  c,
-		API:     apiNew(client, apiOpts...),
+		API:     apiNew(http.DefaultClient, apiOpts...),
 		State:   stateNew(),
 		Results: resultsNew(testName, nil),
 		Log:     slog.New(slog.NewTextHandler(c.LogWriter, &slog.HandlerOptions{Level: lvl})),
@@ -854,6 +846,11 @@ func (r *runner) TestAll() error {
 		if err != nil {
 			errs = append(errs, err)
 		}
+	}
+
+	err = r.TestTransportCompression(r.Results, repo)
+	if err != nil {
+		errs = append(errs, err)
 	}
 
 	// loop over different types of data
@@ -2279,6 +2276,263 @@ func (r *runner) TestReferrers(parent *results, tdName string, repo string) erro
 		r.TestPass(res, tdName, stateAPIReferrers)
 		return nil
 	})
+}
+
+// TestTransportCompression exercises transport-level (HTTP Content-Encoding) compression. The
+// spec permits it (it never makes Content-Length a MUST on a GET) but doesn't require it, and
+// most registries don't implement it, so every check here either passes or is skipped -- never
+// disabled by configuration, since there's no flag for a registry to opt into. It pushes its own
+// small manifest + config blob (independent of the main dataTests loop, which may have already
+// deleted its content by the time this runs) and cleans up after itself.
+func (r *runner) TestTransportCompression(parent *results, repo string) error {
+	return r.ChildRun("transport-compression", parent, func(r *runner, res *results) error {
+		errs := []error{}
+		tdName := "transport-compression"
+		td := newTestData("Transport Compression")
+		r.State.Data[tdName] = td
+		r.State.DataStatus[tdName] = statusUnknown
+
+		layerCDig, layerUCDig, layerBody, err := td.genLayer(0)
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		confDig, confBody, err := td.genConfig(image.Platform{OS: "linux", Architecture: "amd64"}, []digest.Digest{layerUCDig})
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+		manDig, manBody, err := td.genManifest(*td.desc[confDig], []image.Descriptor{*td.desc[layerCDig]}, genWithTag("transport-compression"))
+		if err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
+
+		if err := r.TestPush(res, tdName, repo); err != nil {
+			// nothing was pushed, nothing further to test
+			return err
+		}
+
+		if err := r.TestTransportCompressionNegotiate(res, tdName, repo, manDig); err != nil {
+			errs = append(errs, err)
+		}
+		if err := r.TestTransportCompressionGet(res, tdName, repo, "manifest", stateAPITransportCompressionManifest, manDig, manBody, true); err != nil {
+			errs = append(errs, err)
+		}
+		if err := r.TestTransportCompressionGet(res, tdName, repo, "config blob", stateAPITransportCompressionConfigBlob, confDig, confBody, false); err != nil {
+			errs = append(errs, err)
+		}
+		if err := r.TestTransportCompressionRange(res, tdName, repo, layerCDig, layerBody); err != nil {
+			errs = append(errs, err)
+		}
+		if err := r.TestTransportCompressionHead(res, tdName, repo, manDig, int64(len(manBody)), confDig, int64(len(confBody))); err != nil {
+			errs = append(errs, err)
+		}
+
+		if err := r.TestDelete(res, tdName, repo); err != nil {
+			errs = append(errs, err)
+		}
+		return errors.Join(errs...)
+	})
+}
+
+// TestTransportCompressionNegotiate is a hard requirement (never skipped): a client that
+// explicitly declines transport encoding must never receive one. Unlike the other checks here,
+// this can't rely on simply omitting Accept-Encoding, since our own client (like any real Go
+// http.Client) transparently negotiates and decodes gzip on our behalf whenever we don't set the
+// header ourselves, which would hide a non-compliant registry's behavior from us rather than
+// exposing it. Sending "identity" explicitly keeps the raw response visible.
+func (r *runner) TestTransportCompressionNegotiate(parent *results, tdName, repo string, dig digest.Digest) error {
+	return r.ChildRun("negotiate", parent, func(r *runner, res *results) error {
+		err := r.API.ManifestGetReq(r.Config.schemeReg, repo, dig.String(), dig, r.State.Data[tdName],
+			apiWithHeaderAdd("Accept-Encoding", "identity"),
+			apiExpectStatus(http.StatusOK),
+			apiExpectNoHeader("Content-Encoding"),
+			apiSaveOutput(res.Output),
+		)
+		if err != nil {
+			r.TestFail(res, fmt.Errorf("registry compressed a response despite Accept-Encoding: identity: %w", err), tdName, stateAPITransportCompressionNegotiate)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		r.TestPass(res, tdName, stateAPITransportCompressionNegotiate)
+		return nil
+	})
+}
+
+// TestTransportCompressionGet checks basic compression correctness for a single GET target
+// (a manifest or a blob). Registries commonly serve blobs and manifests through entirely
+// different code paths (e.g. blobs redirected to object storage), so this is run independently
+// against both rather than assuming support for one implies support for the other. Skipped
+// (never failed) if the registry doesn't compress this particular target.
+func (r *runner) TestTransportCompressionGet(parent *results, tdName, repo, label string, api stateAPIType, dig digest.Digest, expectBody []byte, isManifest bool) error {
+	return r.ChildRun("compress-get-"+label, parent, func(r *runner, res *results) error {
+		var resp http.Response
+		var rawBody []byte
+		opts := []apiDoOpt{
+			apiWithHeaderAdd("Accept-Encoding", "gzip"),
+			apiExpectStatus(http.StatusOK),
+			apiReturnResponse(&resp),
+			apiReturnRawBody(&rawBody),
+			apiSaveOutput(res.Output),
+		}
+		var err error
+		if isManifest {
+			err = r.API.ManifestGetReq(r.Config.schemeReg, repo, dig.String(), dig, r.State.Data[tdName], opts...)
+		} else {
+			err = r.API.BlobGetReq(r.Config.schemeReg, repo, dig, r.State.Data[tdName], opts...)
+		}
+		if err != nil {
+			r.TestFail(res, err, tdName, api)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		if resp.Header.Get("Content-Encoding") == "" {
+			err := fmt.Errorf("registry does not compress %s responses%.0w", label, errRegUnsupported)
+			r.TestSkip(res, err, tdName, api)
+			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
+		}
+		decoded, err := gunzipVerify(rawBody)
+		if err != nil {
+			r.TestFail(res, fmt.Errorf("%s: %w", label, err), tdName, api)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		if !bytes.Equal(decoded, expectBody) {
+			err := fmt.Errorf("%s: decompressed body does not match expected content", label)
+			r.TestFail(res, err, tdName, api)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		if vary := resp.Header.Values("Vary"); !slices.Contains(vary, "Accept-Encoding") {
+			err := fmt.Errorf("%s: missing \"Vary: Accept-Encoding\" despite compressing the response", label)
+			r.TestFail(res, err, tdName, api)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		r.TestPass(res, tdName, api)
+		return nil
+	})
+}
+
+// TestTransportCompressionRange checks that compressing a ranged blob response doesn't corrupt
+// the range accounting: Content-Range must still describe the real (uncompressed) byte offsets,
+// and the decompressed body must match exactly that byte slice. This is the kind of thing a
+// compression middleware bolted on without being range-aware could easily get wrong. Skipped
+// (never failed) if the registry doesn't compress ranged blob responses.
+func (r *runner) TestTransportCompressionRange(parent *results, tdName, repo string, dig digest.Digest, fullBody []byte) error {
+	return r.ChildRun("compress-range", parent, func(r *runner, res *results) error {
+		start, end := 0, len(fullBody)-1
+		if len(fullBody) > 4 {
+			start, end = 1, len(fullBody)-2
+		}
+		var resp http.Response
+		var rawBody []byte
+		err := r.API.BlobGetReq(r.Config.schemeReg, repo, dig, r.State.Data[tdName],
+			apiWithHeaderAdd("Accept-Encoding", "gzip"),
+			apiWithHeaderAdd("Range", fmt.Sprintf("bytes=%d-%d", start, end)),
+			apiExpectStatus(http.StatusPartialContent),
+			apiReturnResponse(&resp),
+			apiReturnRawBody(&rawBody),
+			apiSaveOutput(res.Output),
+		)
+		if err != nil {
+			r.TestFail(res, err, tdName, stateAPITransportCompressionRange)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		if resp.Header.Get("Content-Encoding") == "" {
+			err := fmt.Errorf("registry does not compress ranged blob responses%.0w", errRegUnsupported)
+			r.TestSkip(res, err, tdName, stateAPITransportCompressionRange)
+			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
+		}
+		decoded, err := gunzipVerify(rawBody)
+		if err != nil {
+			r.TestFail(res, err, tdName, stateAPITransportCompressionRange)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		wantExact := fmt.Sprintf("bytes %d-%d/%d", start, end, len(fullBody))
+		wantWild := fmt.Sprintf("bytes %d-%d/*", start, end)
+		if cr := resp.Header.Get("Content-Range"); cr != wantExact && cr != wantWild {
+			err := fmt.Errorf("Content-Range mismatch, expected %q or %q, received %q", wantExact, wantWild, cr)
+			r.TestFail(res, err, tdName, stateAPITransportCompressionRange)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		if !bytes.Equal(decoded, fullBody[start:end+1]) {
+			err := fmt.Errorf("decompressed range body does not match the expected byte range")
+			r.TestFail(res, err, tdName, stateAPITransportCompressionRange)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		r.TestPass(res, tdName, stateAPITransportCompressionRange)
+		return nil
+	})
+}
+
+// TestTransportCompressionHead checks that a HEAD response, which has no body to compress,
+// doesn't leak a bogus compressed-body Content-Length. A compression middleware that wraps the
+// whole response writer without special-casing HEAD can end up reporting the byte size of an
+// empty compressed stream instead of either the real resource size or nothing at all -- checked
+// against both a manifest and a blob since either could be wired up independently.
+func (r *runner) TestTransportCompressionHead(parent *results, tdName, repo string, manDig digest.Digest, manSize int64, blobDig digest.Digest, blobSize int64) error {
+	return r.ChildRun("compress-head", parent, func(r *runner, res *results) error {
+		targets := []struct {
+			label      string
+			isManifest bool
+			dig        digest.Digest
+			size       int64
+		}{
+			{"manifest", true, manDig, manSize},
+			{"blob", false, blobDig, blobSize},
+		}
+		errs := []error{}
+		supported := false
+		for _, t := range targets {
+			var resp http.Response
+			opts := []apiDoOpt{
+				apiWithHeaderAdd("Accept-Encoding", "gzip"),
+				apiExpectStatus(http.StatusOK),
+				apiReturnResponse(&resp),
+				apiSaveOutput(res.Output),
+			}
+			var err error
+			if t.isManifest {
+				err = r.API.ManifestHeadReq(r.Config.schemeReg, repo, t.dig.String(), t.dig, r.State.Data[tdName], opts...)
+			} else {
+				err = r.API.BlobHeadReq(r.Config.schemeReg, repo, t.dig, r.State.Data[tdName], opts...)
+			}
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s HEAD failed: %w", t.label, err))
+				continue
+			}
+			if resp.Header.Get("Content-Encoding") == "" {
+				continue // this target doesn't compress HEAD responses -- nothing to check
+			}
+			supported = true
+			if cl := resp.Header.Get("Content-Length"); cl != "" {
+				n, convErr := strconv.ParseInt(cl, 10, 64)
+				if convErr != nil || n != t.size {
+					errs = append(errs, fmt.Errorf("%s HEAD with Accept-Encoding: gzip reported Content-Length %q for a %d-byte resource -- HEAD has no body to compress, so Content-Length must describe the real resource size, or be omitted", t.label, cl, t.size))
+				}
+			}
+		}
+		if len(errs) > 0 {
+			err := errors.Join(errs...)
+			r.TestFail(res, err, tdName, stateAPITransportCompressionHead)
+			return fmt.Errorf("%.0w%w", errAPITestFail, err)
+		}
+		if !supported {
+			err := fmt.Errorf("registry does not compress HEAD responses%.0w", errRegUnsupported)
+			r.TestSkip(res, err, tdName, stateAPITransportCompressionHead)
+			return fmt.Errorf("%.0w%w", errAPITestSkip, err)
+		}
+		r.TestPass(res, tdName, stateAPITransportCompressionHead)
+		return nil
+	})
+}
+
+// gunzipVerify decodes a gzip body and reports a descriptive error if it's not well-formed,
+// distinguishing a registry that lied about Content-Encoding from one that just got unlucky.
+func gunzipVerify(rawBody []byte) ([]byte, error) {
+	gz, err := gzip.NewReader(bytes.NewReader(rawBody))
+	if err != nil {
+		return nil, fmt.Errorf("Content-Encoding: gzip but body is not valid gzip: %w", err)
+	}
+	decoded, err := io.ReadAll(gz)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decompress gzip body: %w", err)
+	}
+	return decoded, nil
 }
 
 func mapContainsAll[K comparable, V comparable](check, goal map[K]V) bool {
