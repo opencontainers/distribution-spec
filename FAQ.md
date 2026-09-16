@@ -31,7 +31,7 @@ secrets you might want to keep them within the scope of an image or repository.
 
 **Q: What kind of digest are we talking about?**
 
-For these push endpoints and generally all distribution specification mentions of blobs, we are generally refering to a sha256 digest, however [other types](https://github.com/opencontainers/image-spec/blob/master/descriptor.md#digests) could be supported.
+For these push endpoints and generally all distribution specification mentions of blobs, we are generally referring to a sha256 digest, however [other types](https://github.com/opencontainers/image-spec/blob/master/descriptor.md#digests) could be supported.
 
 **Q: Can I change the upload location?**
 
@@ -52,7 +52,7 @@ There is currently no best practice for an upload size or number of chunks.
 **Q: What is the order of a push for some client?**
 
 Generally, the data dependency between components drives the order of operations.
-For example, you can't upload a mainfest without knowing the config blob and layer digests. You can't know the config blob digest without knowing the layer diffids. You can't know the layer digests until you've gzipped and uploaded them (unless you know them ahead of time). This generally means that we do an upload like:
+For example, you can't upload a manifest without knowing the config blob and layer digests. You can't know the config blob digest without knowing the layer diffids. You can't know the layer digests until you've gzipped and uploaded them (unless you know them ahead of time). This generally means that we do an upload like:
 
  - blobs are uploaded first (config and layers)
  - blobs (optionally) are then linked to an image manifest (and the manifest uploaded)
@@ -67,11 +67,11 @@ choose to expire it after, for example, a minute or an hour, in the case that yo
 
 **Q: What happens if the `<tagname>` (last) parameter does not exist?**
 
-There is no suggested behavior in the specification for what to do if the tag does not exist. Registries might consider ignoring te parameter, or assuming a non-existing tag is at the start or the end of the sorted list. In the first case, at the start of the list would imply returning the entire set of tags. In the second cast, at the end of the list would imply returningan empty list, as it references the last tag onward (an empty set).
+There is no suggested behavior in the specification for what to do if the tag does not exist. Registries might consider ignoring the parameter, or assuming a non-existing tag is at the start or the end of the sorted list. In the first case, at the start of the list would imply returning the entire set of tags. In the second case, at the end of the list would imply returning an empty list, as it references the last tag onward (an empty set).
 
 **Q: How are clients expected to adopt (and probe for) automatic mount origin discovery?**
 
-The process of mounting a blob is supposed to fail in such a way that if a blob cannot be cross-mounted, the registry the registry initiates an upload. 
+The process of mounting a blob is supposed to fail in such a way that if a blob cannot be cross-mounted, the registry initiates an upload. 
 Clients should try to use the automatic content mount origin discovery mechanism when they do not know of an origin in the registry with the requisite blob. 
 Nonconformant registries may return a non-201 or non-202 error code. 
 If the client is trying to be defensive to nonconformant registries, and receives a non-201 or non-202 error code, it should fall back to [pushing the blob](https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pushing-blobs).
