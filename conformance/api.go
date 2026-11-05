@@ -1438,7 +1438,7 @@ func (a *api) addCachedAuth(req *http.Request) error {
 }
 
 var (
-	authHeaderMatcher = regexp.MustCompile("(?i).*(bearer|basic).*")
+	authHeaderMatcher = regexp.MustCompile(`(?i)^\s*(bearer|basic)\b.*`)
 	authParamsMatcher = regexp.MustCompile(`([a-zA-z]+)="(.+?)"`)
 )
 
