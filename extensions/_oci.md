@@ -126,16 +126,12 @@ If explicit tags are supplied, the source tag MUST NOT be created or updated unl
 If `reference` is a digest and no tags are supplied, the registry MUST NOT assign a tag to the copied root manifest.
 All selected tags MUST point to the single digest resolved for this operation.
 Other source tags, including tags on child manifests, MUST NOT be implicitly copied.
-Destination tags not selected by these rules MUST remain unchanged, except for referrers tag schema maintenance described below.
+Destination tags not selected by these rules MUST remain unchanged, except for referrers tag schema maintenance.
 
 ##### Copy Semantics
 
 The registry MUST resolve `reference` to a root manifest digest once and use that digest throughout the operation.
 If `reference` is a tag, a concurrent update to the source tag MUST NOT change the graph being copied.
-
-Registries implementing this endpoint MUST support OCI image manifests and image indices, including OCI image manifests used for artifacts.
-Registries MAY support additional manifest formats, such as Docker schema 2 manifests and manifest lists.
-A registry MUST reject an unsupported manifest format encountered while traversing the source content.
 
 Dependencies are identified by following these references:
 
@@ -152,11 +148,7 @@ The source content MUST remain unchanged.
 
 Referenced content absent from the source repository is not required to be fetched or copied.
 Its absence MUST NOT, by itself, cause the copy to fail unless the destination's ordinary validation or policy checks require that content to be present.
-The registry MAY reuse content already available in the destination, subject to the same source authorization and validation requirements.
-
-The registry MUST make dependencies being copied available before publishing a parent manifest and MUST NOT apply the selected destination tags until the root manifest and all source-present dependencies have been copied and destination validation has passed.
-It MUST protect content being copied from concurrent source deletion or garbage collection sufficiently to complete the operation, or fail before applying the selected destination tags.
-After success, deleting source content MUST NOT affect the availability of copied content in the destination; the destination's own deletion, retention, and garbage collection rules still apply.
+The registry MAY reuse content already available in the destination.
 
 ##### Subject Relationships and Referrers
 
@@ -166,27 +158,11 @@ Copying the referenced subject or its dependencies is not required, and clients 
 A subject that is independently included through an index's `manifests` entries is copied according to the traversal rules above.
 
 Discovering and copying referrers, such as separately attached signatures or SBOMs, is outside the scope of this operation.
-An artifact included through an index's `manifests` entries MUST still be copied normally.
-For every copied manifest with a `subject`, the registry MUST update the destination's referrers API or, if that API is unavailable, maintain the [referrers tag schema](../spec.md#referrers-tag-schema) as described in [Pushing Manifests with Subject](../spec.md#pushing-manifests-with-subject).
-Existing unrelated entries in the destination's referrers lists MUST be preserved.
-
-##### Authorization and Validation
-
-Registries MUST enforce the same applicable authorization, validation, and policy checks that would apply if the client performed the equivalent sequence of [Pulling manifests](../spec.md#pulling-manifests), [Mounting a blob from another repository](../spec.md#mounting-a-blob-from-another-repository), and [Pushing Manifests](../spec.md#pushing-manifests) operations, including destination tag updates.
-This requirement applies to all content copied by the operation, including any subjects and their dependencies the registry elects to copy.
-Server-side copy MUST NOT bypass checks merely because the content already exists in registry storage.
-The registry is not required to issue internal HTTP requests to perform these checks.
-
-The caller MUST have permission to read the source content being copied and to write the destination content and selected tags.
-For registries using repository-scoped bearer tokens, this corresponds to `pull` access on the source and `push` access on the destination, with any additional checks required by the equivalent operations.
-Knowing a digest or finding content in shared storage MUST NOT substitute for authorization to access it through the source repository.
-Existing destination policies, such as tag immutability, quotas, and manifest validation, MUST remain in force.
 
 ##### Successful Response
 
 A successful request MUST return `201 Created` only after the root manifest and all source-present dependencies have been copied, destination validation has passed, and all selected destination tags have been applied.
 This also applies when the requested content and tags were already present.
-Success does not imply that every reference resolves to content stored in the destination.
 This endpoint is synchronous; it MUST NOT return `202 Accepted` to indicate an unfinished copy or a blob upload session.
 
 The response MUST include:
@@ -222,42 +198,6 @@ Content-Type: application/vnd.oci.descriptor.v1+json
     "size": 1234
 }
 ```
-
-##### Failures and Retries
-
-The operation does not require an atomic transaction across all copied content and tag updates.
-Registries SHOULD validate the request and known policy constraints before modifying the destination.
-If a copy fails, content and referrers metadata already copied MAY remain in the destination.
-Registries MUST NOT modify any selected destination tags if copying the root manifest or any source-present dependency fails.
-If a later tag update fails, earlier successful tag updates MAY remain; rollback is not required.
-The registry MUST return an error rather than `201 Created` for partial completion.
-
-If any selected destination tags were successfully applied before an error, the error response MUST include `Docker-Content-Digest` with the resolved root digest and `OCI-Tag` listing those tags.
-If none were applied, the registry MUST omit `OCI-Tag`.
-Tag updates MUST NOT continue after the registry returns an error response.
-
-Errors returned by an implementation of this endpoint MUST use the [Distribution error response format and codes](../spec.md#error-codes).
-The following conditions use these status codes:
-
-| Status | Error code | Condition |
-|--------|------------|-----------|
-| `400 Bad Request` | `NAME_INVALID`, `DIGEST_INVALID`, or `UNSUPPORTED` | Invalid repository name, digest, or request parameters, including missing required parameters or invalid tags. |
-| `400 Bad Request` | `MANIFEST_INVALID` | A manifest fails validation. |
-| `400 Bad Request` | `MANIFEST_BLOB_UNKNOWN` | The destination's ordinary validation requires a referenced manifest or blob that is missing. |
-| `401 Unauthorized` | `UNAUTHORIZED` | Authentication is required. |
-| `403 Forbidden` | `DENIED` | Authorization or a destination policy denies the operation. |
-| `404 Not Found` | `NAME_UNKNOWN` or `MANIFEST_UNKNOWN` | The source repository or root manifest is not found. |
-| `415 Unsupported Media Type` | `UNSUPPORTED` | A manifest format needed for the copy is unsupported. |
-| `429 Too Many Requests` | `TOOMANYREQUESTS` | A rate or resource limit prevents the operation. |
-
-Registries MAY enforce resource limits on the operation, but MUST fail rather than report success for an incomplete copy.
-A `429 Too Many Requests` response SHOULD include `Retry-After` as described in the Distribution Specification.
-
-A connection failure or lost response does not establish whether the operation completed or which tags were applied.
-Repeating a digest-based request selects the same content, but can overwrite intervening destination tag updates.
-Repeating a tag-based request may resolve a different source digest.
-Clients that require reproducible copies SHOULD resolve the source to a digest before submitting the copy request.
-This endpoint does not provide conditional tag updates or compare-and-swap semantics.
 
 ##### Discovery and Fallback
 
