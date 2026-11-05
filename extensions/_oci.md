@@ -74,7 +74,7 @@ The registry MAY share, link, mount, or physically copy stored content; the exte
 
 #### Module: `manifest`
 
-This OPTIONAL endpoint copies a root manifest and its required dependencies into a destination repository, then applies destination tags.
+This OPTIONAL endpoint copies a root manifest and its dependencies present in the source repository into a destination repository, then applies destination tags.
 The root may be an image manifest, an image index, or an artifact packaged as an OCI image manifest.
 
 ```HTTP
@@ -135,33 +135,35 @@ If `reference` is a tag, a concurrent update to the source tag MUST NOT change t
 
 Registries implementing this endpoint MUST support OCI image manifests and image indices, including OCI image manifests used for artifacts.
 Registries MAY support additional manifest formats, such as Docker schema 2 manifests and manifest lists.
-A registry MUST reject an unsupported manifest format rather than copy it without its required dependencies.
+A registry MUST reject an unsupported manifest format encountered while traversing the source content.
 
-The registry MUST make the root manifest and its required dependencies available through the destination repository's ordinary manifest and blob endpoints:
+Dependencies are identified by following these references:
 
-1. For an image index, recursively copy every entry in `manifests`, including nested indices and all platforms.
-1. For an image manifest, copy its `config` and every entry in `layers`.
-1. Treat configuration and layer content as opaque bytes. An unfamiliar configuration or layer media type, or an unfamiliar `artifactType`, MUST NOT by itself cause the copy to fail.
+1. For an image index, follow every entry in `manifests`, including nested indices and all platforms.
+1. For an image manifest, follow its `config` and every entry in `layers`.
+
+The registry MUST copy the root manifest and recursively copy all dependent manifests and blobs present in the source repository, following these traversal rules.
+Copied manifests and blobs MUST be available through the destination repository's ordinary manifest and blob endpoints.
+Configuration and layer content MUST be treated as opaque bytes. An unfamiliar configuration or layer media type, or an unfamiliar `artifactType`, MUST NOT by itself cause the copy to fail.
 
 The registry MUST preserve the exact bytes and media types of copied manifests and blobs, preserving their digests, annotations, and descriptor fields.
 It MUST NOT convert manifest formats, rewrite descriptors, or filter platforms.
 The source content MUST remain unchanged.
 
-Required content MUST be available in the source repository or supplied by valid embedded descriptor `data`.
+Referenced content absent from the source repository is not required to be fetched or copied.
+Its absence MUST NOT, by itself, cause the copy to fail unless the destination's ordinary validation or policy checks require that content to be present.
 The registry MAY reuse content already available in the destination, subject to the same source authorization and validation requirements.
-It MUST NOT fetch content from descriptor `urls` or a remote registry as part of this operation.
-Missing required dependencies MUST cause the operation to fail rather than produce an incomplete copy.
 
-The registry MUST make dependencies available before publishing a parent manifest and MUST NOT apply the selected destination tags until the required graph is available.
-It MUST protect the copy from concurrent source deletion or garbage collection sufficiently to complete the operation, or fail without publishing an incomplete graph.
-After success, deleting the source content MUST NOT invalidate the destination copy; the destination's own deletion, retention, and garbage collection rules still apply.
+The registry MUST make dependencies being copied available before publishing a parent manifest and MUST NOT apply the selected destination tags until the root manifest and all source-present dependencies have been copied and destination validation has passed.
+It MUST protect content being copied from concurrent source deletion or garbage collection sufficiently to complete the operation, or fail before applying the selected destination tags.
+After success, deleting source content MUST NOT affect the availability of copied content in the destination; the destination's own deletion, retention, and garbage collection rules still apply.
 
 ##### Subject Relationships and Referrers
 
 The registry MUST preserve `subject` descriptors unchanged.
 Registries SHOULD NOT traverse subject relationships when determining the content to copy.
 Copying the referenced subject or its dependencies is not required, and clients MUST NOT assume that a successful copy makes that content available in the destination repository.
-A subject that is independently included through an index's `manifests` entries is still a required dependency.
+A subject that is independently included through an index's `manifests` entries is copied according to the traversal rules above.
 
 Discovering and copying referrers, such as separately attached signatures or SBOMs, is outside the scope of this operation.
 An artifact included through an index's `manifests` entries MUST still be copied normally.
@@ -175,15 +177,16 @@ This requirement applies to all content copied by the operation, including any s
 Server-side copy MUST NOT bypass checks merely because the content already exists in registry storage.
 The registry is not required to issue internal HTTP requests to perform these checks.
 
-The caller MUST have permission to read the required source content and to write the destination content and selected tags.
+The caller MUST have permission to read the source content being copied and to write the destination content and selected tags.
 For registries using repository-scoped bearer tokens, this corresponds to `pull` access on the source and `push` access on the destination, with any additional checks required by the equivalent operations.
 Knowing a digest or finding content in shared storage MUST NOT substitute for authorization to access it through the source repository.
 Existing destination policies, such as tag immutability, quotas, and manifest validation, MUST remain in force.
 
 ##### Successful Response
 
-A successful request MUST return `201 Created` only after the graph has been copied and all selected destination tags have been applied.
+A successful request MUST return `201 Created` only after the root manifest and all source-present dependencies have been copied, destination validation has passed, and all selected destination tags have been applied.
 This also applies when the requested content and tags were already present.
+Success does not imply that every reference resolves to content stored in the destination.
 This endpoint is synchronous; it MUST NOT return `202 Accepted` to indicate an unfinished copy or a blob upload session.
 
 The response MUST include:
@@ -225,7 +228,7 @@ Content-Type: application/vnd.oci.descriptor.v1+json
 The operation does not require an atomic transaction across all copied content and tag updates.
 Registries SHOULD validate the request and known policy constraints before modifying the destination.
 If a copy fails, content and referrers metadata already copied MAY remain in the destination.
-Registries MUST NOT modify any selected destination tags if copying the required graph fails.
+Registries MUST NOT modify any selected destination tags if copying the root manifest or any source-present dependency fails.
 If a later tag update fails, earlier successful tag updates MAY remain; rollback is not required.
 The registry MUST return an error rather than `201 Created` for partial completion.
 
@@ -240,7 +243,7 @@ The following conditions use these status codes:
 |--------|------------|-----------|
 | `400 Bad Request` | `NAME_INVALID`, `DIGEST_INVALID`, or `UNSUPPORTED` | Invalid repository name, digest, or request parameters, including missing required parameters or invalid tags. |
 | `400 Bad Request` | `MANIFEST_INVALID` | A manifest fails validation. |
-| `400 Bad Request` | `MANIFEST_BLOB_UNKNOWN` | A required manifest or blob dependency is missing. |
+| `400 Bad Request` | `MANIFEST_BLOB_UNKNOWN` | The destination's ordinary validation requires a referenced manifest or blob that is missing. |
 | `401 Unauthorized` | `UNAUTHORIZED` | Authentication is required. |
 | `403 Forbidden` | `DENIED` | Authorization or a destination policy denies the operation. |
 | `404 Not Found` | `NAME_UNKNOWN` or `MANIFEST_UNKNOWN` | The source repository or root manifest is not found. |
